@@ -4,10 +4,10 @@
 #
 #-------------------------------------------------
 
-QT       += core
-QT       -= gui
-
 TEMPLATE = app
+
+QT       -= core
+QT       -= gui
 
 TARGET	= zasm
 CONFIG += console
@@ -22,11 +22,6 @@ INCLUDEPATH +=          \
 	./                  \
 	Source              \
 	Libraries           \
-	Libraries/kio       \
-	Libraries/cstrings  \
-	Libraries/sort      \
-	Libraries/unix      \
-	Libraries/Templates \
 
 SOURCES += \
     Source/Error.cpp \
@@ -35,15 +30,13 @@ SOURCES += \
     Source/Segment.cpp \
     Source/Source.cpp \
     Source/Z80Assembler.cpp \
-    ../../../Libraries/cstrings/cstrings.cpp \
-    ../../../Libraries/kio/abort.cpp \
-    ../../../Libraries/kio/errors.cpp \
-    ../../../Libraries/kio/log.cpp \
-    ../../../Libraries/unix/FD.cpp \
-    ../../../Libraries/unix/tempmem.cpp \
-    ../../../Libraries/unix/files.cpp
-
-HEADERS
+    Libraries/cstrings/cstrings.cpp \
+    Libraries/kio/abort.cpp \
+    Libraries/kio/errors.cpp \
+    Libraries/kio/log.cpp \
+    Libraries/unix/FD.cpp \
+    Libraries/unix/tempmem.cpp \
+    Libraries/unix/files.cpp
 
 HEADERS += \
     Source/Error.h \
@@ -55,17 +48,18 @@ HEADERS += \
     Source/Z80Assembler.h \
     Source/settings.h \
     config.h \
-    ../../../Libraries/cstrings/base85.h \
-    ../../../Libraries/cstrings/cstrings.h \
-    ../../../Libraries/kio/abort.h \
-    ../../../Libraries/kio/errors.h \
-    ../../../Libraries/kio/kio.h \
-    ../../../Libraries/kio/log.h \
-    ../../../Libraries/unix/FD.h \
-    ../../../Libraries/unix/tempmem.h \
-    ../../../Libraries/unix/files.h \
-	../../../Libraries/kio/standard_types.h \
-	../../../Libraries/kio/peekpoke.h
+    Libraries/cstrings/base85.h \
+    Libraries/cstrings/cstrings.h \
+    Libraries/kio/abort.h \
+    Libraries/kio/errors.h \
+    Libraries/kio/kio.h \
+    Libraries/kio/log.h \
+    Libraries/unix/FD.h \
+    Libraries/unix/tempmem.h \
+    Libraries/unix/files.h \
+	Libraries/kio/standard_types.h \
+	Libraries/kio/peekpoke.h \
+    Libraries/Templates/Array.h
 
 
 

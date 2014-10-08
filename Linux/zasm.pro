@@ -4,10 +4,10 @@
 #
 #-------------------------------------------------
 
-QT       += core
-QT       -= gui
-
 TEMPLATE = app
+
+QT       -= core
+QT       -= gui
 
 TARGET	= zasm
 CONFIG += console
@@ -20,11 +20,6 @@ INCLUDEPATH +=          \
 	./                  \
 	Source              \
 	Libraries           \
-	Libraries/kio       \
-	Libraries/cstrings  \
-	Libraries/sort      \
-	Libraries/unix      \
-	Libraries/Templates \
 
 SOURCES += \
     Source/Error.cpp \
@@ -40,8 +35,6 @@ SOURCES += \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp
-
-HEADERS
 
 HEADERS += \
     Source/Error.h \
@@ -63,5 +56,6 @@ HEADERS += \
     Libraries/unix/tempmem.h \
     Libraries/unix/files.h \
 	Libraries/kio/standard_types.h \
-	Libraries/kio/peekpoke.h
+	Libraries/kio/peekpoke.h \
+    Libraries/Templates/Array.h
 
