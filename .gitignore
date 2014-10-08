@@ -1,3 +1,12 @@
 .DS_Store
-test/
-OSX/build/
+zasm.pro.user.*
+Distributions/old versions/
+Distributions/*.bz2
+Distributions/*.zip
+Test/
+build-OSX-Debug/
+build-Linux32-Debug/
+build-Linux64-Debug/
+build-OSX-Release/
+build-Linux32-Release/
+build-Linux64-Release/
