@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 1994 - 2014
+/*	Copyright  (c)	Günter Woigk 1994 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -242,14 +242,14 @@ int Z80Assembler::getRegister(SourceLine& q)
 void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, int listfileflags, char style) throw()
 {
 	ASSERT(sname && *sname);
-	
-	listfile_flags = listfileflags;
+
+	int listfile_flags = listfileflags;
 
 	sname = quick_fullpath(sname);				// add $PWD or $HOME
 	s_type filetype = classify_file(sname);
 	if(filetype==s_none){ errors.append(new Error(catstr("sourcefile: ",strerror(errno)),0)); return; }	// s_none => errno set!
 	if(filetype!=s_file){ errors.append(new Error("sourcefile: not a regular file",0)); return; }
-	
+
 	source_directory = directory_from_path(sname);
 	source_filename  = filename_from_path(sname);
 
@@ -259,7 +259,7 @@ void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, int listfile
 		if(lastchar(lname)!='/') lname = catstr(lname,"/");
 		lname = catstr( lname, basename_from_path(sname), ".txt" );
 	}
-	
+
 	if(!dname || is_dir(dname))
 	{
 		if(!dname) dname = source_directory;
@@ -273,7 +273,7 @@ void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, int listfile
 	StrArray source;
 	source.append( catstr("#include ", quotedstr(sname)) );
 	assemble(source);
-	
+
 	writeListfile(listfilepath, listfile_flags);
 }
 
@@ -878,7 +878,10 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 {
 	if(target==NULL) target = "ROM";
 
-	cstr name = upperstr(q.nextWord());
+	cstr name = upperstr(q.nextWord());		// TODO: allow segment name with "-" without req. to quote name
+	if(*name=='"') name = unquotedstr(name);
+	else if(!is_letter(*name) && *name!='_') throw syntax_error("segment name expected");
+	if(!q.testEol() && !q.peekChar()==',') q.testComma();
 
 	bool  address_is_valid = no;
 	int32 address = 0;
@@ -1875,7 +1878,7 @@ void Z80Assembler::writeListfile(cstr listpath, int flags) throw(any_error)
 	for(i=0,e=0;i<source.count();i++)
 	{
 		SourceLine& sourceline = source[i];
-		
+
 		if(flags&ListingWithObjcode)
 		{
 			uint ocode_size  = sourceline.bytecount;
@@ -1885,11 +1888,11 @@ void Z80Assembler::writeListfile(cstr listpath, int flags) throw(any_error)
 			{
 				Segment* segment = sourceline.segment;
 				uint ocode_index = sourceline.byteptr;
-				
+
 				XXXASSERT(segment);
 				XXXASSERT(ocode_size<=0x10000);
 				XXXASSERT(ocode_index+ocode_size <= (uint)segment->size);
-					
+
 				uint8* core = segment->core.getData();
 
 				while(ocode_size>4)
@@ -1899,7 +1902,7 @@ void Z80Assembler::writeListfile(cstr listpath, int flags) throw(any_error)
 					ocode_index += 4;
 					ocode_size  -= 4;
 				}
-				
+
 				fd.write_fmt("%04X: ",ocode_index);						// Adresse
 				for(uint n=0;n<ocode_size;n++) { fd.write_fmt("%02X",core[ocode_index++]); }  // 0..4 Datenbytes
 				fd.write_str(&"        \t"[ocode_size*2]);
@@ -1909,11 +1912,11 @@ void Z80Assembler::writeListfile(cstr listpath, int flags) throw(any_error)
 		fd.write_str(sourceline.text); fd.write_char('\n');
 		while(e<errors.count() && errors[e].sourceline==i) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }
 	}
-	
+
 	while(e<errors.count()) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }
 
 	// TODO: Labelliste
-	
+
 	fd.close_file();
 }
 

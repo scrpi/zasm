@@ -54,7 +54,11 @@ cstr appl_name = "zasm";
 static cstr help =
 "–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\n"
 "  zasm - z80 assembler (c) 1994-2014 Günter Woigk.\n"
-"  version 4.0.0, 2014-05-25, for BSD / Mac OSX.\n"
+#if _BSD
+"  version 4.0.0, 2014-10-08, for BSD / Mac OSX.\n"
+#elif _LINUX
+"  version 4.0.0, 2014-10-08, for Linux.\n"
+#endif
 "  send bug reports to: kio@little-bat.de\n\n"
 
 "syntax:\n"
@@ -114,10 +118,10 @@ int main( int argc, cstr argv[] )
 			}
 		}
 	}
-	
+
 	if(i>=argc) { h: abort("%s",help); }
 	sourcefile = argv[i++];
-		
+
 	while(i<argc)
 	{
 		cstr s = argv[i++];
@@ -150,7 +154,7 @@ int main( int argc, cstr argv[] )
 		if(l<ass.source.count()) fprintf(stderr,"%s\n",ass.source[l].text);
 		fprintf(stderr,"\t\t--> %s\n",ass.errors[i].text);
 	}
-	
+
 	fprintf(stderr,"zasm: %i errors\n", (int)ass.errors.count());
 	return 1;
 }

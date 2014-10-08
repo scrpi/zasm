@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 1994 - 2014
+/*	Copyright  (c)	Günter Woigk 1994 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -47,7 +47,7 @@ class Z80Assembler
 {
 public:
 	double		timestamp;			// of assembly
-	int			listfile_flags;
+//	int			listfile_flags;
 	cstr		listfilepath;
 
 	cstr		source_directory;	// top-level source
