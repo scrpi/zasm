@@ -48,12 +48,12 @@ class Z80Assembler
 public:
 	double		timestamp;			// of assembly
 //	int			listfile_flags;
-	cstr		listfilepath;
+//	cstr		listfilepath;
 
 	cstr		source_directory;	// top-level source
 	cstr		source_filename;
 	cstr		target;				// "BIN, "ROM", "SNA", ...
-	cstr		targetfilepath;
+//	cstr		targetfilepath;
 
 // source:
 	Source		source;				// SourceLine[] accumulating total source
@@ -128,15 +128,17 @@ private:
 
 public:
 			Z80Assembler	();
-	void	assembleFile	(cstr sourcepath, cstr destpath=NULL, cstr logpath=NULL,	// destpath and logpath may be NULL or a directory
-							 int listfile_settings=NoListfile,							// listfile settings; see enum below
+	void	assembleFile	(cstr sourcepath, cstr destpath, cstr listpath=NULL,
+							 bool v=no,					// include opject code in listing
+							 bool w=no,					// include label listing in listing
 							 char style='b' )			throw();						// target style: 'b'=binary, 'x'=intel hex
 	void	assemble		(StrArray& sourcelines)		throw();
 	void	assembleLine	(SourceLine&)				throw(any_error);
 
-	enum { NoListfile=0,ListingWithObjcode=1,ListingWithLabelList=2,BasicListing=4 };	// note: bit masks %11
+//	enum { NoListfile=0,ListingWithObjcode=1,ListingWithLabelList=2,BasicListing=4 };	// note: bit masks %11
 
-	void	writeListfile	(cstr listpath, int listflags) throw(any_error);
+	void	writeListfile	(cstr listpath, bool v, bool w) throw(any_error);
+	void	writeTargetfile	(cstr filename, int style)	throw(any_error);
 };
 
 

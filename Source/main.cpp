@@ -45,6 +45,21 @@
 
 
 cstr appl_name = "zasm";
+cstr version   = "4.0α";
+
+
+/* helper: get the compile date in preferred format "yyyy-mm-dd":
+*/
+static cstr compiledatestr()
+{
+	static char ansidate[] = __DATE__;		// "Jan  1 2014"
+	static char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+
+	uint m=0; while( strncmp(ansidate, months+3*m++, 3) ) {}
+	uint d = strtol(ansidate+4,NULL,10);
+	cptr y = ansidate+7;
+	return usingstr("%s-%02u-%02u",y,m,d);
+}
 
 
 
@@ -54,11 +69,7 @@ cstr appl_name = "zasm";
 static cstr help =
 "–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\n"
 "  zasm - z80 assembler (c) 1994-2014 Günter Woigk.\n"
-#if _BSD
-"  version 4.0.0, 2014-10-08, for BSD / Mac OSX.\n"
-#elif _LINUX
-"  version 4.0.0, 2014-10-08, for Linux.\n"
-#endif
+"  version %s, %s, for %s.\n"								// version, date, platform
 "  send bug reports to: kio@little-bat.de\n\n"
 
 "syntax:\n"
@@ -89,62 +100,67 @@ static cstr help =
 int main( int argc, cstr argv[] )
 {
 // options:
-	bool listing=0;		// listing in pass 1 and 2
-	bool listv=0;		// object code included in listing
-	bool listw=0;		// label listing appended to listing
-	char style='b';		// 'b'/'x' == default/binary/intel hex
+	bool listv   = no;		// object code included in listing
+	bool listw   = no;		// label listing appended to listing
+	char style	 ='b';		// 'b' / 'x' == default/binary/intel hex
 // filepaths:
-	cstr sourcefile = NULL;
-	cstr targetfile = NULL;
+	cstr inputfile  = NULL;
+	cstr outputfile = NULL;
 	cstr listfile   = NULL;
 
-//	Argumente auswerten:
+//	eval arguments:
 	int i=1;
 	while(i<argc)
 	{
-		cptr s = argv[i];
-		if(*s++!='-') break; else i++;			// first non-option
+		cptr s = argv[i++];
 
-		while(*s)
+		if(*s != '-')
 		{
-			switch(*s++)
+			if(!inputfile)  { inputfile = s; continue; }
+			if(!outputfile && i==argc) { outputfile = s; continue; }	// if outfile is not prefixed with -o then it must be the last argument
+			if(!listfile)   { listfile = s; continue; }
+			goto h;
+		}
+
+		while(char c = *++s)
+		{
+			switch(c)
 			{
-			case 'v': listing=listv=yes; continue;
-			case 'w': listing=listw=yes; continue;
+			case 'v': listv=yes; continue;
+			case 'w': listw=yes; continue;
 			case 'x': style='x'; continue;
 			case 'b': style='b'; continue;
-			case 'i': if(*s==0) break;			// must be last: sourcefilename follows
+			case 'i': if(inputfile  || i==argc) goto h; else inputfile  = argv[i++]; continue;
+			case 'o': if(outputfile || i==argc) goto h; else outputfile = argv[i++]; continue;
+			case 'l': if(listfile   || i==argc) goto h; else listfile   = argv[i++]; continue;
 			default:  goto h;
 			}
 		}
 	}
 
-	if(i>=argc) { h: abort("%s",help); }
-	sourcefile = argv[i++];
+// check source file:
+	if(!inputfile) h: abort(help, version, compiledatestr(), _PLATFORM);
+	inputfile = fullpath(inputfile);
+	if(errno) { fprintf(stderr, "\t\t--> sourcefile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
+	if(!is_file(inputfile)) { fprintf(stderr, "\t\t--> sourcefile: not a regular file\nzasm: 1 error\n");  return 1; }
 
-	while(i<argc)
+// check list file:
+	if(listfile)
 	{
-		cstr s = argv[i++];
-		if(eq(s,"-o"))
-		{
-			if(targetfile) goto h; else targetfile = s;
-		}
-		else if(eq(s,"-l"))
-		{
-			if(listfile) goto h; else listfile = s; listing = yes;
-		}
-		else if(i==argc)
-		{
-			if(targetfile) goto h; else targetfile = s;
-		}
-		else
-		{
-			if(listfile) goto h; else listfile = s; listing = yes;
-		}
+		listfile = fullpath(listfile,yes,yes);
+		if(errno && errno!=ENOENT) { fprintf(stderr, "\t\t--> listfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
+		if(lastchar(listfile)=='/') listfile = catstr( listfile, basename_from_path(inputfile), ".txt" );
 	}
 
+// check output file:
+	if(!outputfile) outputfile = directory_from_path(inputfile);
+	outputfile = fullpath(outputfile, yes, yes);
+	if(errno && errno!=ENOENT) { fprintf(stderr, "\t\t--> outputfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
+	if(lastchar(outputfile)=='/') outputfile = catstr( outputfile, basename_from_path(inputfile), ".$" );	// '$' will be replaced by #target
+
+// DO IT!
 	Z80Assembler ass;
-	ass.assembleFile( sourcefile, targetfile, listfile, (listing<<2)+(listw<<1)+(listv<<0), style);
+	ass.assembleFile( inputfile, outputfile, listfile, listv, listw, style);
 	if(ass.errors.count()==0) { fprintf(stderr,"zasm: no errors\n"); return 0; }	// 0 = ok
 
 	for(uint i=0;i<min(10u,ass.errors.count());i++)
@@ -155,7 +171,8 @@ int main( int argc, cstr argv[] )
 		fprintf(stderr,"\t\t--> %s\n",ass.errors[i].text);
 	}
 
-	fprintf(stderr,"zasm: %i errors\n", (int)ass.errors.count());
+	if(ass.errors.count()>1) fprintf(stderr,"zasm: %i errors\n", (int)ass.errors.count());
+	else					 fprintf(stderr,"zasm: 1 error\n");
 	return 1;
 }
 

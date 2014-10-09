@@ -233,48 +233,30 @@ int Z80Assembler::getRegister(SourceLine& q)
 
 
 /*	assemble source file
+		sname = fqn sourcefile
+		dname = fqn outputfile; end on ".$" => extension fixed by #target; NULL => only pass 1
+		lname = fqn listfile or NULL
+		v = verbose output: include object code in list file
+		w = include label listing in list file
 	output will be in
 		source[];
 		labels[];
 		segments[];		// code and data segments
 		errors[];
 */
-void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, int listfileflags, char style) throw()
+void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, bool v, bool w, char style) throw()
 {
-	ASSERT(sname && *sname);
-
-	int listfile_flags = listfileflags;
-
-	sname = quick_fullpath(sname);				// add $PWD or $HOME
-	s_type filetype = classify_file(sname);
-	if(filetype==s_none){ errors.append(new Error(catstr("sourcefile: ",strerror(errno)),0)); return; }	// s_none => errno set!
-	if(filetype!=s_file){ errors.append(new Error("sourcefile: not a regular file",0)); return; }
+	XXASSERT(is_file(sname));
 
 	source_directory = directory_from_path(sname);
 	source_filename  = filename_from_path(sname);
-
-	if(!lname || is_dir(lname))
-	{
-		if(!lname) lname = source_directory;
-		if(lastchar(lname)!='/') lname = catstr(lname,"/");
-		lname = catstr( lname, basename_from_path(sname), ".txt" );
-	}
-
-	if(!dname || is_dir(dname))
-	{
-		if(!dname) dname = source_directory;
-		if(lastchar(dname)!='/') dname = catstr(dname,"/");
-		dname = catstr(dname, basename_from_path(sname), ".$");		// '$' will be replaced depending on #target by "bin" etc.
-	}
-
-	listfilepath = lname;
-	targetfilepath = dname;		// may still end on ".$"
 
 	StrArray source;
 	source.append( catstr("#include ", quotedstr(sname)) );
 	assemble(source);
 
-	writeListfile(listfilepath, listfile_flags);
+	if(dname) writeTargetfile(dname,style);
+	if(lname) writeListfile(lname, v, w);
 }
 
 
@@ -881,7 +863,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	cstr name = upperstr(q.nextWord());		// TODO: allow segment name with "-" without req. to quote name
 	if(*name=='"') name = unquotedstr(name);
 	else if(!is_letter(*name) && *name!='_') throw syntax_error("segment name expected");
-	if(!q.testEol() && !q.peekChar()==',') q.testComma();
+	if(!q.testEol() && q.peekChar()!=',') q.testComma();
 
 	bool  address_is_valid = no;
 	int32 address = 0;
@@ -1867,9 +1849,9 @@ ill_dest:		throw syntax_error("illegal destination");
 ============================================================== */
 
 
-void Z80Assembler::writeListfile(cstr listpath, int flags) throw(any_error)
+void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 {
-	if(flags==NoListfile) return;
+	XXXASSERT(listpath && *listpath);
 	XXXASSERT(source.count()); 	// da muss zumindest das selbst erzeugte #include in Zeile 0 drin sein
 
 	FD fd(listpath,'w');
@@ -1879,7 +1861,7 @@ void Z80Assembler::writeListfile(cstr listpath, int flags) throw(any_error)
 	{
 		SourceLine& sourceline = source[i];
 
-		if(flags&ListingWithObjcode)
+		if(v)
 		{
 			uint ocode_size  = sourceline.bytecount;
 
@@ -1916,11 +1898,16 @@ void Z80Assembler::writeListfile(cstr listpath, int flags) throw(any_error)
 	while(e<errors.count()) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }
 
 	// TODO: Labelliste
+	if(w) errors.append(new Error("writeListfile: write label list: TODO",0));
 
 	fd.close_file();
 }
 
 
+void Z80Assembler::writeTargetfile(cstr dname,int style) throw(any_error)
+{
+	errors.append(new Error("writeTargetfile: TODO",0));
+}
 
 
 
