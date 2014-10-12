@@ -105,10 +105,10 @@ private:
 	void	asmEndLocal		(SourceLine&)				throw(any_error);
 	void	asmInstr		(SourceLine&)				throw(any_error);
 
-	void	store			(int n)						throw(any_error)	{ current_segment().store(n); }
-	void	store			(int n,int m)				throw(any_error)	{ current_segment().store(n,m); }
-	void	store			(int a,int b,int c)			throw(any_error)	{ current_segment().store(a,b,c); }
-	void	store			(int a,int b,int c,int d)	throw(any_error)	{ current_segment().store(a,b,c,d); }
+//	void	store			(int n)						throw(any_error)	{ current_segment().store(n); }
+//	void	store			(int n,int m)				throw(any_error)	{ current_segment().store(n,m); }
+//	void	store			(int a,int b,int c)			throw(any_error)	{ current_segment().store(a,b,c); }
+//	void	store			(int a,int b,int c,int d)	throw(any_error)	{ current_segment().store(a,b,c,d); }
 	void	storeOpcode     (int n)						throw(any_error)	{ current_segment().store(n); }
 	void 	storeWord		(int n)						throw(any_error)	{ current_segment().storeWord(n); }
 	void	storeBlock		(cstr blk, int n)			throw(any_error)	{ current_segment().storeBlock(blk,n); }
@@ -120,6 +120,13 @@ private:
 	void	storeSpace		(int n, bool valid)			throw(any_error)	{ current_segment().storeSpace(n,valid); }
 	void	store_XYCB_op	(int pfx, int op, int dis, bool valid)	throw(any_error);
 	void	store_XY_byte_op(int pfx, int op, int dis, bool valid)	throw(any_error);
+	uint8	popLastByte		()							{ return current_segment().popLastByte(); }
+
+	int32	currentAddress	()							{ return current_segment().currentAddress(); }
+	bool	currentAddressValid()						{ return current_segment().currentAddressValid(); }
+	uint32	currentPosition	()							{ return current_segment().currentPosition(); }
+	bool	currentPositionValid()						{ return current_segment().currentPositionValid(); }
+	void	setOrigin		(int32 a, bool a_valid)		throw(syntax_error) { current_segment().setOrigin(a,a_valid);}
 
 	int		getCondition	(cstr w)					throw(syntax_error);
 	int		getRegister		(SourceLine&);

@@ -141,21 +141,21 @@ int main( int argc, cstr argv[] )
 // check source file:
 	if(!inputfile) h: abort(help, version, compiledatestr(), _PLATFORM);
 	inputfile = fullpath(inputfile);
-	if(errno) { fprintf(stderr, "\t\t--> sourcefile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
-	if(!is_file(inputfile)) { fprintf(stderr, "\t\t--> sourcefile: not a regular file\nzasm: 1 error\n");  return 1; }
+	if(errno) { fprintf(stderr, "--> sourcefile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
+	if(!is_file(inputfile)) { fprintf(stderr, "--> sourcefile: not a regular file\nzasm: 1 error\n");  return 1; }
 
 // check list file:
 	if(listfile)
 	{
-		listfile = fullpath(listfile,yes,yes);
-		if(errno && errno!=ENOENT) { fprintf(stderr, "\t\t--> listfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
+		listfile = fullpath(listfile);
+		if(errno && errno!=ENOENT) { fprintf(stderr, "--> listfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
 		if(lastchar(listfile)=='/') listfile = catstr( listfile, basename_from_path(inputfile), ".txt" );
 	}
 
 // check output file:
 	if(!outputfile) outputfile = directory_from_path(inputfile);
-	outputfile = fullpath(outputfile, yes, yes);
-	if(errno && errno!=ENOENT) { fprintf(stderr, "\t\t--> outputfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
+	outputfile = fullpath(outputfile);
+	if(errno && errno!=ENOENT) { fprintf(stderr, "--> outputfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
 	if(lastchar(outputfile)=='/') outputfile = catstr( outputfile, basename_from_path(inputfile), ".$" );	// '$' will be replaced by #target
 
 // DO IT!

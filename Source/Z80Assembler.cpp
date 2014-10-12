@@ -112,7 +112,7 @@ void Z80Assembler::storeOffset(int offset, bool valid) throw(any_error)
 void Z80Assembler::store_XYCB_op( int pfx, int opcode, int dis, bool valid ) throw(any_error)
 {
 	if (valid && dis!=(signed char)dis) throw syntax_error("displacement out of range");
-	store(pfx,PFX_CB,dis,opcode);
+	current_segment().store(pfx,PFX_CB,dis,opcode);
 }
 
 #define	store_IXCB_opcode(OP,DIS,VALID)	store_XYCB_op(PFX_IX,OP,DIS,VALID)
@@ -121,10 +121,10 @@ void Z80Assembler::store_XYCB_op( int pfx, int opcode, int dis, bool valid ) thr
 
 /*	store pfx + opcode
 */
-#define	store_ED_opcode(OP)	store(PFX_ED,OP)
-#define	store_CB_opcode(OP)	store(PFX_CB,OP)
-#define	store_IX_opcode(OP)	store(PFX_IX,OP)
-#define	store_IY_opcode(OP)	store(PFX_IY,OP)
+#define	store_ED_opcode(OP)	current_segment().store(PFX_ED,OP)
+#define	store_CB_opcode(OP)	current_segment().store(PFX_CB,OP)
+#define	store_IX_opcode(OP)	current_segment().store(PFX_IX,OP)
+#define	store_IY_opcode(OP)	current_segment().store(PFX_IY,OP)
 
 
 /*	store XY opcode dis
@@ -133,7 +133,7 @@ void Z80Assembler::store_XYCB_op( int pfx, int opcode, int dis, bool valid ) thr
 void Z80Assembler::store_XY_byte_op( int pfx, int opcode, int dis, bool valid ) throw(any_error)
 {
 	if (valid && dis!=(signed char)dis) throw syntax_error("displacement out of range");
-	store(pfx,opcode,dis);
+	current_segment().store(pfx,opcode,dis);
 }
 
 #define	store_IX_byte_opcode(OP,DIS,VALID)	store_XY_byte_op(PFX_IX,OP,DIS,VALID)
@@ -361,7 +361,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 
 			if(segment.relocatable && address_valid) segment.setAddress(address);
 
-			if(segment.current_address_valid)
+			if(segment.currentAddressValid())
 			{
 				address = segment.currentAddress();
 				address_valid = yes;
@@ -382,7 +382,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		if(i==0 && s.size==0) continue;
 		ASSERT(s.address_valid);
 		ASSERT(s.size_valid);
-		ASSERT(s.current_address_valid);
+		ASSERT(s.currentAddressValid());
 		ASSERT(!s.relocatable);
 	}
 }
@@ -394,7 +394,7 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 {
 	q.rewind();							// falls Pass 2++
 	q.segment = current_segment_ptr;	// Für Temp Label Resolver
-	q.byteptr = current_segment().dptr;	// Für Temp Label Resolver & Logfile
+	q.byteptr = currentPosition();		// Für Temp Label Resolver & Logfile
 //	q.bytecount = 0;					// Für Logfile und skip over error in pass≥2
 
 #if DEBUG
@@ -416,8 +416,7 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 		asmInstr(q);			// opcode or pseudo opcode
 		q.expectEol();			// expect end of line
 
-		if(q.segment==current_segment_ptr)
-			 q.bytecount = current_segment().dptr - q.byteptr;
+		if(q.segment==current_segment_ptr) q.bytecount = currentPosition() - q.byteptr;
 		else q.segment = current_segment_ptr;	// .area instruction
 	}
 }
@@ -446,8 +445,8 @@ int32 Z80Assembler::value( SourceLine& q, int prio, bool& valid ) throw(any_erro
 		case '~':	n = ~value(q,pUna,valid); goto op;		// complement
 		case '!':	n = !value(q,pUna,valid); goto op;		// negation
 		case '(':	n =  value(q,pAny,valid); q.expect(')'); goto op;	// brackets
-		case '$':	n = current_segment().currentAddress(); // pc
-					valid = valid && current_segment().current_address_valid;
+		case '$':	n = currentAddress();	// pc
+					valid = valid && currentAddressValid();
 					if(!valid) final = false; goto op;
 		}
 	}
@@ -642,8 +641,8 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 	else	// label: <opcode>
 	{
 		q.p = s;									// put back opcode
-		value = current_segment().currentAddress();
-		is_valid = current_segment().current_address_valid;
+		value = currentAddress();
+		is_valid = currentAddressValid();
 
 		// increment temp_label_suffix:
 		if(temp_label_seen)
@@ -847,7 +846,7 @@ void Z80Assembler::asmInsert( SourceLine& q ) throw(any_error)
 
 	char bu[sz];
 	fd.read_bytes(bu, (uint32)sz);
-	current_segment().storeBlock(bu,(uint32)sz);
+	storeBlock(bu,(uint32)sz);
 }
 
 
@@ -1179,7 +1178,7 @@ rr:		n = getRegister(q);
 
 		n = value(q,pAny,v=1);	// kio 2014-02-09: vorgezogen wg. möglicher Referenz auf $
 		storeOpcode(i);
-		storeOffset(n - (current_segment().currentAddress()+1), v && current_segment().current_address_valid);
+		storeOffset(n - (currentAddress()+1), v && currentAddressValid());
 		return;
 	}
 	case '  cp':
@@ -1530,26 +1529,7 @@ wlen3:
 	case ' res':	i = RES0_B; goto bit;
 	case ' set':	i = SET0_B; goto bit;
 	case ' dec':	i = 8; goto inc;
-	case ' org':
-	{
-		// wenn noch kein Code in diesem Segment abgelegt wurde: setze Segment-Start
-		// else: move Org => make Gap
-		// note: negative gap size not allowed => total size of segment = pc
-
-		bool n_valid = true;
-		n = value(q, pAny, n_valid);
-
-		if(current_segment().dptr_valid && current_segment().dptr==0)	// set segment start address
-		{
-			if(n_valid) current_segment().setAddress(n);
-			return;
-		}
-		else // move org
-		{
-			current_segment().storeSpace4Org(n,n_valid);
-			return;
-		}
-	}
+	case ' org':	n = value(q, pAny, v=1); setOrigin(n,v); return;
 	case ' rst':
 	{
 		n = value(q,pAny,v=1);
@@ -1757,15 +1737,15 @@ dm:db:	w = q.nextWord();
 			w = unquotedstr(w);
 cb:			storeBlock(w, strlen(w));
 			q.skip_spaces();
-			if(q.test_char('+'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() + n,v); } else
-			if(q.test_char('-'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() - n,v); } else
-			if(q.test_char('|'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() | n,v); } else
-			if(q.test_char('&'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() & n,v); } else
-			if(q.test_char('^'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() ^ n,v); } else
-			if(q.test_char('*'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() * n,v); } else
-			if(q.test_char('%'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() % n,v); } else
-			if(q.test_char('\\'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() % n,v); } else
-			if(q.test_char('/'))	{ n=value(q,pAny,v=1); storeByte(current_segment().popLastByte() / n,v); }
+			if(q.test_char('+'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() + n,v); } else
+			if(q.test_char('-'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() - n,v); } else
+			if(q.test_char('|'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() | n,v); } else
+			if(q.test_char('&'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() & n,v); } else
+			if(q.test_char('^'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() ^ n,v); } else
+			if(q.test_char('*'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() * n,v); } else
+			if(q.test_char('%'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() % n,v); } else
+			if(q.test_char('\\'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() % n,v); } else
+			if(q.test_char('/'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() / n,v); }
 			if(q.testComma()) goto dm; else return;
 		}
 
@@ -1828,7 +1808,7 @@ sh:			if(n&1) throw syntax_error("even number of hex characters expected");
 	{
 		n = value(q,pAny,v=1);			// kio 2014-02-09: vor storeOpcode(DJNZ) vorgezogen wg. Bezug eines evtl. genutzen $
 		storeOpcode(DJNZ);
-		storeOffset( n - (current_segment().currentAddress()+1), v&&current_segment().current_address_valid );
+		storeOffset( n - (currentAddress()+1), v && currentAddressValid() );
 		return;
 	}
 	}
@@ -1873,7 +1853,7 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 
 				XXXASSERT(segment);
 				XXXASSERT(ocode_size<=0x10000);
-				XXXASSERT(ocode_index+ocode_size <= (uint)segment->size);
+				XXXASSERT(ocode_index+ocode_size <= segment->size);
 
 				uint8* core = segment->core.getData();
 

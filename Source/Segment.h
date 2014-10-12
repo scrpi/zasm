@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -46,20 +46,20 @@ public:
 	Z80Assembler* assembler;
 
 	cstr		name;
-	bool		is_data;			// => no actual code storing allowed
-	uint8		fillbyte;			// $FF for ROM else $00
+	bool		is_data;				// => no actual code storing allowed
+	uint8		fillbyte;				// $FF for ROM else $00
 
 	Core		core;
 
-	int32		dptr;				// deposition pointer
-	int32		address;			// segment start address
-	int32		size;				// segment size
-
+	int32		address;				// segment start address
+	uint32		size;					// segment size
 	bool		address_valid;			// segment base address
-	bool		dptr_valid;				// code deposition position inside segment
-	bool		current_address_valid;	// mostly address_valid && dptr_valid, but may be valid independently after org instruction
 	bool		size_valid;				// segment size
 	bool		relocatable;			// address has not been explicitely set
+
+	uint32		dptr;					// deposition pointer (index)
+	bool		dptr_valid;				// code deposition position inside segment
+	bool		dptr_address_valid;		// mostly address_valid && dptr_valid, but may be valid independently after org instruction
 
 private:
 	void		validate_address_and_size() throw(syntax_error);
@@ -80,14 +80,18 @@ public:
 	void		storeSpace		(int c, int sz, bool sz_valid)	throw(syntax_error);
 	void		storeSpace		(int sz, bool sz_valid)			throw(syntax_error);
 	void		storeHexBytes	(cptr data, int n)				throw(syntax_error);
-	void		storeSpace4Org	(int32 a, bool a_valid)			throw(syntax_error);
+	void		setOrigin		(int32 a, bool a_valid)			throw(syntax_error);
 
 	uint8		popLastByte		()								{ XXXASSERT(dptr>0); return core[--dptr]; }
 
 	void		setAddress		(int32 a)						throw(syntax_error);
-	void		setSize			(int32 n)						throw(syntax_error);
+	void		setSize			(uint32 n)						throw(syntax_error);
 
-	int			currentAddress	()								{ return address + dptr; }
+	uint32		currentPosition	()								{ return dptr; }				// write position (offset) in core
+	bool		currentPositionValid()							{ return dptr_valid; }			// … valid?
+	int32		currentAddress	()								{ return address + dptr; }		// address associated with write position
+	bool		currentAddressValid()							{ return dptr_address_valid; }	// … valid?
+
 	void		rewind			();
 };
 
