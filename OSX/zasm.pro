@@ -59,7 +59,8 @@ HEADERS += \
     Libraries/unix/files.h \
 	Libraries/kio/standard_types.h \
 	Libraries/kio/peekpoke.h \
-    Libraries/Templates/Array.h
+    Libraries/Templates/Array.h \
+    Libraries/Templates/HashMap.h
 
 
 
