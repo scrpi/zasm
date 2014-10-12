@@ -30,7 +30,7 @@
 
 #include "kio/kio.h"
 #include "Templates/Array.h"
-
+#include "Source.h"
 
 
 
@@ -39,10 +39,10 @@ class Error
 {
 public:
 	cstr	text;
-	uint	sourceline;
+	SourceLine* sourceline;
 
 public:
-	Error(cstr text, uint sourceline);
+	Error(cstr text, SourceLine* sourceline);
 };
 
 

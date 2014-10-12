@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -57,7 +57,7 @@ class SourceLine
 public:
 	cstr	text;				// tempmem / shared
 	cstr	sourcefile;			// tempmem / shared between all sourcelines of this file
-	uint	sourcelinenumber;	// 0-based
+	uint	sourcelinenumber;	// line number in source file; 0-based
 
 	Segment* segment;			// of object code
 	uint	byteptr;			// index of object code in segment
@@ -76,7 +76,7 @@ public:
 	SourceLine&	operator-=	(int n)	{ XXXASSERT(n<0?p-n<=strchr(p,0):p-n>=text); p-=n; return *this; }
 
 	void	rewind		()			{ p = text; }
-	void	skip_spaces	()			{ while(*p<=' ' && *p>0) p++; }
+	void	skip_spaces	()			{ while(is_space(*p)) p++; }
 	void	skip_char	(char c)	{ if(*p==c) p++; }
 	void	skip_to_eol	()			{ p = strchr(p,0); }
 	bool	test_char	(char c)	{ if(*p==c) { p++; return true; } else return false; }
@@ -93,6 +93,8 @@ public:
 	void	expectEol	()			throw(syntax_error);
 
 	cstr	nextWord	();
+
+	uint	column		()			{ return p-text; }		// 0-based
 };
 
 

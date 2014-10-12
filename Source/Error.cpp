@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -33,11 +33,12 @@
 
 
 
-Error::Error(cstr text, uint sourceline)
-:	text(text),
+Error::Error(cstr text, SourceLine* sourceline)
+:
+	text(text),
 	sourceline(sourceline)
 {
-	Log("");
+	XXXLog("");		// <-- put here a breakpoint to break into the debugger on assembler errors
 }
 
 

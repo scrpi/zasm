@@ -161,20 +161,70 @@ int main( int argc, cstr argv[] )
 // DO IT!
 	Z80Assembler ass;
 	ass.assembleFile( inputfile, outputfile, listfile, listv, listw, style);
-	if(ass.errors.count()==0) { fprintf(stderr,"zasm: no errors\n"); return 0; }	// 0 = ok
 
-	for(uint i=0;i<min(10u,ass.errors.count());i++)
+	if(ass.errors.count()==0)
 	{
-		//if(ass.errors[i].sourceline) continue;
-		uint l = ass.errors[i].sourceline;
-		if(l<ass.source.count()) fprintf(stderr,"%s\n",ass.source[l].text);
-		fprintf(stderr,"\t\t--> %s\n",ass.errors[i].text);
+		fprintf(stderr,"zasm: no errors\n");
+		return 0; 	// 0 = ok
 	}
 
-	if(ass.errors.count()>1) fprintf(stderr,"zasm: %i errors\n", (int)ass.errors.count());
-	else					 fprintf(stderr,"zasm: 1 error\n");
+// display errors:
+	cstr current_file = NULL;
+	for(uint i=0;i<min(10u,ass.errors.count());i++)
+	{
+		Error const& e = ass.errors[i];
+		SourceLine* sourceline = e.sourceline;
+		if(!sourceline) { fprintf(stderr,"\n%s\n",e.text); continue; }
+
+		cstr filename = sourceline->sourcefile;
+		if(filename!=current_file)	// note: compare pointers!
+		{
+			current_file = filename;
+			if(filename && *filename) fprintf(stderr, "\nin file %s:\n", filename); else fprintf(stderr, "\n");
+		}
+
+		if(filename && *filename)
+		{
+			cstr linenumber = numstr(sourceline->sourcelinenumber+1);
+			fprintf(stderr, "%s: %s\n", linenumber, sourceline->text);
+			fprintf(stderr, "%s%s^ %s\n", spacestr(strlen(linenumber)+2), whitestr(leftstr(sourceline->text,sourceline->column())), e.text);
+		}
+		else fprintf(stderr, "--> %s\n",e.text);
+	}
+
+	if(ass.errors.count()>1) fprintf(stderr,"\nzasm: %i errors\n\n", (int)ass.errors.count());
+	else					 fprintf(stderr,"\nzasm: 1 error\n\n");
 	return 1;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
