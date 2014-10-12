@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -48,10 +48,7 @@ public:
 
 class Errors : private ObjArray<Error>
 {
-public:
-	uint	max_errors;
-
-public:				Errors()					:max_errors(30){}
+public:				Errors()					{}
 	void			purge()						{ ObjArray<Error>::purge(); }
 	uint			count()						{ return ObjArray<Error>::count(); }
 	void			append(Error*s)				{ ObjArray<Error>::append(s); }
