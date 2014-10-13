@@ -95,6 +95,7 @@ public:
 	cstr	nextWord	();
 
 	uint	column		()			{ return p-text; }		// 0-based
+	cstr	whitestr	()			{ return ::whitestr(substr(text,p)); }	// whitestr() up to error column
 };
 
 

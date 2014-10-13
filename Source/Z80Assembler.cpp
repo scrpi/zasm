@@ -1858,20 +1858,22 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 
 	FD fd(listpath,'w');
 
-	uint i,e;
-	for(i=0,e=0;i<source.count();i++)
+	uint si=0,ei=0;	// source[] index, errors[] index
+	while( si<source.count() )
 	{
-		SourceLine& sourceline = source[i];
+		SourceLine* sourceline = &source[si++];
 
-		if(v)
+		if(v)	// include objcode:
 		{
-			uint ocode_size  = sourceline.bytecount;
-
-			if(ocode_size==0) fd.write_str("              \t");
+			uint ocode_size = sourceline->bytecount;
+			if(ocode_size==0)
+			{
+				fd.write_str("              \t");
+			}
 			else
 			{
-				Segment* segment = sourceline.segment;
-				uint ocode_index = sourceline.byteptr;
+				Segment* segment = sourceline->segment;
+				uint ocode_index = sourceline->byteptr;
 
 				XXXASSERT(segment);
 				XXXASSERT(ocode_size<=0x10000);
@@ -1881,23 +1883,35 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 
 				while(ocode_size>4)
 				{
-					fd.write_fmt("%04X: ",ocode_index);					// Adresse
-					fd.write_fmt("%08X\n",peek4X(core+ocode_index));	// 4 Datenbytes; note: assumes int==int32
+					uint32 data = peek4X(core+ocode_index);
+					if(data != segment->fillbyte*0x01010101u)					// exclude (large) ranges of empty space
+					{
+						fd.write_fmt("%04X: ",segment->address+ocode_index);	// address
+						fd.write_fmt("%08X\n",data);							// 4 data bytes; note: assumes int==int32
+					}
 					ocode_index += 4;
 					ocode_size  -= 4;
 				}
 
-				fd.write_fmt("%04X: ",ocode_index);						// Adresse
-				for(uint n=0;n<ocode_size;n++) { fd.write_fmt("%02X",core[ocode_index++]); }  // 0..4 Datenbytes
-				fd.write_str(&"        \t"[ocode_size*2]);
+				fd.write_fmt("%04X: ",segment->address+ocode_index);							// address
+				for(uint n=0; n<ocode_size; n++) { fd.write_fmt("%02X",core[ocode_index++]); }  // 1..4 data bytes
+				fd.write_str(&"        \t"[ocode_size*2]);						// padding for bytes less than 4; plus tab
 			}
 		}
 
-		fd.write_str(sourceline.text); fd.write_char('\n');
-		while(e<errors.count() && errors[e].sourceline && errors[e].sourceline->sourcelinenumber==i) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }	// TODO: error column marker
+		fd.write_str(sourceline->text); fd.write_char('\n');					// source line
+
+		while( ei<errors.count() && errors[ei].sourceline == sourceline )
+		{
+			if(v) fd.write_str(usingstr("***ERROR***   \t%s^ %s\n", sourceline->whitestr(), errors[ei++].text));
+			else  fd.write_str(usingstr("%s^ ***ERROR*** %s\n", sourceline->whitestr(), errors[ei++].text));
+		}
 	}
 
-	while(e<errors.count()) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }
+	while(ei<errors.count())	// remaining errors (presumably without associated source line)
+	{
+		fd.write_fmt("***ERROR*** %s\n",errors[ei++].text);
+	}
 
 	// TODO: Labelliste
 	if(w) addError("writeListfile: write label list: TODO");

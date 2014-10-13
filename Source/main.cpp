@@ -190,7 +190,7 @@ int main( int argc, cstr argv[] )
 
 		cstr linenumber = numstr(sourceline->sourcelinenumber+1);
 		fprintf(stderr, "%s: %s\n", linenumber, sourceline->text);
-		fprintf(stderr, "%s%s^ %s\n", spacestr(strlen(linenumber)+2), whitestr(leftstr(sourceline->text,sourceline->column())), e.text);
+		fprintf(stderr, "%s%s^ %s\n", spacestr(strlen(linenumber)+2), sourceline->whitestr(), e.text);
 	}
 
 	if(ass.errors.count()>1) fprintf(stderr,"\nzasm: %i errors\n\n", (int)ass.errors.count());
