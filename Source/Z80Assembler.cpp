@@ -308,6 +308,9 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		// we are finished if it is still set after this assembly pass
 		final = true;
 
+		// set by #end -> source end before last line
+		end = false;
+
 		// Errors vorbereiten:
 		errors.purge();
 		//max_errors = 30;
@@ -331,7 +334,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		memcpy(temp_label_suffix,"$0",3);
 
 		// Source assemblieren:
-		for(uint i=0; i<source.count(); i++)
+		for(uint i=0; i<source.count() && !end; i++)
 		{
 			try
 			{
@@ -717,10 +720,17 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 		if(eq(w,"include"))	  asmInclude(q);	else
 		if(eq(w,"insert"))	  asmInsert(q);		else
 		if(eq(w,"local"))	  asmLocal(q);		else
-		if(eq(w,"endlocal"))  asmEndLocal(q);	else throw fatal_error("unknown assembler directive");
+		if(eq(w,"endlocal"))  asmEndLocal(q);	else
+		if(eq(w,"end"))		  asmEnd(q);		else throw fatal_error("unknown assembler directive");
 	}
 	catch(fatal_error& e) { throw e; }
 	catch(any_error& e)   { throw fatal_error(e.what()); }
+}
+
+
+void Z80Assembler::asmEnd(SourceLine&) throw(any_error)
+{
+	end = true;
 }
 
 

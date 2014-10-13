@@ -88,6 +88,7 @@ public:
 	uint		max_errors;
 	uint		pass;
 	bool		final;
+	bool		end;
 
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) throw(any_error);
@@ -103,6 +104,7 @@ private:
 	void	asmSegment		(SourceLine&,bool)			throw(any_error);
 	void	asmLocal		(SourceLine&)				throw(any_error);
 	void	asmEndLocal		(SourceLine&)				throw(any_error);
+	void	asmEnd			(SourceLine&)				throw(any_error);
 	void	asmInstr		(SourceLine&)				throw(any_error);
 
 //	void	store			(int n)						throw(any_error)	{ current_segment().store(n); }
