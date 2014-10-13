@@ -73,7 +73,7 @@ static cstr help =
 "  send bug reports to: kio@little-bat.de\n\n"
 
 "syntax:\n"
-"  zasm [-vwbx] [-i] inputfile [[-l] listfile] [[-o] outfile]\n\n"
+"  zasm [-vwbxs] [-i] inputfile [[-l] listfile] [[-o] outfile]\n\n"
 
 "examples:\n"
 "  zasm speccirom.asm\n"
@@ -84,6 +84,7 @@ static cstr help =
 "  -w  include label list in list file\n"
 "  -b  write output to binary file (default)\n"
 "  -x  write output in intel hex format\n\n"
+"  -s  silent: no summary on stderr\n\n"
 
 "If no listfile is given, then no list file is generated.\n"
 "The listfile may refer to a directory.\n"
@@ -102,6 +103,7 @@ int main( int argc, cstr argv[] )
 // options:
 	bool listv   = no;		// object code included in listing
 	bool listw   = no;		// label listing appended to listing
+	bool silent	 = no;		// no summary on stderr (except if the Ass is not even started due to file not found etc.)
 	char style	 ='b';		// 'b' / 'x' == default/binary/intel hex
 // filepaths:
 	cstr inputfile  = NULL;
@@ -128,6 +130,7 @@ int main( int argc, cstr argv[] )
 			{
 			case 'v': listv=yes; continue;
 			case 'w': listw=yes; continue;
+			case 's': silent=yes;continue;
 			case 'x': style='x'; continue;
 			case 'b': style='b'; continue;
 			case 'i': if(inputfile  || i==argc) goto h; else inputfile  = argv[i++]; continue;
@@ -162,34 +165,32 @@ int main( int argc, cstr argv[] )
 	Z80Assembler ass;
 	ass.assembleFile( inputfile, outputfile, listfile, listv, listw, style);
 
+	if(silent) return ass.errors.count()>0;		// 0=ok, 1=error(s)
+
 	if(ass.errors.count()==0)
 	{
 		fprintf(stderr,"zasm: no errors\n");
 		return 0; 	// 0 = ok
 	}
 
-// display errors:
+// show errors on stderr:
 	cstr current_file = NULL;
-	for(uint i=0;i<min(10u,ass.errors.count());i++)
+	for(uint i=0; i<min(10u,ass.errors.count()); i++)
 	{
 		Error const& e = ass.errors[i];
 		SourceLine* sourceline = e.sourceline;
-		if(!sourceline) { fprintf(stderr,"\n%s\n",e.text); continue; }
+		if(!sourceline) { if(current_file) fprintf(stderr,"\n"); current_file=NULL; fprintf(stderr,"--> %s\n",e.text); continue; }
 
 		cstr filename = sourceline->sourcefile;
-		if(filename!=current_file)	// note: compare pointers!
+		if(filename!=current_file)				// note: compare pointers!
 		{
 			current_file = filename;
-			if(filename && *filename) fprintf(stderr, "\nin file %s:\n", filename); else fprintf(stderr, "\n");
+			fprintf(stderr, "\nin file %s:\n", filename_from_path(filename));
 		}
 
-		if(filename && *filename)
-		{
-			cstr linenumber = numstr(sourceline->sourcelinenumber+1);
-			fprintf(stderr, "%s: %s\n", linenumber, sourceline->text);
-			fprintf(stderr, "%s%s^ %s\n", spacestr(strlen(linenumber)+2), whitestr(leftstr(sourceline->text,sourceline->column())), e.text);
-		}
-		else fprintf(stderr, "--> %s\n",e.text);
+		cstr linenumber = numstr(sourceline->sourcelinenumber+1);
+		fprintf(stderr, "%s: %s\n", linenumber, sourceline->text);
+		fprintf(stderr, "%s%s^ %s\n", spacestr(strlen(linenumber)+2), whitestr(leftstr(sourceline->text,sourceline->column())), e.text);
 	}
 
 	if(ass.errors.count()>1) fprintf(stderr,"\nzasm: %i errors\n\n", (int)ass.errors.count());

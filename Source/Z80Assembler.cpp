@@ -224,11 +224,18 @@ int Z80Assembler::getRegister(SourceLine& q)
 }
 
 
-// add error to errors for current file, line & column
+// set error for current file, line & column
 //
-void Z80Assembler::appendError( cstr text )
+void Z80Assembler::setError( any_error& e )
 {
-	errors.append( new Error(text, &current_sourceline()) );
+	errors.append( new Error(e.what(), &current_sourceline()) );
+}
+
+// set error without associated source line
+//
+void Z80Assembler::addError( cstr text )
+{
+	errors.append( new Error(text, NULL) );
 }
 
 
@@ -258,7 +265,6 @@ void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, bool v, bool
 
 	StrArray source;
 	source.append( catstr("#include ", quotedstr(sname)) );
-	source.append("");
 	assemble(source);
 
 	if(dname) writeTargetfile(dname,style);
@@ -334,20 +340,19 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 			}
 			catch(fatal_error& e)
 			{
-				appendError(e.what());
-				current_sourceline_index = source.count()-1;
+				setError(e);
 				return;
 			}
 			catch(any_error& e)
 			{
-				appendError(e.what());
+				setError(e);
 				if(errors.count()>max_errors) return;
 				if(pass>1) source[i].segment->skipExistingData(source[i].bytecount);
 			}
 		}
 
 		// Auf Fehler prüfen:
-		if(cond[0]!=no_cond) { appendError("#endif missing"); }
+		if(cond[0]!=no_cond) { addError("#endif missing"); }
 		if(errors.count()) return;
 		XXXASSERT(!cond_off);
 
@@ -381,7 +386,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		}
 	}
 
-	if(!final) { appendError("some labels failed to resolve"); return; }
+	if(!final) { addError("some labels failed to resolve"); return; }
 
 	if(XXXSAFE) for(uint i=0;i<segments.count();i++)
 	{
@@ -1879,13 +1884,13 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 		}
 
 		fd.write_str(sourceline.text); fd.write_char('\n');
-		while(e<errors.count() && errors[e].sourceline && errors[e].sourceline->sourcelinenumber==i) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }
+		while(e<errors.count() && errors[e].sourceline && errors[e].sourceline->sourcelinenumber==i) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }	// TODO: error column marker
 	}
 
 	while(e<errors.count()) { fd.write_fmt("***\t\t--> %s\n",errors[e++].text); }
 
 	// TODO: Labelliste
-	if(w) appendError("writeListfile: write label list: TODO");
+	if(w) addError("writeListfile: write label list: TODO");
 
 	fd.close_file();
 }
@@ -1893,7 +1898,7 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 
 void Z80Assembler::writeTargetfile(cstr dname,int style) throw(any_error)
 {
-	appendError("writeTargetfile: TODO");
+	addError("writeTargetfile: TODO");
 }
 
 

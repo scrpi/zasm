@@ -133,7 +133,8 @@ private:
 //	void	compressPageAce	(Array<uint8>&);
 //	void	compressPageZ80	(Array<uint8>&);
 
-	void	appendError		(cstr text);				// add error to errors for current file, line & column
+	void	setError		(any_error&);				// set error for current file, line & column
+	void	addError		(cstr text);				// add error without source line
 
 public:
 			Z80Assembler	();

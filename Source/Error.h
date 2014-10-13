@@ -38,8 +38,8 @@
 class Error
 {
 public:
-	cstr	text;
-	SourceLine* sourceline;
+	cstr		text;
+	SourceLine*	sourceline;			// reference to source line or NULL
 
 public:
 	Error(cstr text, SourceLine* sourceline);
