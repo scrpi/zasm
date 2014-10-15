@@ -68,6 +68,7 @@ Segment::Segment(cstr name, int address, int size, bool is_data, uint8 fillbyte,
 	address_valid(addr_valid),
 	size_valid(size_valid),
 	relocatable(no),
+	resizable(no),
 	dptr(0),
 	dptr_valid(yes),
 	dptr_address_valid(addr_valid)
@@ -90,6 +91,7 @@ Segment::Segment(cstr name, bool is_data, uint8 fillbyte )
 	address_valid(no),
 	size_valid(no),
 	relocatable(yes),
+	resizable(yes),
 	dptr(0),
 	dptr_valid(yes),
 	dptr_address_valid(no)
@@ -107,11 +109,17 @@ void Segment::validate_address_and_size() throw(syntax_error)
 		throw syntax_error(usingstr("segment size out of range: %i",(int)size));
 	}
 
+	if(size_valid && dptr_valid && dptr>size)
+	{
+		dptr_valid = no;
+		throw syntax_error("segment overflow");
+	}
+
 	if(address_valid && address!=(uint16)address && address!=(int16)address)
 	{
 		address_valid = no;
 		dptr_address_valid = no;
-		throw syntax_error(usingstr("segment base address out of range: %i",(int)address));
+		throw syntax_error(usingstr("segment address out of range: %i",(int)address));
 	}
 
 	if(address_valid && size_valid)
@@ -124,6 +132,7 @@ void Segment::validate_address_and_size() throw(syntax_error)
 
 
 /*	set segment start address
+	does not clear a 'relocatable' flag
 */
 void Segment::setAddress(int a) throw(syntax_error)
 {
@@ -142,13 +151,13 @@ void Segment::setAddress(int a) throw(syntax_error)
 	address = a;
 	address_valid = yes;
 	if(dptr_valid) dptr_address_valid = yes;
-	relocatable = no;
 
 	validate_address_and_size();
 }
 
 
 /*	set segment size
+	does not clear a 'resizable' flag
 */
 void Segment::setSize(uint n) throw(syntax_error)
 {
@@ -165,18 +174,35 @@ void Segment::setSize(uint n) throw(syntax_error)
 }
 
 
-/*	set segment start address or move dptr
-	if there is not yet stored any code in the segment, then set segment start address,
-	else insert space up to the new address
-	negative gap size (thus moving back dptr) is not allowed, because total size of segment is calculated from dptr
+/*	insert space up to the new address
+	negative gap size (moving back the address) is not allowed,
+	because total size of segment is calculated from dptr
 */
 void Segment::setOrigin( int32 addr, bool addr_valid ) throw(syntax_error)
 {
-	if(dptr_valid && dptr==0)	// set segment start address
-	{
-		if(addr_valid) setAddress(addr);
-		return;
-	}
+/*	Mit 'org' die Segment-Startadresse nachträglich zu verschieben, hat leider ein Problem:
+
+	• NOTE: Segment-Adressen definieren nicht die Position in der Ausgabedatei, sondern die logische Adresse,
+	  z.B.: 2 16kB-Segmente ab Adresse 0 in einer 32kB-Datei für 2 Memory-Pages!
+	• NOTE: Segmente werden in der Ausgabedatei ohne Zwischenraum aneinandergehängt!
+	• NOTE: Segment ohne gesetzte Adresse (relocatable): Die Adressen laufen vom vorhergehenden Segment weiter.
+	• NOTE: 'org' an beliebiger Stelle => Einfügen von Space bis zu dieser Adresse.
+
+	• Ein Programmierer, der 'org' als ersten Opcode in ein relozierbares Segment schreibt, kann das Einfügen
+	  von Space auch hier wünschen. So wird seine Code-Position auch zur entsprechenden physikalischen
+	  Position weitergestellt. Wollte er nur logisch andere Adressen, sollte er die Segment-Adresse setzen.
+	• Es kann unerwartet sein, wenn sich 'org' am Segment-Anfang anders verhält als mittendrin.
+
+	• SDCC: hier wird der Origin  mit '.org' nach '.area' gesetzt.
+	  Dies geschieht aber in der Datei 'crt0.s', die angepasst werden kann; und das Verhalten für '.org'
+	  kann ggf. anders sein als for 'org', sollte es vom Compiler selbst auch erzeugt werden.
+*/
+//	if(relocatable)
+//	{
+//		if(!(dptr_valid && dptr==0)) throw syntax_error("'org' in a relocatable segment must be the first instruction");
+//		if(addr_valid) setAddress(addr);
+//		return;
+//	}
 
 	// store space up to new address:
 
@@ -219,7 +245,11 @@ void Segment::setOrigin( int32 addr, bool addr_valid ) throw(syntax_error)
 void Segment::store( int byte ) throw(fatal_error)
 {
 	if(dptr<0x10000) core[dptr] = byte;
-	if(++dptr>size && dptr_valid && size_valid) { dptr_valid=no; throw fatal_error("segment overflow"); }
+	if(++dptr>size && dptr_valid && size_valid)
+	{
+		dptr_valid = no;
+		throw syntax_error("segment overflow");
+	}
 }
 
 /* store 2 bytes (z80 byte order: lsb first)
@@ -229,6 +259,7 @@ void Segment::storeWord( int n )
 	store(n);
 	store(n>>8);
 }
+
 
 /* store block of raw bytes
 */
@@ -240,6 +271,7 @@ void Segment::storeBlock( cptr data, int n ) throw(syntax_error)
 	if(dptr<0x10000) memcpy(&core[dptr], data, min((uint)n,0x10000-dptr));
 	if((dptr+=n)>size && dptr_valid && size_valid) { dptr_valid=no; throw syntax_error("segment overflow"); }
 }
+
 
 /* skip over existing data in pass≥2:
 */
@@ -269,6 +301,7 @@ void Segment::storeHexBytes(cptr data, int n ) throw(syntax_error)
 	}
 }
 
+
 /* store space
 */
 void Segment::storeSpace( int c, int sz, bool sz_valid ) throw(syntax_error)
@@ -288,6 +321,7 @@ void Segment::storeSpace( int c, int sz, bool sz_valid ) throw(syntax_error)
 	}
 }
 
+
 /* store space with default fillbyte
 */
 void Segment::storeSpace( int sz, bool sz_valid ) throw(syntax_error)
@@ -296,6 +330,10 @@ void Segment::storeSpace( int sz, bool sz_valid ) throw(syntax_error)
 }
 
 
+/*	rewind dptr to offset 0
+	used at start of next assembler pass
+	=> preserves valid segment address and size
+*/
 void Segment::rewind()
 {
 	dptr = 0;

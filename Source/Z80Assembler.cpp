@@ -287,18 +287,24 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 
 	target = NULL;
 
+	// setup labels:
 	labels.purge();
 	labels.append(new Labels(0));			// global_labels must exist
-	//local_labels_index = 0;
-	//local_blocks_count = 1;
-	//unresolved_temp_labels.purge();
-	//temp_labels.purge();
 
+	// setup segments:
 	segments.purge();
-	segments.append(new Segment("CODE_DEFAULT",no,0xff));	// current_segment must exist
-	//current_segment_ptr = &segments[0];
+	segments.append(new Segment("DEFAULT_CODE_SEGMENT",no,0xff));	// current_segment must exist
 
-	for(pass=1,final=no; pass<9 && !final; pass++)
+	// setup errors:
+	errors.purge();
+
+	// setup conditional assembly:
+	cond_off = 0x00;
+	cond[0] = no_cond;
+
+	// DOIT:
+	//
+	for(pass=1,final=no; pass<9 && !final && errors.count()==0; pass++)
 	{
 		// final: true = this may be the last pass.
 		// wird gelöscht, wenn:
@@ -311,34 +317,22 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		// set by #end -> source end before last line
 		end = false;
 
-		// Errors vorbereiten:
-		errors.purge();
-		//max_errors = 30;
-
-		// Cond. Assemblierung vorbereiten:
-		cond_off = 0x00;
-		cond[0] = no_cond;	// memset(cond,no_cond,sizeof(cond));
-
-		// Segmente vorbereiten:
+		// init segments:
 		current_segment_ptr = &segments[0];
-		for(uint i=0;i<segments.count();i++)
-		{
-			Segment& segment = segments[i];
-			segment.rewind();
-		}
+		for(uint i=0;i<segments.count();i++) { segments[i].rewind(); }
 
-		// Labels vorbereiten:
+		// init labels:
 		local_labels_index = 0;
 		local_blocks_count = 1;
 		temp_label_seen = no;
 		memcpy(temp_label_suffix,"$0",3);
 
-		// Source assemblieren:
+		// assemble source:
 		for(uint i=0; i<source.count() && !end; i++)
 		{
 			try
 			{
-				current_sourceline_index = i;	// req. for Errors and Labels
+				current_sourceline_index = i;	// req. for errors and labels
 				assembleLine(source[i]);
 			}
 			catch(fatal_error& e)
@@ -354,52 +348,64 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 			}
 		}
 
-		// Auf Fehler prüfen:
-		if(cond[0]!=no_cond) { addError("#endif missing"); }
+		if(end) { cond_off = 0x00; cond[0] = no_cond; }		// 'end' may occur within an #if condition
+
+		// bail out on errors:
 		if(errors.count()) return;
+		if(cond[0]!=no_cond) { addError("#endif missing"); return; }	// TODO: set error in '#if/#elif/#else' line
 		XXXASSERT(!cond_off);
 
-		// Segmente aneinanderhängen:
-		int32 data_address = 0; bool data_address_valid = yes;
-		int32 code_address = 0; bool code_address_valid = yes;
-		for(uint i=0;i<segments.count();i++)
+		try	// concatenate segments:
+		{	// => set segment address for relocatable segments
+			// => set segment size for resizable segments
+
+			int32 data_address = 0; bool data_address_valid = yes;	// for data segments
+			int32 code_address = 0; bool code_address_valid = yes;	// for code segments
+
+			for(uint i=0; i<segments.count(); i++)
+			{
+				Segment& seg = segments[i];
+				int32& seg_address		 = seg.is_data ? data_address		: code_address;
+				bool&  seg_address_valid = seg.is_data ? data_address_valid : code_address_valid;
+
+				if(seg.resizable)
+				{
+					if(seg.dptr_valid) seg.setSize(seg.dptr);
+				}
+				else
+				{
+					seg.storeSpace(seg.size-seg.dptr, seg.dptr_valid && seg.size_valid);
+				}
+
+				if(seg.relocatable)
+				{
+					if(seg_address_valid) seg.setAddress(seg_address);
+				}
+
+				seg_address_valid = seg.currentAddressValid();
+				seg_address = seg.currentAddress();
+
+			//	final = final && seg.currentAddressValid();	// this is not strictly neccessary, though if not true,
+			//	final = final && seg.address_valid;			// … most likely some label references are still not satisfied.
+				final = final && seg.size_valid;			// … might happen with unused (empty) segments.
+			}
+		}
+		catch(any_error& e)
 		{
-			Segment& segment = segments[i];
-			XXXASSERT(segment.dptr==segment.size || !segment.dptr_valid || !segment.size_valid);
-			XXXASSERT(!segment.address_valid || !segment.relocatable);
-
-			if(segment.dptr_valid) segment.setSize(segment.dptr);
-			if(segment.relocatable && segment.size_valid && segment.size==0) continue;	// unused segment
-
-			int32& address		 = segment.is_data ? data_address		: code_address;
-			bool&  address_valid = segment.is_data ? data_address_valid : code_address_valid;
-
-			if(segment.relocatable && address_valid) segment.setAddress(address);
-
-			if(segment.currentAddressValid())
-			{
-				address = segment.currentAddress();
-				address_valid = yes;
-			}
-			else if(segment.address_valid && segment.size_valid)
-			{
-				address = segment.address + segment.size;
-				address_valid = yes;
-			}
+			addError(e.what());
+			return;
 		}
 	}
 
 	if(!final) { addError("some labels failed to resolve"); return; }
 
-	if(XXXSAFE) for(uint i=0;i<segments.count();i++)
-	{
-		Segment& s = segments[i];
-		if(i==0 && s.size==0) continue;
-		ASSERT(s.address_valid);
-		ASSERT(s.size_valid);
-		ASSERT(s.currentAddressValid());
-		ASSERT(!s.relocatable);
-	}
+//	if(XXXSAFE) for(uint i=0;i<segments.count();i++)
+//	{
+//		Segment& s = segments[i];
+//		ASSERT(s.address_valid);
+//		ASSERT(s.size_valid);
+//		ASSERT(s.currentAddressValid());
+//	}
 }
 
 
@@ -1920,7 +1926,7 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 }
 
 
-void Z80Assembler::writeTargetfile(cstr dname,int style) throw(any_error)
+void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
 {
 	addError("writeTargetfile: TODO");
 }

@@ -43,8 +43,6 @@ class Z80Assembler;
 class Segment
 {
 public:
-	Z80Assembler* assembler;
-
 	cstr		name;
 	bool		is_data;				// => no actual code storing allowed
 	uint8		fillbyte;				// $FF for ROM else $00
@@ -53,9 +51,10 @@ public:
 
 	int32		address;				// segment start address
 	uint32		size;					// segment size
-	bool		address_valid;			// segment base address
-	bool		size_valid;				// segment size
+	bool		address_valid;			// segment start address valid
+	bool		size_valid;				// segment size valid
 	bool		relocatable;			// address has not been explicitely set
+	bool		resizable;				// size has not been explicitely set
 
 	uint32		dptr;					// deposition pointer (index)
 	bool		dptr_valid;				// code deposition position inside segment
