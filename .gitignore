@@ -10,3 +10,5 @@ build-Linux64-Debug/
 build-OSX-Release/
 build-Linux32-Release/
 build-Linux64-Release/
+Examples/sdcc/device/lib/z80/
+Examples/sdcc/device/examples/
