@@ -5,7 +5,7 @@
 ;
 ; space is filled with 0x00
 ;
-; The first code segment must contain the z80 header data and must be properly set up. 
+; The first code segment must contain the z80 header data and must be properly set up.
 ; Header size may be 30 (v1, deprecated), 55 (v2.01) or 86 to 88 (v3 recommended).
 
 ; Ram segments have an additional argument: the pageID. see pageID description.
@@ -109,11 +109,11 @@ z80maxlen   z80v3len+3
 					; For example, bit 6=1 after an OUT 31,13 (=2*6+1)
 					; If in 128 mode, contains last OUT to 7ffd (paging control)
 					; if timex ts2068: last out to port 244
-	
+
 	db		0		; if1paged or port_ff
 					; !=0 means: interface1 rom is paged in
 					; if timex ts2068: last out to port 255
-	
+
 	db		-1		; rldiremu		Bit 0: 1 if R register emulation on
 					;				Bit 1: 1 if LDIR emulation on
 					;				Bit 2: AY sound in use, even on 48K machines
@@ -121,18 +121,18 @@ z80maxlen   z80v3len+3
 					;	*zxsp*		Bit 5: if zxsp, then present a ZX Spectrum Plus
 					;				Bit 6: (if bit 2 set) Fuller Audio Box emulation
 					;				Bit 7: Modify hardware (see below)
-								
+
 	db		0		; port_fffd		Last OUT to fffd (soundchip register number)
 	ds		16		; soundreg[16]	Contents of the sound chip registers
 
 ; Z80 version 3.0:
 
-	db		0,0,0	; t_l,t_m,t_h		T state counter	
-					; 	The hi T state counter counts up modulo 4. Just after the ULA generates its 
+	db		0,0,0	; t_l,t_m,t_h		T state counter
+					; 	The hi T state counter counts up modulo 4. Just after the ULA generates its
 					;	50 Hz interrupt, it is 3, and is increased by one every 5 emulated milliseconds.
 					; 	In these 1/200s intervals, the low T state counter counts down from 17471 to 0 (17726 in 128K modes),
 					; 	which make a total of 69888 (70908) T states per frame.
-	db		0		; spectator			Flag byte used by Spectator QL Specci emulator. 
+	db		0		; spectator			Flag byte used by Spectator QL Specci emulator.
 					; 	*zxsp*			ram size (in kB) for b&w models ID 76 to 83. 0 = default ram size (no memory expansion).
 	db		0		; mgt_paged			0xFF if MGT Rom paged
 	db		0		; multiface_paged	0xFF if Multiface Rom paged. Should always be 0.
@@ -158,8 +158,8 @@ z80maxlen   z80v3len+3
 					;	*zxsp*			Bit 5: port 239: Comms out bit
 					;	*zxsp*			Bit 6: port 239: CTS out bit
 					;	*zxsp*			Bit 7: port 247: Data out bit
-					
-; 	db		0		; spectra_port_7fdf	if SPECTRA present: 
+
+; 	db		0		; spectra_port_7fdf	if SPECTRA present:
 					;	*zxsp*			last out to port 7FDF (colour mode register)
 
 
@@ -172,26 +172,26 @@ z80maxlen   z80v3len+3
 
 ; The pages are numbered, depending on the hardware mode, in the following way:
 ;
-;       PageID	48 mode				128 mode			SamRam mode
-;       0		48K rom				rom (basic)			48K rom
-;       1		Interface I, Disciple or Plus D rom, according to setting
-;		2							rom (reset)			samram rom (basic)
-;       3		-					page 0				samram rom (monitor,..)
-;       4		8000-bfff			page 1				Normal 8000-bfff
-;       5		c000-ffff			page 2				Normal c000-ffff
-;       6		-					page 3				Shadow 8000-bfff
-;       7		-					page 4				Shadow c000-ffff
-;       8		4000-7fff			page 5				4000-7fff
-;       9		-					page 6				-
-;       10		-					page 7				-
-;       11		Multiface rom		Multiface rom		-
-;*zxsp*	12		SPECTRA rom			SPECTRA rom			SPECTRA rom
-;*zxsp*	13		SPECTRA ram[0]		SPECTRA ram[0]		SPECTRA ram[0]
-;*zxsp*	14		SPECTRA ram[1]		SPECTRA ram[1]		SPECTRA ram[1]
+;       PageID	48 mode				128 mode			SamRam mode			varying_pagesize
+;       0		48K rom				rom (basic)			48K rom					-
+;       1		Interface I, Disciple or Plus D rom, according to setting		-
+;		2							rom (reset)			samram rom (basic)		-
+;       3		-					page 0				samram rom (monitor)	1k
+;       4		8000-bfff			page 1				Normal 8000-bfff		2k
+;       5		c000-ffff			page 2				Normal c000-ffff		4k
+;       6		-					page 3				Shadow 8000-bfff		8k
+;       7		-					page 4				Shadow c000-ffff		16k
+;       8		4000-7fff			page 5				4000-7fff				32k
+;       9		-					page 6				-						64k
+;       10		-					page 7				-						128k
+;       11		Multiface rom		Multiface rom		-						-
+;*zxsp*	12		SPECTRA rom			SPECTRA rom			SPECTRA rom				-
+;*zxsp*	13		SPECTRA ram[0]		SPECTRA ram[0]		SPECTRA ram[0]			-
+;*zxsp*	14		SPECTRA ram[1]		SPECTRA ram[1]		SPECTRA ram[1]			-
 ;
-;   In 16k mode, only page 8 is saved.					
+;   In 16k mode, only page 8 is saved.
 ;   In 48k mode, pages 4, 5 and 8 are saved.
-;   In SamRam mode, pages 4 to 8 must be saved.	
+;   In SamRam mode, pages 4 to 8 must be saved.
 ;   In 128 mode, all pages from 3 to 10 are saved.
 ;
 ;   The 128 has a memory map like:   Rom [switchable];   Ram 5;   Ram 2;   Ram [switchable]
@@ -201,7 +201,7 @@ z80maxlen   z80v3len+3
 ;	b&w models ID 76 to 83 (TK85, TS1000, TS1500, ZX80, ZX81, Jupiter ACE) have a 'varying ram size'.
 ;	their ram is saved in one block of 1k, 2k, 4k, 8k, 16k, 32k, 64k and 128k each as required to sum up to the actual ram size.
 ;	maximum ram size which can be saved this way is 255k: 1+2+4+8+16+32+64+128=255. (actually they have 64k at most.)
-;	these ram pages may occur in any order. They are concatenated in sequence of occurance when loaded, 
+;	these ram pages may occur in any order. They are concatenated in sequence of occurance when loaded,
 ;	so e.g. for a 48k ram you have the choice to save the 16k or the 32k chunk first, whichever fits your memory layout better.
 
 ; page IDs:
@@ -271,7 +271,7 @@ code_start:
 
 
 ; ---------------------------------------------------
-;		fast ram: frequently used code, 
+;		fast ram: frequently used code,
 ;		variables and machine stack
 ;		must be segmented into 16k chunks for .z80 file
 ;		pageIDs for 48k Specci (set in header.model above)
