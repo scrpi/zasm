@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -170,8 +170,9 @@ cstr SourceLine::nextWord()
 		if (*p==c) p++;
 		break;
 
-	case '$':								// pc or hex number
-		while(is_hex_digit(*p)) p++;
+	case '$':								// $, $$ or hex number
+		if(*p=='$') p++;
+		else while(is_hex_digit(*p)) p++;
 		break;
 
 	case '%':								// binary number

@@ -26,7 +26,7 @@
 
 
 #define SAFE 3
-#define LOG 1
+#define LOG 2
 #include <sys/time.h>
 #include "unix/FD.h"
 #include "unix/files.h"
@@ -34,9 +34,11 @@
 #include "Segment.h"
 #include "Z80/Z80opcodes.h"
 #include "Templates/HashMap.h"
-
+#include "Z80Head.h"
+#include "helpers.h"
 
 // Priorities for Z80Assembler::value(…)
+//
 enum
 { 	pAny = 0,		// whole expression: up to ')' or ','
 	pCmp, 			// comparisions:	 lowest priority
@@ -55,6 +57,13 @@ static double now()
 	return tv.tv_sec + tv.tv_usec/1000000.0;
 }
 
+
+// name for default code segment, if no #target is given:
+//
+const char DEFAULT_CODE_SEGMENT[] = "DEFAULT_CODE_SEGMENT";
+
+
+static void compressPageAce( Array<uint8>& zbu );
 
 
 
@@ -266,9 +275,9 @@ void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, bool v, bool
 	StrArray source;
 	source.append( catstr("#include ", quotedstr(sname)) );
 	assemble(source);
-
-	if(dname) writeTargetfile(dname,style);
-	if(lname) writeListfile(lname, v, w);
+	if(errors.count()==0) try { checkTargetfile(); } catch(any_error& e) { addError(e.what()); }
+	if(lname) try { writeListfile(lname, v, w); } catch(any_error& e) { addError(e.what()); }
+	if(errors.count()==0 && dname) try { writeTargetfile(dname,style); } catch(any_error& e) { addError(e.what()); }
 }
 
 
@@ -281,6 +290,8 @@ void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, bool v, bool
 */
 void Z80Assembler::assemble(StrArray& sourcelines) throw()
 {
+	XLogLine("assemble: %u lines", sourcelines.count());
+
 	source.purge();
 	for(uint i=0;i<sourcelines.count();i++) { source.append(new SourceLine("", i, dupstr(sourcelines[i]))); }
 	//current_sourceline_index = 0;
@@ -293,7 +304,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 
 	// setup segments:
 	segments.purge();
-	segments.append(new Segment("DEFAULT_CODE_SEGMENT",no,0xff));	// current_segment must exist
+	segments.append(new Segment(DEFAULT_CODE_SEGMENT,no,0xff,no,yes));	// current_segment must exist
 
 	// setup errors:
 	errors.purge();
@@ -303,7 +314,6 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 	cond[0] = no_cond;
 
 	// DOIT:
-	//
 	for(pass=1,final=no; pass<9 && !final && errors.count()==0; pass++)
 	{
 		// final: true = this may be the last pass.
@@ -348,33 +358,32 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 			}
 		}
 
-		if(end) { cond_off = 0x00; cond[0] = no_cond; }		// 'end' may occur within an #if condition
-
-		// bail out on errors:
+		// stop on errors:
 		if(errors.count()) return;
-		if(cond[0]!=no_cond) { addError("#endif missing"); return; }	// TODO: set error in '#if/#elif/#else' line
+		if(cond[0]!=no_cond) { addError("#endif missing"); return; }	// TODO: set error marker in '#if/#elif/#else' line
 		XXXASSERT(!cond_off);
 
-		try	// concatenate segments:
-		{	// => set segment address for relocatable segments
-			// => set segment size for resizable segments
-
-			int32 data_address = 0; bool data_address_valid = yes;	// for data segments
-			int32 code_address = 0; bool code_address_valid = yes;	// for code segments
+		// concatenate segments:
+		// => set segment address for relocatable segments
+		// => set segment size for resizable segments
+		try
+		{
+			uint32 data_address = 0; bool data_address_valid = yes;	// for data segments
+			uint32 code_address = 0; bool code_address_valid = yes;	// for code segments
 
 			for(uint i=0; i<segments.count(); i++)
 			{
 				Segment& seg = segments[i];
-				int32& seg_address		 = seg.is_data ? data_address		: code_address;
-				bool&  seg_address_valid = seg.is_data ? data_address_valid : code_address_valid;
+				uint32& seg_address		  = seg.is_data ? data_address		 : code_address;
+				bool&   seg_address_valid = seg.is_data ? data_address_valid : code_address_valid;
 
 				if(seg.resizable)
 				{
-					if(seg.dptr_valid) seg.setSize(seg.dptr);
+					if(seg.dpos_valid) seg.setSize(seg.dpos);
 				}
 				else
 				{
-					seg.storeSpace(seg.size-seg.dptr, seg.dptr_valid && seg.size_valid);
+					if(seg.dpos_valid && seg.size_valid) seg.storeSpace(seg.size-seg.dpos, true);
 				}
 
 				if(seg.relocatable)
@@ -382,11 +391,11 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 					if(seg_address_valid) seg.setAddress(seg_address);
 				}
 
-				seg_address_valid = seg.currentAddressValid();
-				seg_address = seg.currentAddress();
+				seg_address_valid = seg.physicalAddressValid();
+				seg_address       = seg.physicalAddress();
 
-			//	final = final && seg.currentAddressValid();	// this is not strictly neccessary, though if not true,
-			//	final = final && seg.address_valid;			// … most likely some label references are still not satisfied.
+			//	final = final && seg.logicalAddressValid();	// this is not strictly neccessary, though if not true,
+			//	final = final && seg.physicalAddressValid();// … most likely some label references are still not satisfied.
 				final = final && seg.size_valid;			// … might happen with unused (empty) segments.
 			}
 		}
@@ -397,15 +406,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		}
 	}
 
-	if(!final) { addError("some labels failed to resolve"); return; }
-
-//	if(XXXSAFE) for(uint i=0;i<segments.count();i++)
-//	{
-//		Segment& s = segments[i];
-//		ASSERT(s.address_valid);
-//		ASSERT(s.size_valid);
-//		ASSERT(s.currentAddressValid());
-//	}
+	if(!final) { addError("some labels failed to resolve"); return; }		// TODO: list them
 }
 
 
@@ -466,7 +467,7 @@ int32 Z80Assembler::value( SourceLine& q, int prio, bool& valid ) throw(any_erro
 		case '~':	n = ~value(q,pUna,valid); goto op;		// complement
 		case '!':	n = !value(q,pUna,valid); goto op;		// negation
 		case '(':	n =  value(q,pAny,valid); q.expect(')'); goto op;	// brackets
-		case '$':	n = currentAddress();	// pc
+		case '$':	n = currentAddress();					// $ = "logical" address at current code position
 					valid = valid && currentAddressValid();
 					if(!valid) final = false; goto op;
 		}
@@ -475,11 +476,22 @@ int32 Z80Assembler::value( SourceLine& q, int prio, bool& valid ) throw(any_erro
 	{
 		char c = 0;
 
-		if (w[0]=='$')				// hex number
+		if (w[0]=='$')				// hex number or $$
 		{
 			w++;
-hex_number:	while( is_hex_digit(*w) ) { n = (n<<4)+(*w&0x0f); if(*w>'9') n+=9; w++; }
-			if(w[c!=0]==0) goto op; else goto syntax_error;
+			if(*w=='$')				// $$ = "physical" address of current code position  (segment.address+dpos)
+			{
+				w++;
+				XXASSERT(*w==0);
+				n = realAddress();	// pc: real address = segment.address + dpos
+				valid = valid && realAddressValid();
+				if(!valid) final = false; goto op;
+			}
+			else					// hex number
+			{
+hex_number:		while( is_hex_digit(*w) ) { n = (n<<4)+(*w&0x0f); if(*w>'9') n+=9; w++; }
+				if(w[c!=0]==0) goto op; else goto syntax_error;
+			}
 		}
 		else if(w[0]=='%')			// binary number
 		{
@@ -832,13 +844,25 @@ void Z80Assembler::asmEndif(SourceLine&) throw(any_error)
 
 
 /*	#target <nikname>
-	known targets are: 'ROM', 'BIN', 'Z80', 'SNA', 'TAP', 'TAPE', 'O', 'P', '80', '81', 'ACE'
+	known targets are: 'ROM', 'BIN', 'Z80', 'SNA', 'TAP', 'TAPE', 'O', 'P', '80', '81', 'P81', 'ACE'
+	note: if #target is defined then the DEFAULT_CODE_SEGMENT
+		  will be deleted when the first #code or #data segment is defined
 */
 void Z80Assembler::asmTarget( SourceLine& q ) throw(any_error)
 {
-	if(pass>1) q.skip_to_eol();
-	else if(target) throw fatal_error("#target redefined");
-	else { target = upperstr(q.nextWord()); if(!is_idf(*target)) throw syntax_error("target name expected"); }
+	if(pass>1) { q.skip_to_eol(); return; }
+	if(target) throw fatal_error("#target redefined");
+
+	if(!current_segment_ptr->isAtStart() ||				// already some code defined
+			current_segment_ptr->org_valid)	// org defined
+		throw fatal_error("#target must defined before first opcode");
+
+	target = upperstr(q.nextWord());
+	if(!contains(" ROM BIN Z80 SNA TAP TAPE O P 80 81 P81 ACE ",catstr(" ",target," ")))
+		throw syntax_error("target name expected");
+
+	// fix fillbyte in case no segments are defined: (not recommended!)
+	current_segment_ptr->fillbyte = eq(target,"ROM") ? 0xff : 0x00;
 }
 
 
@@ -880,53 +904,61 @@ void Z80Assembler::asmInsert( SourceLine& q ) throw(any_error)
 
 /*	#code <NAME> [,<start>] [,<size>] [,flags]
 	#data <NAME> [,<start>] [,<size>] [,flags]
-	on first occurance start and size may be defined
-	on subsequent re-opening of segment redefining start and size is not allowed
+	on first occurance start and size and, if required, flags may be defined
+	<start> may be '*' for relocatable (append to prev. segment)
+	<size>  may be '*' for resizable   (shrink to fit)
+	on subsequent re-opening of segment no arguments are allowed
 */
 void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 {
-	if(target==NULL) target = "ROM";
+	// wenn #code oder #data benutzt werden, muss #target gesetzt worden sein:
+	if(!target) throw fatal_error("#target declaration missing");
 
-	cstr name = upperstr(q.nextWord());		// TODO: allow segment name with "-" without req. to quote name
-	if(*name=='"') name = unquotedstr(name);
-	else if(!is_letter(*name) && *name!='_') throw syntax_error("segment name expected");
-	if(!q.testEol() && q.peekChar()!=',') q.testComma();
-
-	bool  address_is_valid = no;
-	int32 address = 0;
-	bool  size_is_valid = no;
-	int32 size = 0x10000;
-
+	cstr name = upperstr(q.nextWord());
+	if(!is_letter(*name) && *name!='_') throw syntax_error("segment name expected");
 	Segment* segment = segments.find(name);
+	if(pass==1 ? segment!=NULL : q.peekChar()!=',') return;	// --> expect eol
+
+	int32 address	= 0;
+	int32 size		= 0;
+	int32 flags		= 0;
+	bool  address_is_valid	= no;
+	bool  size_is_valid		= no;
+	bool  flags_is_valid	= no;
+	bool  relocatable		= yes;
+	bool  resizable			= yes;
 
 	if(q.testComma())
 	{
-		if(pass==1 && segment!=NULL) throw syntax_error("segment redefined");
-
-		address = value(q,pAny,address_is_valid=yes);
+		relocatable = q.testChar('*');
+		if(!relocatable) address = value(q, pAny, address_is_valid=yes);
 	}
 
 	if(q.testComma())
 	{
-		size = value(q,pAny,size_is_valid=yes);
+		resizable = q.testChar('*');
+		if(!resizable) size = value(q, pAny, size_is_valid=yes);
 	}
 
-	if(segment)	// segment already exists
+	if(q.testComma())
 	{
-		if(size_is_valid) segment->setSize(size);			// throws
-		if(address_is_valid) segment->setAddress(address);	// throws
-		// note: Das Anpassen aller echten Labels in diesem Segment ist leider nutzlos,
-		// weil sie dadurch nicht valid werden, wenn wir nicht auch noch defs etc. genau parsen wollen...
+		flags = value(q, pAny, flags_is_valid=yes);
+		if(flags_is_valid && flags!=(uint8)flags) throw syntax_error("value out of range");
 	}
-	else		// new segment (pass1)
+
+	if(segment==NULL)	// new segment in pass 1
 	{
 		XXXASSERT(pass==1);
-		uint8 fillbyte = !is_data && eq(target,"ROM") ? 0xFF : 0x00;
-		segment = new Segment(name,address,size,is_data,fillbyte,address_is_valid,size_is_valid);	// throws
+
+		uint8 fillbyte = is_data || ne(target,"ROM") ? 0x00 : 0xFF;
+		segment = new Segment(name,is_data,fillbyte,relocatable,resizable);
 		segments.append(segment);
 	}
-
 	current_segment_ptr = segment;
+
+	if(address_is_valid) { segment->setAddress(address); segment->setOrigin(address,yes); }	// throws
+	if(size_is_valid)    { segment->setSize(size); }			// throws
+	if(flags_is_valid)   { segment->setFlag(flags); }			// throws
 }
 
 
@@ -1557,7 +1589,14 @@ wlen3:
 	case ' res':	i = RES0_B; goto bit;
 	case ' set':	i = SET0_B; goto bit;
 	case ' dec':	i = 8; goto inc;
-	case ' org':	n = value(q, pAny, v=1); setOrigin(n,v); return;
+	case ' org':
+	{
+		// org <value>	; set "logical" code address
+		// org $$		; $$ = "physical" code address = segment.address + dpos
+		n = value(q, pAny, v=1);
+		current_segment().setOrigin(n,v);
+		return;
+	}
 	case ' rst':
 	{
 		n = value(q,pAny,v=1);
@@ -1743,7 +1782,7 @@ wlen4:
 	case 'defs':	// space
 	{
 ds:		n = value(q,pAny,v=1);
-		if(q.testComma()) { bool u=1; storeSpace(value(q,pAny,u),n,v); } else storeSpace(n,v);
+		if(q.testComma()) { bool u=1; storeSpace(n,v,value(q,pAny,u)); } else storeSpace(n,v);
 		return;
 	}
 	case 'defw':
@@ -1859,6 +1898,8 @@ ill_dest:		throw syntax_error("illegal destination");
 
 void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 {
+	XLogLine("writeListfile %s, %s%s", listpath, v?"v":"", w?"w":"");
+
 	XXXASSERT(listpath && *listpath);
 	XXXASSERT(source.count()); 	// da muss zumindest das selbst erzeugte #include in Zeile 0 drin sein
 
@@ -1926,12 +1967,117 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 }
 
 
-void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
+/*	check segments[] for #target
+*/
+void Z80Assembler::checkTargetfile() throw(any_error)
 {
-	addError("writeTargetfile: TODO");
+	XLogLine("checkTargetfile");
+
+	// Prevent empty output:
+	if(segments.totalSize()==0) throw syntax_error("code size = 0");
+
+	// Move all code segments before all data segments:
+	for(uint i=1; i<segments.count(); i++)
+	{
+		if(segments[i].isData()) continue;
+		for(int j=i-1; j>=0 && segments[j].isData(); j--) kio::swap(segments[j],segments[j+1]);
+	}
+
+	// remove empty DEFAULT_CODE_SEGMENT:
+	XXXASSERT(segments[0].isCode());
+	XXXASSERT(segments[0].size>0 || (segments.count()>1 && segments[0].name==DEFAULT_CODE_SEGMENT));
+	if(segments[0].size==0) segments.remove((uint)0);
+
+	if(target==NULL) target="ROM";
+	if(eq(target,"ROM") || eq(target,"BIN")) checkBinFile();
+	else if(eq(target,"SNA")) checkSnaFile();
+	else if(eq(target,"Z80")) checkZ80File();
+	else if(eq(target,"ACE")) checkAceFile();
+	else if(startswith(target,"TAP")) checkTapFile();
+	else if(eq(target,"O")||eq(target,"80")) checkZX80File();
+	else if(eq(target,"P")||eq(target,"81")||eq(target,"P81")) checkZX81File();
+	else throw syntax_error("internal error: checkTargetfile: unknown target");
 }
 
 
+/*	write segments[] to output file
+*/
+void Z80Assembler::writeTargetfile(cstr dname, char style) throw(any_error)
+{
+	XXXASSERT(dname!=NULL);
+	XLogLine("writeTargetfile %s, '%c'", dname, style);
+
+	if(target==NULL) target="ROM";
+	cstr ext = lowerstr(target);
+	if(style=='x' && (eq(ext,"rom") || eq(ext,"bin"))) ext = "hex";
+
+	if(endswith(dname,".$")) dname = catstr(leftstr(dname,strlen(dname)-1),ext);
+	FD fd(dname,'w');	// create & open file for writing
+
+	if(eq(ext,"rom") || eq(ext,"bin")) writeBinFile(fd);
+	else if(eq(ext,"hex")) writeHexFile(fd);
+	else if(eq(ext,"sna")) writeSnaFile(fd);
+	else if(eq(ext,"z80")) writeZ80File(fd);
+	else if(eq(ext,"ace")) writeAceFile(fd);
+	else if(startswith(ext,"tap")) writeTapFile(fd);
+	else if(eq(ext,"o")||eq(ext,"80")) writeZX80File(fd);
+	else if(eq(ext,"p")||eq(ext,"81")||eq(ext,"p81")) writeZX81File(fd);
+	else throw syntax_error("internal error: writeTargetfile: unknown target");
+}
+
+
+/*	check segments[] for target "TAP":
+	verify that all tape blocks have a flag
+*/
+void Z80Assembler::checkTapFile() throw(any_error)
+{
+	for(uint i=0; i<segments.count() && segments[i].isCode(); i++)
+	{
+		Segment& s = segments[i];
+		if(!s.flag_valid) throw syntax_error(usingstr("segment %s: flag missing", s.name));
+		if(s.size==0)     throw syntax_error(usingstr("segment %s: size = 0", s.name));
+		if(s.size>0xfeff) throw syntax_error(usingstr("segment %s: size = %u (max = 0xfeff)", s.name, s.size));
+	}
+}
+
+
+void Z80Assembler::checkSnaFile() throw(any_error)
+{
+	throw syntax_error("checkSnaFile: TODO");
+}
+
+void Z80Assembler::checkAceFile() throw(any_error)
+{
+	throw syntax_error("checkAceFile: TODO");
+}
+
+void Z80Assembler::checkZX80File() throw(any_error)
+{
+	throw syntax_error("checkZX80File: TODO");
+}
+
+void Z80Assembler::checkZX81File() throw(any_error)
+{
+	throw syntax_error("checkZX81File: TODO");
+}
+
+
+
+
+
+void Z80Assembler::checkZ80File() throw(any_error)
+{
+	throw syntax_error("checkZ80File: TODO");
+}
+
+
+/*	write segments[] to .z80 file
+	no error checking!
+*/
+void Z80Assembler::writeZ80File(FD& fd) throw(any_error)
+{
+	throw syntax_error("writeZ80File: TODO");
+}
 
 
 
@@ -2022,92 +2168,6 @@ static char z80_dflt[] = {	0,0,0,0,0,0,0,0,0,0,0,0,0x3f,0,7<<1,0,0,0,0,0,0,0,0,0
 							0,23,0,0,0,0,0,7,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
  							0,0,0,0,0,0,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 							0	};
-
-
-/* ==========================================================
-				z80 assembler specific methods
-========================================================== */
-
-/*	compress ram page for Jupiter Ace
-*/
-void Z80Assembler::compressPageAce( Array<uint8>& zbu )
-{
-	uint   n  = zbu.count();
-	uint8  bu[n]; memcpy(bu,zbu.getData(),n);
-	uint8* z  = 0;
-	uint8* q  = bu;
-	uint8* qe = bu + n;
-
-// Zielgröße berechnen:
-	while(q<qe)
-	{
-		uint8 c = *q++;
-		uint  n = 1; while(q<qe && *q==c && n<240) { q++; n++; }
-		z += c==0xed || n>3 ? 3 : n;
-	}
-
-// Array resizen:
-	zbu.purge();
-	zbu.grow((size_t)z);
-
-// Daten komprimieren:
-	z = zbu.getData();
-	q = bu;
-	qe = bu+n;
-
-	while(q<qe)
-	{
-		uint8 c = *q++;
-
-		uint n=1; while(q<qe && *q==c && n<240) { q++; n++; }
-		if(c==0xed || n>3)
-		{
-			*z++ = 0xed;
-			*z++ = n;
-			*z++ = c;
-		}
-		else
-		{
-			while(n--) *z++ = c;
-		}
-	}
-}
-
-/*	compress .z80 block v2.01 or later
-	block layout:
-		dc.w		length of data (without this header; low byte first)
-		dc.b		page number of block
-		dc.s		compressed data follows
-	compression scheme:
-		dc.b $ed, $ed, count, char
-*/
-static uint8* compress_z80(uint id, uint8 const* q, uint qsize, uint8* z)
-{
-	uint8 const* qe = q + qsize;
-	uint8* za = z;
-	z += 3;
-
-	while(q<qe)
-	{
-		uint8 c = *q++;
-		if(q==qe || *q!=c)		// single byte
-		{
-			*z++ = c;
-			if(c==0xed && q+2<=qe && *q==*(q+1)) { *z++ = *q++; }
-		}
-		else					// sequence of same bytes
-		{
-			int n=1; while(n<255 && q<qe && *q==c) { n++; q++; }
-			if(n>=4 || c==0xed)	{ *z++ = 0xed; *z++ = 0xed; *z++ = n; *z++ = c; }	// compress ?
-			else				{ while(n--) *z++ = c; }							// don't compress
-		}
-	}
-
-	poke2Z(za,z-za-3);			// data len
-	za[2] = id;					// block id
-
-	return z;
-}
 
 
 void Z80Assembler::compressPageZ80(Array<uint8>& qbu)
@@ -2446,110 +2506,6 @@ void Z80Assembler::handleCodeZ80()
 }
 
 
-void Z80Assembler::handleEndZ80()
-{
-	XXXASSERT(target==' z80');
-	XXXASSERT(targetstyle=='b');
-
-	if(!dest_bu) throw fatal_error("#head segment expected");
-	if(in_head) throw fatal_error("#code segment expected");
-
-	Assembler::handleEnd(no);
-}
-
-
-
-/* ==============================================================
-		AssDirect() virtual method
-		handle assembler directive
-============================================================== */
-
-
-bool Z80Assembler::assDirect( cstr w )
-{
-// check for conditional assembly off:
-	if (cond_off) return Assembler::assDirect(w);
-
-// #target:
-	if(eq(w,"target"))
-	{
-		Assembler::assDirect(w);
-
-		switch(target)
-		{
-		case 'tape':	target = ' tap';
-		case    'o':
-		case    'p':
-		case '  80':
-		case '  81':
-		case ' tap':
-		case ' sna':
-		case ' z80': 	in_head = false;
-		case ' ace':
-		case ' bin':
-		case ' rom':	return true;
-		default:		throw syntax_error("unknown #target");
-		}
-	}
-
-// #head:
-	if(eq(w,"head"))
-	{
-		switch(target)
-		{
-		case     0 :	throw syntax_error("#head segment without #target");
-		case ' sna':	handleHeadSna(); return true;
-		case ' z80':	handleHeadZ80(); return true;
-		default:		throw syntax_error("#head segment not allowed for this #target");
-		}
-	}
-
-// #code:
-	if(eq(w,"code"))
-	{
-		switch(target)
-		{
-		case ' sna':	handleCodeSna(); return true;
-		case ' z80':	handleCodeZ80(); return true;
-		case ' tap':	handleCodeTap(); return true;
-		case    'o':
-		case '  80':	handleCodeZX80(); return true;
-		case    'p':
-		case '  81':	handleCodeZX81(); return true;
-		case ' ace':	handleCodeAce();  return true;
-		default:		break; // call super
-		}
-	}
-
-// #end:
-	if(eq(w,"end"))
-	{
-		switch(target)
-		{
-		case ' sna':	handleEndSna(); return true;
-		case ' z80':	handleEndZ80(); return true;
-		case ' tap':	handleEndTap(); return true;
-		case    'o':
-		case '  80':	handleEndZX80(); return true;
-		case    'p':
-		case '  81':	handleEndZX81(); return true;
-		case ' ace':	handleEndAce();  return true;
-		default:		break; // call super
-		}
-	}
-
-	/*	no recognized #directive
-		=> try general Ass #directives
-	*/
-	return Assembler::assDirect(w);
-}
-
-
-void Z80Assembler::compressPage( Array<uint8>& zbu )
-{
-	if(target==' ace') compressPageAce(zbu);
-	if(target==' z80') compressPageZ80(zbu);
-}
 
 
 

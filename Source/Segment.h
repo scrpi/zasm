@@ -43,30 +43,28 @@ class Z80Assembler;
 class Segment
 {
 public:
+	Core		core;
+
 	cstr		name;
 	bool		is_data;				// => no actual code storing allowed
 	uint8		fillbyte;				// $FF for ROM else $00
+	bool		relocatable;			// address has not been explicitely set => append to prev. segment
+	bool		resizable;				// size has not been explicitely set    => shrink to fit
 
-	Core		core;
-
-	int32		address;				// segment start address
+	uint32		address;				// "physical" segment start address (as set in segment header or calculated when appended to prev. segment)
 	uint32		size;					// segment size
-	bool		address_valid;			// segment start address valid
-	bool		size_valid;				// segment size valid
-	bool		relocatable;			// address has not been explicitely set
-	bool		resizable;				// size has not been explicitely set
+	uint32		dpos;					// code deposition index
+	int32		org_base_address;		// base address for "logical" address (at dpos==0)
+	int			flag;					// flag for .z80 and .tap code segments
 
-	uint32		dptr;					// deposition pointer (index)
-	bool		dptr_valid;				// code deposition position inside segment
-	bool		dptr_address_valid;		// mostly address_valid && dptr_valid, but may be valid independently after org instruction
-
-private:
-	void		validate_address_and_size() throw(syntax_error);
+	bool		address_valid;
+	bool		size_valid;
+	bool		dpos_valid;
+	bool		org_valid;
+	bool		flag_valid;
 
 
-public:
-				Segment			(cstr name, int address, int size, bool is_data, uint8 fillbyte, bool address_valid=yes, bool size_valid=yes) throw(syntax_error);
-				Segment			(cstr name, bool is_data, uint8 fillbyte=0);
+public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, bool resizable);
 
 // store object code
 	void		store			(int byte)						throw(fatal_error);
@@ -76,22 +74,27 @@ public:
 	void 		storeWord		(int n);
 	void		storeBlock		(cptr, int sz)					throw(syntax_error);
 	void		skipExistingData(int sz)						throw(syntax_error);
-	void		storeSpace		(int c, int sz, bool sz_valid)	throw(syntax_error);
+	void		storeSpace		(int sz, bool sz_valid, int c)	throw(syntax_error);
 	void		storeSpace		(int sz, bool sz_valid)			throw(syntax_error);
 	void		storeHexBytes	(cptr data, int n)				throw(syntax_error);
 	void		setOrigin		(int32 a, bool a_valid)			throw(syntax_error);
 
-	uint8		popLastByte		()								{ XXXASSERT(dptr>0); return core[--dptr]; }
-
-	void		setAddress		(int32 a)						throw(syntax_error);
-	void		setSize			(uint32 n)						throw(syntax_error);
-
-	uint32		currentPosition	()								{ return dptr; }				// write position (offset) in core
-	bool		currentPositionValid()							{ return dptr_valid; }			// … valid?
-	int32		currentAddress	()								{ return address + dptr; }		// address associated with write position
-	bool		currentAddressValid()							{ return dptr_address_valid; }	// … valid?
+	uint8		popLastByte		()								{ XXXASSERT(dpos>0); return core[--dpos]; }
 
 	void		rewind			();
+	void		setAddress		(int32 a)						throw(syntax_error);
+	void		setSize			(uint32 n)						throw(syntax_error);
+	void		setFlag			(int32 n)						throw(syntax_error);
+
+	bool		isAtStart		()								{ return dpos_valid && dpos==0; }
+	uint32		currentPosition	()								{ return dpos; }						// write position (offset in core)
+	bool		currentPositionValid()							{ return dpos_valid; }					// … valid?
+	uint32		physicalAddress	()								{ return address + dpos; }				// phy. address of write position (segment_address + dpos)
+	bool		physicalAddressValid()							{ return address_valid && dpos_valid; }	// … valid?
+	int32		logicalAddress	()								{ return org_base_address + dpos; }		// log. address of write position (org + dpos)
+	bool		logicalAddressValid()							{ return org_valid; }					// … valid?
+	bool		isData			()								{ return is_data; }
+	bool		isCode			()								{ return !is_data; }
 };
 
 
@@ -101,6 +104,7 @@ class Segments : public ObjArray<Segment>
 public:
 	void		add(Segment* s)	{ ObjArray<Segment>::append(s); }
 	Segment*	find(cstr name);
+	uint32		totalSize()		{ uint32 sz=0; for(uint i=count();i--;){Segment* s = data[i]; if(!s->is_data) sz+=s->size; } return sz; }
 };
 
 

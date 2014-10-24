@@ -47,13 +47,10 @@ class Z80Assembler
 {
 public:
 	double		timestamp;			// of assembly
-//	int			listfile_flags;
-//	cstr		listfilepath;
 
 	cstr		source_directory;	// top-level source
 	cstr		source_filename;
 	cstr		target;				// "BIN, "ROM", "SNA", ...
-//	cstr		targetfilepath;
 
 // source:
 	Source		source;				// SourceLine[] accumulating total source
@@ -118,17 +115,18 @@ private:
 
 	void	storeByte 		(int n, bool valid)			throw(any_error);
 	void	storeOffset 	(int n, bool valid)			throw(any_error);
-	void	storeSpace		(int c, int n, bool valid)	throw(any_error)	{ current_segment().storeSpace(c,n,valid); }
+	void	storeSpace		(int n, bool valid, int c)	throw(any_error)	{ current_segment().storeSpace(n,valid,c); }
 	void	storeSpace		(int n, bool valid)			throw(any_error)	{ current_segment().storeSpace(n,valid); }
 	void	store_XYCB_op	(int pfx, int op, int dis, bool valid)	throw(any_error);
 	void	store_XY_byte_op(int pfx, int op, int dis, bool valid)	throw(any_error);
 	uint8	popLastByte		()							{ return current_segment().popLastByte(); }
 
-	int32	currentAddress	()							{ return current_segment().currentAddress(); }
-	bool	currentAddressValid()						{ return current_segment().currentAddressValid(); }
 	uint32	currentPosition	()							{ return current_segment().currentPosition(); }
 	bool	currentPositionValid()						{ return current_segment().currentPositionValid(); }
-	void	setOrigin		(int32 a, bool a_valid)		throw(syntax_error) { current_segment().setOrigin(a,a_valid);}
+	int32	currentAddress	()							{ return current_segment().logicalAddress(); }
+	bool	currentAddressValid()						{ return current_segment().logicalAddressValid(); }
+	int32	realAddress		()							{ return current_segment().physicalAddress(); }
+	bool	realAddressValid()							{ return current_segment().physicalAddressValid(); }
 
 	int		getCondition	(cstr w)					throw(syntax_error);
 	int		getRegister		(SourceLine&);
@@ -147,10 +145,24 @@ public:
 	void	assemble		(StrArray& sourcelines)		throw();
 	void	assembleLine	(SourceLine&)				throw(any_error);
 
-//	enum { NoListfile=0,ListingWithObjcode=1,ListingWithLabelList=2,BasicListing=4 };	// note: bit masks %11
-
-	void	writeListfile	(cstr listpath, bool v, bool w) throw(any_error);
-	void	writeTargetfile	(cstr filename, int style)	throw(any_error);
+	void	checkTargetfile	()	throw(any_error);
+	void	writeListfile	(cstr filepath, bool v, bool w) throw(any_error);
+	void	writeTargetfile	(cstr filepath, char style)	throw(any_error);
+	void	writeBinFile	(FD&)	throw(any_error);
+	void	writeHexFile	(FD&)	throw(any_error);
+	void	writeTapFile	(FD&)	throw(any_error);
+	void	writeZ80File	(FD&)	throw(any_error);
+	void	writeSnaFile	(FD&)	throw(any_error);
+	void	writeAceFile	(FD&)	throw(any_error);
+	void	writeZX80File	(FD&)	throw(any_error);
+	void	writeZX81File	(FD&)	throw(any_error);
+	void	checkBinFile	()	throw(any_error);
+	void	checkTapFile	()	throw(any_error);
+	void	checkZ80File	()	throw(any_error);
+	void	checkSnaFile	()	throw(any_error);
+	void	checkAceFile	()	throw(any_error);
+	void	checkZX80File	()	throw(any_error);
+	void	checkZX81File	()	throw(any_error);
 };
 
 
