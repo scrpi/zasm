@@ -38,7 +38,9 @@ SOURCES += \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
-    Source/helpers.cpp
+    Source/helpers.cpp \
+    Source/outputfile.cpp \
+    Source/listfile.cpp
 
 HEADERS += \
     Source/Error.h \

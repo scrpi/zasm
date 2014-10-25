@@ -38,6 +38,7 @@
 
 
 
+extern const char DEFAULT_CODE_SEGMENT[];
 
 
 

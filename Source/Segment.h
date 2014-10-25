@@ -95,6 +95,7 @@ public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, 
 	bool		logicalAddressValid()							{ return org_valid; }					// … valid?
 	bool		isData			()								{ return is_data; }
 	bool		isCode			()								{ return !is_data; }
+	uint8*		getData			()								{ return core.getData(); }
 };
 
 
