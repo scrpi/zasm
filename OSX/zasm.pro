@@ -31,6 +31,9 @@ SOURCES += \
     Source/Source.cpp \
     Source/Z80Assembler.cpp \
 	Source/Z80Head.cpp \
+    Source/helpers.cpp \
+    Source/outputfile.cpp \
+    Source/listfile.cpp \
     Libraries/cstrings/cstrings.cpp \
     Libraries/kio/abort.cpp \
     Libraries/kio/errors.cpp \
@@ -38,9 +41,6 @@ SOURCES += \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
-    Source/helpers.cpp \
-    Source/outputfile.cpp \
-    Source/listfile.cpp
 
 HEADERS += \
     Source/Error.h \

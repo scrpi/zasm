@@ -16,17 +16,17 @@ _min_heap_size::	equ	0x1000
 ; Ordering of code segments in the resulting file:
 ;
 #code 	_HEADER,_rom_start
-#code 	_HOME				; Code that should never be put in a bank switched part of memory.
-#code 	_CODE				; most code and const data go here
-#code 	_CABS,*,0			; ?
-#code 	_INITIALIZER		; initializer for initialized data in ram
-#code 	_GSINIT				; init code: the compiler adds some code here and there as required
-#code 	_GSFINAL,*,1		; the final ret from gsinit:: in _GSINIT
+#code 	_HOME					; Code that should never be put in a bank switched part of memory.
+#code 	_CODE					; most code and const data go here
+#code 	_CABS,*,0				; ?
+#code 	_INITIALIZER			; initializer for initialized data in ram
+#code 	_GSINIT					; init code: the compiler adds some code here and there as required
+#code 	_GSFINAL,*,1			; the final ret from gsinit:: in _GSINIT
 		ret
 #code	_GSEXIT,*,0
 #code	_GSEXITFINAL,*,0
 #code	_ROM_PADDING
-		defs	_rom_end-$	; pad rom file up to rom end
+		defs	_rom_end-$$		; pad rom file up to rom end
 
 ; Ordering of data segments:
 ; not stored in the output file!
@@ -40,7 +40,7 @@ _min_heap_size::	equ	0x1000
 #data	_HEAP_EXTRA				; any additional unused memory adds to the heap
 		defs	_ram_end-$-1
 #data	_HEAP_END,*,1
-
+		defs	1				; malloc lib provided by sdcc needs it this way
 
 
 
@@ -57,31 +57,35 @@ _min_heap_size::	equ	0x1000
 ;
 #code _HEADER
 
-		jp		init		; RST 0: reset vector
+; reset vector
+RST0::	jp		init		
+		defs	0x08-$
 
-		org		0x08		; RST 1
-		reti
+RST1::	reti
+		defs	0x10-$		
 
-		org		0x10		; RST 2
-		reti
+RST2::	reti
+		defs	0x18-$
 
-		org		0x18		; RST 3
-		reti
+RST3::	reti		
+		defs	0x20-$
 
-		org		0x20		; RST 4
-		reti
+RST4::	reti
+		defs	0x28-$
 
-		org		0x28		; RST 5
-		reti
+RST5::	reti
+		defs	0x30-$
 
-		org		0x30		; RST 6
-		reti
+RST6::	reti
+		defs	0x38-$
 
-		org		0x38		; RST 7: maskable interrupt handler in IM 1
-		reti
+; maskable interrupt handler in IM 1:
+RST7::	reti
 
-		org    	0x66		; NMI: muss mit retn abgeschlossen werden
-    	push 	af
+
+; NMI: muss mit retn abgeschlossen werden
+		defs   	0x66-$		
+NMI::	push 	af
 		push 	bc
 		push 	de
 		push 	hl

@@ -96,6 +96,8 @@ public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, 
 	bool		isData			()								{ return is_data; }
 	bool		isCode			()								{ return !is_data; }
 	uint8*		getData			()								{ return core.getData(); }
+	bool		isEmpty			()								{ bool empty=yes; for(uint i=0; i<size && empty; i++) empty = core[i]==fillbyte; return empty; }
+	uint8&		operator[]		(uint32 i)						{ return core[i]; }
 };
 
 
@@ -103,9 +105,12 @@ public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, 
 class Segments : public ObjArray<Segment>
 {
 public:
-	void		add(Segment* s)	{ ObjArray<Segment>::append(s); }
+	void		add(Segment* s)					{ ObjArray<Segment>::append(s); }
 	Segment*	find(cstr name);
-	uint32		totalSize()		{ uint32 sz=0; for(uint i=count();i--;){Segment* s = data[i]; if(!s->is_data) sz+=s->size; } return sz; }
+	uint32		totalCodeSize()					{ uint32 sz=0; for(uint i=count();i--;){Segment* s = data[i]; if(!s->is_data) sz+=s->size; } return sz; }
+	int			firstCodeSegmentWithValidFlag()	{ for(uint i=0;i<count()&&data[i]->isCode();i++) { if(data[i]->flag_valid) return i; } return -1; }
+	void		assertNoFlagsSet()				throw(syntax_error) { for(uint i=0;i<count();i++) { if(data[i]->flag_valid) throw syntax_error(usingstr("segment %s must not have flag set", data[i]->name)); }  }
+	uint		numCodeSegments()				{ uint n=0; for(uint i=0;i<count();i++) n += data[i]->isCode(); return n; }
 };
 
 

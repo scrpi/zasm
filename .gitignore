@@ -4,6 +4,7 @@ Distributions/old versions/
 Distributions/*.bz2
 Distributions/*.zip
 Test/
+Info/
 build-OSX-Debug/
 build-Linux32-Debug/
 build-Linux64-Debug/

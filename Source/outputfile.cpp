@@ -165,7 +165,7 @@ void Z80Assembler::writeZ80File(FD& fd) throw(any_error)	// no error checking!
 	if(hs.size == z80v1len)		// write v1.45 single page:
 	{
 		Segment& s = segments[1];
-		if(hs.core[12] & 0x20)	// head.data.bit5
+		if(hs.core[12]!=255 && hs.core[12] & 0x20)	// head.data.bit5
 			 write_compressed_page_z80( fd, -1, s.getData(), s.size );
 		else fd.write_bytes( s.getData(), s.size );
 	}
@@ -205,7 +205,7 @@ void Z80Assembler::checkTargetfile() throw(any_error)
 	XLogLine("checkTargetfile");
 
 	// Prevent empty output:
-	if(segments.totalSize()==0) throw syntax_error("code size = 0");
+	if(segments.totalCodeSize()==0) throw syntax_error("code size = 0");
 
 	// Move all code segments before all data segments:
 	for(uint i=1; i<segments.count(); i++)
@@ -249,17 +249,136 @@ void Z80Assembler::checkTapFile() throw(any_error)
 
 void Z80Assembler::checkBinFile() throw(any_error)
 {
-	throw syntax_error("checkBinFile: TODO");
+	segments.assertNoFlagsSet();
 }
 
+
+/*	check target SNA
+	48k version only
+	(there is also a rarely used 128k variant)
+*/
 void Z80Assembler::checkSnaFile() throw(any_error)
 {
-	throw syntax_error("checkSnaFile: TODO");
+	struct SnaHead
+	{
+		uint8	i;						// $3f
+		uint8	l2,h2,e2,d2,c2,b2,a2,f2;
+		uint8	j,h,e,d,c,b,yl,yh,xl,xh;
+		uint8	iff2;					// bit 2 = iff2 (iff1 before nmi) 0=di, 1=ei
+		uint8	r,f,a;
+		uint8	spl,sph;
+		uint8	int_mode;				// 1
+		uint8	border;					// 7	border color: 0=black ... 7=white
+	};
+	static_assert(sizeof(SnaHead)==27,"sizeof(SnaHead) wrong!");
+
+	segments.assertNoFlagsSet();
+
+	// verify that first block is the header:
+	Segment& hs = segments[0];
+	if(hs.size!=27) throw syntax_error(usingstr("target SNA: first code segment must be .sna header and 27 bytes long (size=%u)", (uint)hs.size));
+	SnaHead* head = (SnaHead*)hs.getData();
+
+	// verify some values from header:
+	if((head->i>>6)==1) addError(usingstr("segment %i: i register must not be in range [0x40 .. 0x7F] (i=0x%02X)", hs.name, head->i));
+	if(head->iff2&~4) addError(usingstr("segment %i: iff2 byte must be 0 or 4 (iff2=0x%02X)", hs.name, head->iff2));
+	uint16 sp = head->spl + 256*head->sph;
+	if(sp>0 && sp<0x4002) addError(usingstr("segment %i: sp register must not be in range [0x0001 .. 0x4001] (sp=0x%04X)", hs.name, sp));
+	if(head->int_mode>2) addError(usingstr("segment %i: interrupt mode must be in range 0 .. 2 (im=%u)", hs.name, head->int_mode));
+	if(head->border>7) addError(usingstr("segment %i: border color byte must not be in range 0 .. 7 (brdr=%u)", hs.name, head->border));
+	if(errors.count()) return;
+
+	// verify ram segments:
+	uint32 addr = 0x4000;
+	for(uint i=1; i<segments.count() && segments[i].isCode(); i++)
+	{
+		Segment& s = segments[i];
+		if(s.address!=addr) addError(usingstr("segment %s should start at 0x%04X (size=0x%04X)", s.name, (uint)addr, (uint)s.address));
+		addr += s.size;
+		if(addr>0x10000) { addError(usingstr("segment %s extends beyond ram end (end=0x%05X)", s.name, (uint)addr)); break; }
+	}
+	if(addr<0x10000) addError(usingstr("target SNA: total ram size must be 0xC000 bytes (size=0x%04X)", (uint)addr-0x4000));
+//	if(errors.count()) return;
 }
 
+
+/*	check target ACE
+	checks for presence of all the empty pages
+	checks registers
+	checks "physical" segment addresses
+*/
 void Z80Assembler::checkAceFile() throw(any_error)
 {
-	throw syntax_error("checkAceFile: TODO");
+	struct AceHead
+	{
+		uint32	flag_8001, z1[0x20-1];
+		uint32	ramtop, dda, dba, frame_skip_rate, frames_per_tv_tick, fdfd, time_running, color_mode, z2[0x20-8];
+		uint32	af,bc,de,hl,ix,iy,sp,pc,af2,bc2,de2,hl2,im,iff1,iff2,i,r,flag_80, z3[0xC0-18];
+	};
+	static_assert(sizeof(AceHead)==0x400,"sizeof(AceHead) wrong!");
+
+	segments.assertNoFlagsSet();
+	uint32 ramsize = segments.totalCodeSize();
+	bool ramsize_valid = ramsize==0x2000 || ramsize==0x6000 || ramsize==0xA000;
+	if(!ramsize_valid) addError(usingstr("total ram size is not supported: must be 0x2000 (3k), 0x6000 (3+16k) or 0xA000 (3+32k)"));
+
+	uint32 addr = 0x2000;	// current address := ram start
+	for(uint i=0; i<segments.count() && segments[i].isCode(); i++)
+	{
+		Segment& s = segments[i];
+		if(s.size==0) continue;		// skip & don't check address
+		if(s.address!=addr) addError(usingstr("segment %s should start at 0x%04X (address=0x%04X)", s.name, (uint)addr, (uint)s.address));
+		if(addr>=0x3C00) { addr+=s.size; continue; }	// Program Ram: segments may be any size
+		if(s.size&0x3ff) throw syntax_error(usingstr("segment %s size must be a multiple of 0x400 (size=0x%04X)", s.name, (uint)s.size));
+
+		for(uint32 offs=0; offs<s.size; offs+=0x400, addr+=0x400)
+		{
+			switch(addr)
+			{
+			case 0x2000:	// VRAM mirror with Z80 registers
+			{
+				// check empty:
+				uint16 zbu[0x200]; memcpy(zbu,&s[offs],0x400);
+				for(uint i=0; i<8;  i++) zbu[0x41+2*i]=0;	// clear settings
+				for(uint i=0; i<18; i++) zbu[0x81+2*i]=0;	// clear registers
+				bool empty=yes; for(int i=1; i<0x200 && empty; i++) { empty = zbu[i]==0; }
+				if(!empty) { addError(usingstr("segment %s must be empty except for settings and registers", s.name)); break; }
+
+				// check registers:
+				AceHead* head = (AceHead*)&s[offs];
+				if(peek2Z(&head->flag_8001) != 0x8001) addError(usingstr("segment %s: segment[0].flag must be 0x8001", s.name));
+				uint ramtop = peek2Z(&head->ramtop);
+				if(ramsize_valid && ramtop!=0x2000+ramsize) addError(usingstr("segment %s: settings[0].ramtop != ram end address 0x%04X (ramtop=0x%04X)", s.name, 0x2000+(uint)ramsize, ramtop));
+
+				uint sp = peek2Z(&head->sp);
+				if(sp<0x2002) addError(usingstr("segment %s: z80_regs[6].sp must not be in range [0x0000 .. 0x2001] (sp=0x%04X)", s.name, sp));
+				if(sp>ramtop) addError(usingstr("segment %s: z80_regs[6].sp points behind settings[0].ramtop (sp=0x%04X, ramtop=0x%04X)", s.name, sp, ramtop));
+
+				if(peek2Z(&head->im)>2)   addError(usingstr("segment %s: z80_regs[12].int_mode must be in range 0 .. 2 (im=%u)", s.name, head->im));
+				if(peek2Z(&head->iff1)>1) addError(usingstr("segment %s: z80_regs[13].iff1 must be 0 or 1 (iff1=%u)", s.name, head->iff1));
+				if(peek2Z(&head->iff2)>1) addError(usingstr("segment %s: z80_regs[14].iff2 must be 0 or 1 (iff2=%u)", s.name, head->iff2));
+				if(peek2Z(&head->i)>255)  addError(usingstr("segment %s: z80_regs[15].reg_i must be in range 0 .. 0xff (i=%u)", s.name, head->i));
+				if(peek2Z(&head->r)>255)  addError(usingstr("segment %s: z80_regs[16].reg_r must be in range 0 .. 0xff (r=%u)", s.name, head->r));
+				if(peek2Z(&head->flag_80) != 0x80) addError(usingstr("segment %s: z80_regs[17].flag must be 0x80", s.name));
+				break;
+			}
+
+			case 0x2800:	// CRAM mirror
+			case 0x3000:	// Prog RAM 1st mirror
+			case 0x3400:	// Prog RAM 2nd mirror
+			case 0x3800:	// Prog RAM 3rd mirror
+			{
+				uint32* bu = (uint32*)&s[offs]; bool empty=yes; for(int i=0; i<0x100 && empty; i++) { empty = bu[i]==0; }
+				if(!s.isEmpty()) addError(usingstr("segment %s: page 0x%04X-0x%04X must be empty", s.name, (uint)addr, (uint)addr+0x3ff));
+			}
+//			case 0x2400:	// VRAM
+//			case 0x2C00:	// CRAM
+			default:		// Prog RAM
+				XXXASSERT(addr==0x3C00);
+				throw syntax_error(usingstr("segment %s extends into program ram at 0x3C00 (segment end=0x%04X)",s.name,(uint)(addr-offs+s.size)));
+			}
+		}
+	}
 }
 
 void Z80Assembler::checkZX80File() throw(any_error)
@@ -302,7 +421,7 @@ void Z80Assembler::checkZ80File() throw(any_error)
 		if(s.flag_valid) addError(usingstr("segment %s: v1.45: no page ID allowed",s.name));
 
 		// comfort: clear compression flag if size increases:
-		if(head.data&0x20 && compressed_page_size_z80(s.getData(),0xc000)>0xc000) head.data -= 0x20;
+		if(head.data!=255 && head.data&0x20 && compressed_page_size_z80(s.getData(),0xc000)>0xc000) head.data -= 0x20;
 		return;
 	}
 
