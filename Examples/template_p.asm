@@ -1,6 +1,6 @@
 
 ; Example zasm source with target 'p' or '81':
-; 
+;
 ; ZX81 tape file / snapshot
 ;
 ; #target p  /  #target 81
@@ -20,31 +20,31 @@
 ;
 ; --------------------------------------------------------------------
 ; A ZX81 program is stored like this on a real audio tape:
-; 
+;
 ; 	x seconds    video noise
 ; 	5 seconds    silence
 ; 	1-127 bytes  filename (bit 7 set in last char)
 ; 	LEN bytes    data, loaded to address $4009, LEN = ($4014)-$4009.
 ; 	1 pulse      video retrace signal if display was enabled
 ; 	x seconds    silence / video noise
-; 
+;
 ; --------------------------------------------------------------------
 ; Notes:
 ; 	The data contains system area, basic program, video memory, VARS.
 ; 	the last byte of a (clean) file should be $80 (the last byte of VARS)
-; 
+;
 ; 	$4014	defines the end address (used to calculate the file length)
 ; 	$4029	points to the next executed (autostarted) BASIC line
 ; 	$403B	indicates if program runs in SLOW or FAST mode (bit 6)
 ; 	$403C++	may be misused for whatever purpose,
 ; 	video memory must contain 25 HALT opcodes if the file was saved in SLOW mode.
-; 
-; 	While loading, the data at address $4014/4015 (E_LINE) is overwritten. After this they contain 
+;
+; 	While loading, the data at address $4014/4015 (E_LINE) is overwritten. After this they contain
 ; 	the real data end address of the data loaded and define when loading will stop. :-)
-; 
+;
 ; 	Files should usually not exceed 16 kBytes.
 ; 	The memory detection procedure in both ZX80 and ZX81 stops after 16 kBytes (at $8000)
-; 
+;
 ;
 ; ---------------------------------------------------------------
 ; 					Character Set
@@ -85,7 +85,7 @@
 
 
 
- 
+
 ;#target p
 ;#target 81
 #target p81
@@ -93,8 +93,8 @@
 
 ; only if target p81:
 #code	PROGNAME
-	dm	"progname" | $80
-	
+	dm	"progname" | $80	; this will be translated by zasm into the ZX81 character set!
+
 
 
 ; ---------------------------------------------------------------
@@ -106,16 +106,16 @@
 ;
 #data SYSVARS_NOT_SAVED, $4000, 9
 ;
-ERR_NR 	db	0		; 1 less than the report code. Starts off at 255 (for -1), so PEEK 16384, if it works at all, gives 255. 
- 					; POKE 16384,n can be used to force an error halt: 0 … 14 gives one of the usual reports, 
+ERR_NR 	db	0		; 1 less than the report code. Starts off at 255 (for -1), so PEEK 16384, if it works at all, gives 255.
+ 					; POKE 16384,n can be used to force an error halt: 0 … 14 gives one of the usual reports,
  					; 15 … 34 or 99 … 127 gives a nonstandard report, and 35 … 98 is likely to mess up the display file.
 FLAGS	db	0		; Various flags to control the BASIC system.
 ERR_SP	dw	0		; Address of first item on machine stack (after GOSUB returns).
-RAMTOP	dw	0		; Address of first byte above BASIC system area. You can poke this to make NEW reserve space above that area 
- 					; (see Chapter 26) or to fool CLS into setting up a minimal display file. 
-					; Poking RAMTOP has no effect until one of these two is executed.		
+RAMTOP	dw	0		; Address of first byte above BASIC system area. You can poke this to make NEW reserve space above that area
+ 					; (see Chapter 26) or to fool CLS into setting up a minimal display file.
+					; Poking RAMTOP has no effect until one of these two is executed.
 MODE	db	0		; Specifies K, L, F or G cursor.
-PPC 	dw	0		; Line number of statement currently being executed. 
+PPC 	dw	0		; Line number of statement currently being executed.
  					; Poking this has no lasting effect except in the last line of the program.
 
 
@@ -130,9 +130,9 @@ DF_CC	dw	0		; Address of PRINT position in display file. Can be poked so that PR
 VARS	dw	0		; Address of user program variables in memory.
 DEST	dw	0		; Address of variable in assignment.
 E_LINE	dw	0		; Address of line being editted in memory.
-CH_ADD	dw	0		; Address of the next character to be interpreted: the character after the argument of PEEK, 
+CH_ADD	dw	0		; Address of the next character to be interpreted: the character after the argument of PEEK,
 					; or the ENTER/NEWLINE at the end of a POKE statement.
-X_PTR	dw	0		; Address of the character preceding the [S] marker.					
+X_PTR	dw	0		; Address of the character preceding the [S] marker.
 STKBOT	dw	0		; Address of the Calculator stack in memory. This is where Basic does the math calculations.
 STKEND	dw	0		; End of the Calculator stack.
 BREG	db	0		; Calculator’s b register.
@@ -149,9 +149,9 @@ FLAGX	db	0		; Various flags.
 STRLEN	dw	0		; Length of string type designation in assignment.
 T_ADDR	dw	0		; Address of next item in syntax table (very unlikely to be useful).
 SEED	dw	0		; The seed for RND. This is the variable that is set by RAND.
-FRAMES	dw	0		; Counts the frames displayed on the television. Bit 15 is 1. Bits 0 to 14 are decremented for each frame 
-					; sent to the television. This can be used for timing, but PAUSE also uses it. PAUSE resets bit 15 to 0 and 
-					; puts in bits 0 to 14 the length of the pause. When these have been counted down to zero, the pause stops. 
+FRAMES	dw	0		; Counts the frames displayed on the television. Bit 15 is 1. Bits 0 to 14 are decremented for each frame
+					; sent to the television. This can be used for timing, but PAUSE also uses it. PAUSE resets bit 15 to 0 and
+					; puts in bits 0 to 14 the length of the pause. When these have been counted down to zero, the pause stops.
 					; If the pause stops because of a key depression, bit 15 is set to 1 again.
 COORDS	db	0		; x-coordinate of last pointed PLOTted.
 		db	0		; y-coordinate of last pointed PLOTted.
@@ -159,7 +159,7 @@ PR_CC	db	0		; Less significant byte of address of next position for LPRINT to pr
 S_POSN	db	0		; Column number for PRINT position.
 		db	0		; Line number for PRINT position.
 CDFLAG	db	0		; Various flags. Bit 7 is on (1) during compute and display (SLOW) mode.
-PRBUFF	ds	33		; Printer buffer (33rd character is ENTER/NEWLINE).	
+PRBUFF	ds	33		; Printer buffer (33rd character is ENTER/NEWLINE).
 MEMBOT	ds	30		; Calculator’s memory area; used to store numbers that cannot conveniently be put on the calculator stack.
 		dw	0		; not used
 
@@ -174,7 +174,7 @@ MEMBOT	ds	30		; Calculator’s memory area; used to store numbers that cannot co
 #code DFILE
 
 
-; TODO: add code for Basic loader 
+; TODO: add code for Basic loader
 
 
 

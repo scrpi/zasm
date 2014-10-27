@@ -109,7 +109,7 @@ public:
 	Segment*	find(cstr name);
 	uint32		totalCodeSize()					{ uint32 sz=0; for(uint i=count();i--;){Segment* s = data[i]; if(!s->is_data) sz+=s->size; } return sz; }
 	int			firstCodeSegmentWithValidFlag()	{ for(uint i=0;i<count()&&data[i]->isCode();i++) { if(data[i]->flag_valid) return i; } return -1; }
-	void		assertNoFlagsSet()				throw(syntax_error) { for(uint i=0;i<count();i++) { if(data[i]->flag_valid) throw syntax_error(usingstr("segment %s must not have flag set", data[i]->name)); }  }
+	void		checkNoFlagsSet()				throw(syntax_error) { for(uint i=0;i<count();i++) { if(data[i]->flag_valid) throw syntax_error(usingstr("segment %s must not have flag set", data[i]->name)); }  }
 	uint		numCodeSegments()				{ uint n=0; for(uint i=0;i<count();i++) n += data[i]->isCode(); return n; }
 };
 

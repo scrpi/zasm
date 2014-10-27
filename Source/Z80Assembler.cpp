@@ -63,6 +63,12 @@ static double now()
 const char DEFAULT_CODE_SEGMENT[] = "DEFAULT_CODE_SEGMENT";
 
 
+// for character set translation:
+//
+char const zx80_chars[] = " \"###########$:?()-+*/=><;,.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";	// char(12)='£'
+char const zx81_chars[] = " ##########\"#$:?()><=+-*/;,.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";	// char(12)='£'
+
+
 
 // --------------------------------------------------
 //					Creator
