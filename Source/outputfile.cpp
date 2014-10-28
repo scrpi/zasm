@@ -491,8 +491,8 @@ void Z80Assembler::checkZX81File() throw(any_error)
 		uint8 T_ADDR,T_ADDRhi;	//	dw	0		; Address of next item in syntax table (very unlikely to be useful).
 		uint8 SEED,SEEHhi;		//	dw	0		; The seed for RND. This is the variable that is set by RAND.
 		uint8 FRAMES,FRAMEShi;	//	dw	0		; Counts the frames displayed on the television.
-		uint8 COORDS;			//	db	0		; x-coordinate of last pointed PLOTted.
-		uint8 x3;				//	db	0		; y-coordinate of last pointed PLOTted.
+		uint8 CORD_X;			//	db	0		; x-coordinate of last point PLOTed.
+		uint8 CORD_Y;			//	db	0		; y-coordinate of last point PLOTed.
 		uint8 PR_CC;			//	db	0		; Less significant byte of address of next position for LPRINT to print at (in PRBUFF).
 		uint8 S_POSN_X;			//	db	0		; Column number for PRINT position.
 		uint8 S_POSN_Y;			//	db	0		; Line number for PRINT position.

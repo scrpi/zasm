@@ -14,6 +14,8 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG += c++11
 CONFIG += precompiled_header
+CONFIG(release,debug|release) { DEFINES += NDEBUG }
+
 
 QMAKE_MAC_SDK = macosx10.9
 

@@ -420,7 +420,7 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 	q.rewind();							// falls Pass 2++
 	q.segment = current_segment_ptr;	// Für Temp Label Resolver
 	q.byteptr = currentPosition();		// Für Temp Label Resolver & Logfile
-//	q.bytecount = 0;					// Für Logfile und skip over error in pass≥2
+	if(pass==1) q.bytecount = 0;		// Für Logfile und skip over error in pass≥2
 
 #if DEBUG
 	LogLine("%s",q.text);
@@ -435,6 +435,24 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 	{
 		return;
 	}
+#ifndef NDEBUG					// test suite:
+	else if(q.test_char('!'))	// test suite: this line must fail:
+	{
+		try
+		{
+			if((uint8)q[1] > ' ' && q[1]!=';') asmLabel(q);	// label definition
+			asmInstr(q);		// opcode or pseudo opcode
+			q.expectEol();		// expect end of line
+		}
+		catch(any_error&)		// we expect to come here:
+		{
+			XXXASSERT(q.segment==current_segment_ptr);		// zunächst: wir nehmen mal an,
+		//	XXXASSERT(currentPosition() == q.byteptr);		// dass dann auch kein Code erzeugt wurde
+			return;
+		}
+		throw syntax_error("instruction did not fail!");	// did not throw!
+	}
+#endif
 	else						// [label:] + opcode
 	{
 		if((uint8)q[0] > ' ' && q[0]!=';') asmLabel(q);	// label definition
@@ -510,9 +528,14 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 		}
 		else if(is_dec_digit(w[0]))	// decimal number
 		{
-			c = w[strlen(w)-1];
-			if( tolower(c)=='h' ) goto hex_number;	// hex number    indicated by suffix
-			if( tolower(c)=='b' ) goto bin_number;	// binary number indicated by suffix
+			if(w[0]=='0')
+			{
+				if(tolower(w[1])=='x' && w[2]) { w+=2; goto hex_number; }	// 0xABCD
+				if(tolower(w[1])=='b' && w[2]) { w+=2; goto bin_number; }	// 0b0101
+			}
+			c = tolower(lastchar(w));
+			if( c=='h' ) goto hex_number;	// hex number    indicated by suffix
+			if( c=='b' ) goto bin_number;	// binary number indicated by suffix
 		}
 	}
 
@@ -638,7 +661,9 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 //	label	.gblequ expr			global label
 //	label	.lclequ expr			local label
 
-	XXXASSERT(q.p==q.text);
+#ifdef NDEBUG
+	XXXASSERT(q.p==q.text);			// may happen in test suite: lines with "!" which must fail
+#endif
 
 	cstr name = q.nextWord();
 	bool is_temporaer = q.test_char('$');	// sdasz80 syntax

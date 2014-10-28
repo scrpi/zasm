@@ -63,8 +63,8 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 				uint ocode_index = sourceline->byteptr;
 
 				XXXASSERT(segment);
-				XXXASSERT(ocode_size<=0x10000);
-				XXXASSERT(ocode_index+ocode_size <= segment->size);
+				XXXASSERT(!segment->size_valid || ocode_size<=0x10000);
+				XXXASSERT(!segment->size_valid || ocode_index+ocode_size <= segment->size);
 
 				uint8* core = segment->core.getData();
 
