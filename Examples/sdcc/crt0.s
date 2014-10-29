@@ -2,6 +2,8 @@
 ;	crt0.s - Generic boot loader for a Z80 system
 ; ------------------------------------------------------------------------
 
+#target rom
+
 
 _rom_start::		equ	0
 _rom_end::			equ	0x4000
@@ -20,7 +22,9 @@ _min_heap_size::	equ	0x1000
 #code 	_CODE					; most code and const data go here
 #code 	_CABS,*,0				; ?
 #code 	_INITIALIZER			; initializer for initialized data in ram
+s__INITIALIZER::
 #code 	_GSINIT					; init code: the compiler adds some code here and there as required
+l__INITIALIZER:: equ $-s__INITIALIZER
 #code 	_GSFINAL,*,1			; the final ret from gsinit:: in _GSINIT
 		ret
 #code	_GSEXIT,*,0
@@ -33,6 +37,7 @@ _min_heap_size::	equ	0x1000
 ;
 #data 	_DATA,_ram_start		; data in ram: uninitialized data
 #data 	_INITIALIZED			; data in ram: initialized with data from segment _INITIALIZER
+s__INITIALIZED:
 #data 	_BSEG,*,0				; data in ram: TODO: ? absolute segment within BIT space (Ax51) ?
 #data 	_BSS,*,0				; data in ram: uninitialized
 #data	_DABS,*,0				; absolute external ram data
@@ -121,12 +126,15 @@ _exit::
 ; globals and statics initialization:
 ;
 gsinit::
-#if l__INITIALIZER!=0
+;#if l__INITIALIZER!=0		problem: not evaluatable in pass 1
 		ld	bc,l__INITIALIZER	; length of segment _INITIALIZER
 		ld	de,s__INITIALIZED	; start of segment _INITIALIZED
 		ld	hl,s__INITIALIZER	; start of segment _INITIALIZER
-		ldir
-#endif
+		ld	a,b
+		or	c
+		jr	z,$+4
+		ldir		
+;#endif
 
 
 

@@ -88,6 +88,12 @@ public:
 	bool		final;
 	bool		end;
 
+// c compiler:					// "$$SOURCE$$" and "$$DEST$$" can be used to place .c and .s file in argv[]
+	cstr		cc[10];			// executable path + upto_6_options + sourcefile + asmfile + NULL
+	int			cc_qi;			// index of source file in cc[]
+	int			cc_zi;			// index of output file in cc[]
+	cstr		cc_basedir;		// where the resulting asmfiles go
+
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) throw(any_error);
 	void	asmLabel		(SourceLine&)				throw(any_error);
@@ -97,6 +103,7 @@ private:
 	void	asmElse			(SourceLine&)				throw(any_error);
 	void	asmEndif		(SourceLine&)				throw(any_error);
 	void	asmTarget		(SourceLine&)				throw(any_error);
+	void	asmCc			(SourceLine&)				throw(any_error);
 	void	asmInclude		(SourceLine&)				throw(any_error);
 	void	asmInsert		(SourceLine&)				throw(any_error);
 	void	asmSegment		(SourceLine&,bool)			throw(any_error);

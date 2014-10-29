@@ -34,6 +34,7 @@
 #include "Segment.h"
 #include "Z80/Z80opcodes.h"
 #include "Templates/HashMap.h"
+extern char** environ;
 
 
 
@@ -308,6 +309,8 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 	// setup segments:
 	segments.purge();
 	segments.append(new Segment(DEFAULT_CODE_SEGMENT,no,0xff,no,yes));	// current_segment must exist
+	segments[0].address_valid = yes;		// "physical" address = $0000 is valid
+	segments[0].org_valid = yes;			// "logical"  address = $0000 is valid too
 
 	// setup errors:
 	errors.purge();
@@ -420,7 +423,7 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 	q.rewind();							// falls Pass 2++
 	q.segment = current_segment_ptr;	// Für Temp Label Resolver
 	q.byteptr = currentPosition();		// Für Temp Label Resolver & Logfile
-	if(pass==1) q.bytecount = 0;		// Für Logfile und skip over error in pass≥2
+//	if(pass==1) q.bytecount = 0;		// Für Logfile und skip over error in pass≥2
 
 #if DEBUG
 	LogLine("%s",q.text);
@@ -763,6 +766,7 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 		if(eq(w,"target"))	  asmTarget(q);		else
 		if(eq(w,"code"))	  asmSegment(q,0);	else
 		if(eq(w,"data"))	  asmSegment(q,1);	else
+		if(eq(w,"cc"))		  asmCc(q);			else
 		if(eq(w,"include"))	  asmInclude(q);	else
 		if(eq(w,"insert"))	  asmInsert(q);		else
 		if(eq(w,"local"))	  asmLocal(q);		else
@@ -774,6 +778,66 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 }
 
 
+/*	#cc "path/to/c-compiler" <options>
+	define path to c compiler and options
+
+*/
+void Z80Assembler::asmCc(SourceLine& q) throw(any_error)
+{
+	cstr compiler = q.nextWord();
+	if(compiler[0]!='"') throw fatal_error("quoted filepath expected");
+	compiler = unquotedstr(compiler);
+
+	if(compiler[0]!='/')
+	{
+		Array<str> ss;
+		split(ss, getenv("PATH"), ':');
+		for(uint i=0; i<ss.count(); i++)
+		{
+			cstr s = catstr(ss[i],"/",compiler);
+			if(is_file(s)) { compiler = s; break; }
+		}
+	}
+	if(!exists_node(compiler))	 throw fatal_error("file not found");
+	if(!is_file(compiler))		 throw fatal_error("not a regular file");
+	if(!is_executable(compiler)) throw fatal_error("not executable");
+
+	cc[0] = compiler;
+	cc_qi = 0;
+	cc_zi = 0;
+
+	cstr options = "";		// accu for subdir in tempdir
+	uint i = 1;
+	while(!q.testEol())
+	{
+		if(i==NELEM(cc)-1) throw fatal_error("too many options to c-compiler call (max. 8 allowed)");
+		cptr a = q.p;
+		while((uint8)*q>' ') ++q;
+		cstr s = substr(a,q.p);
+		if(s[0]=='"') s = unquotedstr(s);
+		if(s[0]=='$' && eq(s,"$$SOURCE$$")) cc_qi = i;
+		if(s[0]=='$' && eq(s,"$$DEST$$"))   cc_zi = i;
+		cc[i++] = s;
+		options = catstr(options, " ", s);
+	}
+	cc[i] = NULL;
+
+	if(cc_qi==0) throw fatal_error("argument '$$SOURCE$$' is missing");
+	if(cc_zi==0) throw fatal_error("argument '$$DEST$$' is missing");
+
+	cstr tempdir = "/tmp/";
+	if(!is_dir(tempdir)) tempdir = getenv("TMPDIR");
+	if(!is_dir(tempdir)) throw fatal_error("temp dir not found!");
+	if(!is_writable(tempdir)) throw fatal_error("temp dir not writable!");
+	cc_basedir = fullpath(catstr(tempdir, "/", filename_from_path(compiler), options, "/"),1,1);
+	if(errno) throw fatal_error(usingstr("creating temp dir for intermediate files failed: %s",strerror(errno)));
+}
+
+
+/*	#end
+	force end of assembler source
+	must not be within #if …
+*/
 void Z80Assembler::asmEnd(SourceLine&) throw(any_error)
 {
 	end = true;
@@ -881,8 +945,8 @@ void Z80Assembler::asmTarget( SourceLine& q ) throw(any_error)
 	if(pass>1) { q.skip_to_eol(); return; }
 	if(target) throw fatal_error("#target redefined");
 
-	if(!current_segment_ptr->isAtStart() ||				// already some code defined
-			current_segment_ptr->org_valid)	// org defined
+	if(!current_segment_ptr->isAtStart())				// already some code defined
+		// || current_segment_ptr->org_valid)	// org defined
 		throw fatal_error("#target must defined before first opcode");
 
 	target = upperstr(q.nextWord());
@@ -899,13 +963,57 @@ void Z80Assembler::asmTarget( SourceLine& q ) throw(any_error)
 */
 void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 {
+	if(pass>1) { q.skip_to_eol(); return; }
+
 	cstr fqn = q.nextWord();
 	if(fqn[0]!='"') throw syntax_error("quoted filename expected");
-
 	fqn = unquotedstr(fqn);
 	if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
 
-	if(pass==1) source.includeFile(fqn, current_sourceline_index+1);
+	if(endswith(fqn,".c"))
+	{
+		if(cc[0]==NULL) throw fatal_error("no c compiler defined! (-> use directive #cc)");
+		if(!exists_node(fqn)) throw fatal_error("file does not exist");
+		if(!is_file(fqn)) throw fatal_error("not a regular file");
+
+		cstr& fqn_c = cc[cc_qi]; fqn_c = fqn;
+		cstr& fqn_a = cc[cc_zi]; fqn_a = fqn = catstr(cc_basedir, basename_from_path(fqn), ".s");
+
+		// if the .a file does not exists or is older than the .c file, then compile the .c file:
+		if(!exists_node(fqn_a) || file_mtime(fqn_a) <= file_mtime(fqn_c))
+		{
+			pid_t child_id = fork();	// fork a child process
+			XXXASSERT(child_id!=-1);	// fork failed: can't happen
+
+			if(child_id==0)				// child process:
+			{
+				execve(cc[0], (char**)cc, environ);	// exec cmd
+				exit(errno);				// exec failed: return errno: will be printed in error msg, but is ambiguous with cc exit code
+			}
+			else						// parent process:
+			{
+				int status;
+				for(int err; (err = waitpid(child_id,&status,0)) != child_id; )
+				{
+					XXXASSERT(err==-1);
+					if(errno!=EINTR) throw fatal_error(usingstr("waitpid: %s",strerror(errno)));
+				}
+
+				if(WIFEXITED(status))				// child process exited normally
+				{
+					if(WEXITSTATUS(status)!=0)		// child process returned error code
+						throw fatal_error(usingstr("%s returned exit code %i", quotedstr(cc[0]), (int)WEXITSTATUS(status)));
+				}
+				else if(WIFSIGNALED(status))		// child process terminated by signal
+				{
+					throw fatal_error(usingstr("%s terminated by signal %i", quotedstr(cc[0]), (int)WTERMSIG(status)));
+				}
+				else IERR();
+			}
+		}
+	}
+
+	source.includeFile(fqn, current_sourceline_index+1);
 }
 
 
@@ -945,7 +1053,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	cstr name = upperstr(q.nextWord());
 	if(!is_letter(*name) && *name!='_') throw syntax_error("segment name expected");
 	Segment* segment = segments.find(name);
-	if(pass==1 ? segment!=NULL : q.peekChar()!=',') return;	// --> expect eol
+	if(pass==1 ? segment!=NULL : q.peekChar()!=',') { current_segment_ptr = segment; return; }	// --> expect eol
 
 	int32 address	= 0;
 	int32 size		= 0;

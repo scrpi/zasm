@@ -198,7 +198,7 @@ void Segment::setOrigin( int32 new_address, bool valid ) throw(syntax_error)
 void Segment::store( int byte ) throw(fatal_error)
 {
 	if(dpos<core.count()) core[dpos] = byte;
-	if(++dpos>size && dpos_valid && size_valid) { dpos_valid = no; throw syntax_error("segment overflow"); }
+	if(++dpos>size && dpos_valid && size_valid) { dpos_valid = no; throw fatal_error("segment overflow"); }
 }
 
 

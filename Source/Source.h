@@ -38,7 +38,7 @@
 
 class Segment;
 
-inline bool is_space ( char c )	{ return c<=' ' && c>0; }
+inline bool is_space ( unsigned char c )	{ return c<=' ' && c>0; }
 inline bool is_idf	 ( char c ) { return is_letter(c) || is_dec_digit(c) || c=='_'; }
 inline char lc       ( char c ) { return c|0x20; }
 
