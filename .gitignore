@@ -3,7 +3,11 @@ zasm.pro.user*
 Distributions/old versions/
 Distributions/*.bz2
 Distributions/*.zip
-Test/
+Test/Zeug*
+Test/*.bin
+Test/*.rom
+Test/*.lst
+Test/*.s
 Info/
 build-OSX-Debug/
 build-Linux32-Debug/

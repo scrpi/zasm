@@ -86,7 +86,17 @@ OTHER_FILES += \
     ../Examples/template_zx80_sysvars.asm \
     ../Examples/template_zx81_sysvars.asm \
     ../Examples/template_zx82_sysvars.asm \
-    ../Examples/zx82_rom.asm
+    ../Examples/zx82_rom.asm \
+    ../.gitignore \
+    ../Test/main.c \
+    ../Test/main.s \
+    ../Test/test-cc.asm \
+    ../Test/test-cc.lst \
+    ../Test/test.asm \
+    ../Test/test.lst \
+    ../Test/test-opcodes.asm \
+
+
 
 
 
