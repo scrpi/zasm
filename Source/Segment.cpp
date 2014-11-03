@@ -66,7 +66,7 @@ Segment* Segments::find(cstr name)
 */
 Segment::Segment(cstr name, bool is_data, uint8 fillbyte , bool relocatable, bool resizable)
 :
-	core(is_data?0:0x10000),
+	core(0x10000),
 	name(name),
 	is_data(is_data),
 	fillbyte(fillbyte),
@@ -125,8 +125,8 @@ void Segment::setAddress(int32 a) throw(syntax_error)
 	if(address_valid && (uint32)a!=address) { address_valid=no; throw syntax_error("segment address redefined"); }
 	if(a>0x10000) { address_valid = no; throw syntax_error(usingstr("segment address out of range: %i",(int)a)); }
 	if(size_valid && a + size > 0x10000)
-			throw syntax_error(usingstr("segment address+size out of range: %u + %u = %u",
-			(uint)a, (uint)size, (uint)(a+size)));
+			throw syntax_error(usingstr("segment %s: address+size out of range: %u + %u = %u",
+			name, (uint)a, (uint)size, (uint)(a+size)));
 
 	address = a;
 	address_valid = yes;
@@ -146,8 +146,8 @@ void Segment::setSize(uint32 sz) throw(syntax_error)
 	if(sz>0x10000) { size_valid = no; throw syntax_error(usingstr("segment size out of range: %i",(int)size)); }
 	if(dpos_valid && dpos>sz) { dpos_valid=no; throw syntax_error("segment overflow"); }
 	if(address_valid && address + sz > 0x10000 )
-			throw syntax_error(usingstr("segment address+size out of range: %u + %u = %u",
-			(uint)address, (uint)sz, (uint)(address+sz)));
+			throw syntax_error(usingstr("segment %s: address+size out of range: %u + %u = %u",
+			name, (uint)address, (uint)sz, (uint)(address+sz)));
 
 	size = sz;
 	size_valid = yes;
@@ -197,7 +197,7 @@ void Segment::setOrigin( int32 new_address, bool valid ) throw(syntax_error)
 */
 void Segment::store( int byte ) throw(fatal_error)
 {
-	if(dpos<core.count()) core[dpos] = byte;
+	if(dpos<0x10000) core[dpos] = byte;
 	if(++dpos>size && dpos_valid && size_valid) { dpos_valid = no; throw fatal_error("segment overflow"); }
 }
 
@@ -218,7 +218,7 @@ void Segment::storeBlock( cptr data, int n ) throw(syntax_error)
 	if(n<0) throw syntax_error("size < 0");
 	if(n>0x10000) throw syntax_error("size > 0x10000");
 
-	if(dpos<core.count()) memcpy(&core[dpos], data, min((uint)n,core.count()-dpos));
+	if(dpos<0x10000) memcpy(&core[dpos], data, min((uint)n,0x10000-dpos));
 	if((dpos+=n)>size && dpos_valid && size_valid) { dpos_valid=no; throw syntax_error("segment overflow"); }
 }
 
@@ -263,7 +263,7 @@ void Segment::storeSpace( int sz, bool sz_valid, int c ) throw(syntax_error)
 		if(sz<0) throw syntax_error("gap size < 0");
 		if(sz>0x10000) throw syntax_error("gap size > 0x10000");
 
-		if(dpos<core.count()) memset(&core[dpos], c, min((uint)sz,core.count()-dpos));
+		if(dpos<0x10000) memset(&core[dpos], c, min((uint)sz,0x10000-dpos));
 		if((dpos+=sz)>size && dpos_valid && size_valid) { dpos_valid=no; throw syntax_error("segment overflow"); }
 	}
 	else

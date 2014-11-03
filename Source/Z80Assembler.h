@@ -51,6 +51,7 @@ public:
 
 	cstr		source_directory;	// top-level source
 	cstr		source_filename;
+	cstr		temp_directory;
 	cstr		target;				// "BIN, "ROM", "SNA", ...
 
 // source:
@@ -87,12 +88,13 @@ public:
 	uint		pass;
 	bool		final;
 	bool		end;
+	uint		verbose;
 
-// c compiler:					// "$$SOURCE$$" and "$$DEST$$" can be used to place .c and .s file in argv[]
-	cstr		cc[10];			// executable path + upto_6_options + sourcefile + asmfile + NULL
-	int			cc_qi;			// index of source file in cc[]
-	int			cc_zi;			// index of output file in cc[]
-	cstr		cc_basedir;		// where the resulting asmfiles go
+// c compiler:
+	cstr		c_compiler;		// fqn to sdcc or similar
+	Array<cstr>	c_flags;
+	uint		c_qi;			// index of source file in cc_argv[]
+	uint		c_zi;			// index of output file in cc_argv[]
 
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) throw(any_error);
@@ -103,10 +105,10 @@ private:
 	void	asmElse			(SourceLine&)				throw(any_error);
 	void	asmEndif		(SourceLine&)				throw(any_error);
 	void	asmTarget		(SourceLine&)				throw(any_error);
-	void	asmCc			(SourceLine&)				throw(any_error);
 	void	asmInclude		(SourceLine&)				throw(any_error);
 	void	asmInsert		(SourceLine&)				throw(any_error);
 	void	asmSegment		(SourceLine&,bool)			throw(any_error);
+	void	asmCFlags		(SourceLine&)				throw(any_error);
 	void	asmLocal		(SourceLine&)				throw(any_error);
 	void	asmEndLocal		(SourceLine&)				throw(any_error);
 	void	asmEnd			(SourceLine&)				throw(any_error);
@@ -146,16 +148,18 @@ private:
 
 public:
 			Z80Assembler	();
-	void	assembleFile	(cstr sourcepath, cstr destpath, cstr listpath=NULL,
-							 bool v=no,					// include opject code in listing
-							 bool w=no,					// include label listing in listing
-							 char style='b' )			throw();						// target style: 'b'=binary, 'x'=intel hex
-	void	assemble		(StrArray& sourcelines)		throw();
-	void	assembleLine	(SourceLine&)				throw(any_error);
+	void	assembleFile	(cstr sourcepath,				// source file must exist
+							 cstr destpath=NULL,			// dflt = same as source directory, may be dir or filename
+							 cstr listpath=NULL,			// dflt = same as dest direcory, may be dir or filename
+							 cstr temppath=NULL,			// dflt = same as dest dir, must be dir
+							 int liststyle='1',				// '0'=none, '1'=plain, '2'=with objcode, '4'=with labels
+							 int deststyle='b')		throw();// '0'=none, 'b'=binary, 'x'=intel hex, 's'=motorola s-record
+	void	assemble		(StrArray& sourcelines)	throw();
+	void	assembleLine	(SourceLine&)			throw(any_error);
 
 	void	checkTargetfile	()	throw(any_error);
-	void	writeListfile	(cstr filepath, bool v, bool w) throw(any_error);
-	void	writeTargetfile	(cstr filepath, char style)	throw(any_error);
+	void	writeListfile	(cstr filepath, int style) throw(any_error);
+	void	writeTargetfile	(cstr filepath, int style)	throw(any_error);
 	void	writeBinFile	(FD&)	throw(any_error);
 	void	writeHexFile	(FD&)	throw(any_error);
 	void	writeTapFile	(FD&)	throw(any_error);

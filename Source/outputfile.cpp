@@ -39,7 +39,7 @@
 		no error checking
 ============================================================== */
 
-void Z80Assembler::writeTargetfile(cstr dname, char style) throw(any_error)
+void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
 {
 	XXXASSERT(errors.count()==0);
 	XXXASSERT(dname!=NULL);
@@ -211,7 +211,7 @@ void Z80Assembler::checkTargetfile() throw(any_error)
 	for(uint i=1; i<segments.count(); i++)
 	{
 		if(segments[i].isData()) continue;
-		for(int j=i-1; j>=0 && segments[j].isData(); j--) kio::swap(segments[j],segments[j+1]);
+		for(int j=i-1; j>=0 && segments[j].isData(); j--) kio::swap(*(segments.getData()+j),*(segments.getData()+(j+1)));
 	}
 
 	// remove empty DEFAULT_CODE_SEGMENT:

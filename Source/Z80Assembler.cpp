@@ -80,6 +80,7 @@ Z80Assembler::Z80Assembler()
 :	timestamp(now()),
 	source_directory(NULL),
 	source_filename(NULL),
+	temp_directory(NULL),
 	target(NULL),
 	current_sourceline_index(0),
 	current_segment_ptr(NULL),
@@ -89,10 +90,17 @@ Z80Assembler::Z80Assembler()
 	cond_off(0),
 	max_errors(5),	// 30
 	pass(0),
-	final(0)
+	final(0),
+	end(0),
+	verbose(1),
+	c_compiler(NULL),
+	c_qi(0),
+	c_zi(0)
 {
 	cond[0] = no_cond;			// memset(cond,no_cond,sizeof(cond));
 	temp_label_suffix[0] = 0;	// memcpy(temp_label_suffix,"_0",3);
+	c_flags.append("-mz80");
+	c_flags.append("-S");
 }
 
 
@@ -269,19 +277,53 @@ void Z80Assembler::addError( cstr text )
 		segments[];		// code and data segments
 		errors[];
 */
-void Z80Assembler::assembleFile(cstr sname, cstr dname, cstr lname, bool v, bool w, char style) throw()
+void Z80Assembler::assembleFile(cstr sourcefile, cstr destpath, cstr listpath, cstr temppath, int liststyle, int deststyle) throw()
 {
-	XXASSERT(is_file(sname));
+	sourcefile = fullpath(sourcefile);			XXASSERT(errno==ok && is_file(sourcefile));
+	if(destpath) destpath = fullpath(destpath); XXASSERT(errno==ok || errno==ENOENT);
+	if(listpath) listpath = fullpath(listpath); XXASSERT(errno==ok || errno==ENOENT);
+	if(temppath) temppath = fullpath(temppath); XXASSERT(errno==ok && is_dir(temppath));
 
-	source_directory = directory_from_path(sname);
-	source_filename  = filename_from_path(sname);
+	XXASSERT(liststyle>=0 && liststyle<=7);
+	XXASSERT(deststyle==0 || deststyle=='b' || deststyle=='x' || deststyle=='s');
+
+
+	source_directory = directory_from_path(sourcefile);
+	source_filename  = filename_from_path(sourcefile);
+	cstr basename    = basename_from_path(source_filename);
+
+	cstr dest_directory = destpath ? directory_from_path(destpath) : destpath=source_directory;
+	XXXASSERT(is_dir(dest_directory));
+
+	cstr list_directory = listpath ? directory_from_path(listpath) : listpath=dest_directory;
+	XXXASSERT(is_dir(list_directory));
+
+	temp_directory = temppath ? temppath : dest_directory;
+	XXXASSERT(is_dir(temp_directory));
 
 	StrArray source;
-	source.append( catstr("#include ", quotedstr(sname)) );
+	source.append( catstr("#include ", quotedstr(sourcefile)) );
 	assemble(source);
-	if(errors.count()==0) try { checkTargetfile(); } catch(any_error& e) { addError(e.what()); }
-	if(lname) try { writeListfile(lname, v, w); } catch(any_error& e) { addError(e.what()); }
-	if(errors.count()==0 && dname) try { writeTargetfile(dname,style); } catch(any_error& e) { addError(e.what()); }
+
+	if(errors.count()==0)
+		try { checkTargetfile(); }
+		catch(any_error& e) { addError(e.what()); }
+
+	if(liststyle)
+		try
+		{
+			listpath = endswith(listpath,"/") ? catstr(listpath, basename, ".lst") : listpath;
+			writeListfile(listpath, liststyle);
+		}
+		catch(any_error& e) { addError(e.what()); }
+
+	if(errors.count()==0 && deststyle)
+		try
+		{
+			destpath = endswith(destpath,"/") ? catstr(destpath, basename, ".$") : destpath;
+			writeTargetfile(destpath,deststyle);
+		}
+		catch(any_error& e) { addError(e.what()); }
 }
 
 
@@ -311,6 +353,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 	segments.append(new Segment(DEFAULT_CODE_SEGMENT,no,0xff,no,yes));	// current_segment must exist
 	segments[0].address_valid = yes;		// "physical" address = $0000 is valid
 	segments[0].org_valid = yes;			// "logical"  address = $0000 is valid too
+	global_labels().add(new Label(DEFAULT_CODE_SEGMENT,&segments[0],0,0,yes));
 
 	// setup errors:
 	errors.purge();
@@ -318,6 +361,8 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 	// setup conditional assembly:
 	cond_off = 0x00;
 	cond[0] = no_cond;
+
+	Array<Segment*> oldsegs;
 
 	// DOIT:
 	for(pass=1,final=no; pass<9 && !final && errors.count()==0; pass++)
@@ -362,6 +407,8 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 				if(errors.count()>max_errors) return;
 				if(pass>1) source[i].segment->skipExistingData(source[i].bytecount);
 			}
+			if(pass==1) { assert(oldsegs.count()==i); oldsegs.append(source[i].segment); }			// TODO XXX
+			else assert(oldsegs[i]==source[i].segment);
 		}
 
 		// stop on errors:
@@ -395,6 +442,14 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 				if(seg.relocatable)
 				{
 					if(seg_address_valid) seg.setAddress(seg_address);
+				}
+
+				if(seg.address_valid)
+				{
+					Label& l = global_labels().find(seg.name);
+					if(l.is_valid && l.value!=(int32)seg.address) { addError(usingstr("label %s redefined",seg.name)); return; }
+					l.value = seg.address;
+					l.is_valid = yes;
 				}
 
 				seg_address_valid = seg.physicalAddressValid();
@@ -463,7 +518,12 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 		q.expectEol();			// expect end of line
 
 		if(q.segment==current_segment_ptr) q.bytecount = currentPosition() - q.byteptr;
-		else q.segment = current_segment_ptr;	// .area instruction
+		else
+		{
+			q.segment = current_segment_ptr;	// .area instruction
+			q.byteptr = currentPosition();		// Für Temp Label Resolver & Logfile
+			XXXASSERT(q.bytecount==0);
+		}
 	}
 }
 
@@ -766,9 +826,9 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 		if(eq(w,"target"))	  asmTarget(q);		else
 		if(eq(w,"code"))	  asmSegment(q,0);	else
 		if(eq(w,"data"))	  asmSegment(q,1);	else
-		if(eq(w,"cc"))		  asmCc(q);			else
 		if(eq(w,"include"))	  asmInclude(q);	else
 		if(eq(w,"insert"))	  asmInsert(q);		else
+		if(eq(w,"cflags"))	  asmCFlags(q);		else
 		if(eq(w,"local"))	  asmLocal(q);		else
 		if(eq(w,"endlocal"))  asmEndLocal(q);	else
 		if(eq(w,"end"))		  asmEnd(q);		else throw fatal_error("unknown assembler directive");
@@ -778,9 +838,9 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 }
 
 
+#if 0
 /*	#cc "path/to/c-compiler" <options>
 	define path to c compiler and options
-
 */
 void Z80Assembler::asmCc(SourceLine& q) throw(any_error)
 {
@@ -831,6 +891,40 @@ void Z80Assembler::asmCc(SourceLine& q) throw(any_error)
 	if(!is_writable(tempdir)) throw fatal_error("temp dir not writable!");
 	cc_basedir = fullpath(catstr(tempdir, "/", filename_from_path(compiler), options, "/"),1,1);
 	if(errno) throw fatal_error(usingstr("creating temp dir for intermediate files failed: %s",strerror(errno)));
+}
+#endif
+
+
+/*	#CFLAGS -opt1 -opt2 …
+	arguments may be quoted
+	detects special arguments $SOURCE, $DEST and $CFLAGS
+	note: argv[0] (the executable's path) is not included in c_flags[].
+		  $SOURCE and $DEST may be present or missing: then c_qi or c_zi = 0
+		  default in c'tor: c_flags = { "-S", "-mz80" }
+		  in #include: default argv[] = { "…/sdcc", "-S", "-mz80", "-o", outfile, sourcefile }
+*/
+void Z80Assembler::asmCFlags( SourceLine& q ) throw(any_error)
+{
+	if(pass>1) { q.skip_to_eol(); return; }
+
+	Array<cstr> old_cflags = c_flags;		// moves contents
+
+	while(!q.testEol())
+	{
+		cptr a = q.p;
+		while((uint8)*q>' ') ++q;
+		cstr s = substr(a,q.p);
+		if(s[0]=='"') s = unquotedstr(s);
+		if(s[0]=='$' && eq(s,"$SOURCE")) c_qi = c_flags.count();
+		if(s[0]=='$' && eq(s,"$DEST"))   c_zi = c_flags.count();
+		if(s[0]=='$' && eq(s,"$CFLAGS"))
+		{
+			if(c_qi) c_qi += old_cflags.count();
+			if(c_zi) c_zi += old_cflags.count();
+			c_flags.append(old_cflags);	// moves contents
+		}
+		c_flags.append(s);
+	}
 }
 
 
@@ -960,6 +1054,7 @@ void Z80Assembler::asmTarget( SourceLine& q ) throw(any_error)
 
 /*	#include "sourcefile"
 	the file is included in pass 1
+	filenames ending on ".c" are compiled with sdcc (or the preset compiler) into the temp directory
 */
 void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 {
@@ -972,23 +1067,47 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 
 	if(endswith(fqn,".c"))
 	{
-		if(cc[0]==NULL) throw fatal_error("no c compiler defined! (-> use directive #cc)");
-		if(!exists_node(fqn)) throw fatal_error("file does not exist");
-		if(!is_file(fqn)) throw fatal_error("not a regular file");
+		if(c_compiler==NULL)
+		{
+			Array<str> ss;
+			split(ss, getenv("PATH"), ':');
+			for(uint i=0; i<ss.count(); i++)
+			{
+				cstr s = catstr(ss[i],"/sdcc");
+				if(is_file(s)) { c_compiler = s; break; }
+			}
+			if(!exists_node(c_compiler))	throw fatal_error("sdcc not found");
+			if(!is_file(c_compiler))		throw fatal_error("sdcc is not a regular file");
+			if(!is_executable(c_compiler))	throw fatal_error("sdcc is not executable");
 
-		cstr& fqn_c = cc[cc_qi]; fqn_c = fqn;
-		cstr& fqn_a = cc[cc_zi]; fqn_a = fqn = catstr(cc_basedir, basename_from_path(fqn), ".s");
+			c_flags.purge();
+		}
+
+		if(c_flags.count()==0)			// --> sdcc -mz80 -S
+		{
+			c_flags.append("-mz80");
+			c_flags.append("-S");
+		}
+
+		cstr fqn_q = fqn;
+		cstr fqn_z = fqn = catstr(temp_directory, basename_from_path(fqn), ".s");
 
 		// if the .a file does not exists or is older than the .c file, then compile the .c file:
-		if(!exists_node(fqn_a) || file_mtime(fqn_a) <= file_mtime(fqn_c))
+		// note: this does not handle modified header files or modified CFLAGS
+		if(!exists_node(fqn_z) || file_mtime(fqn_z) <= file_mtime(fqn_q))
 		{
 			pid_t child_id = fork();	// fork a child process
 			XXXASSERT(child_id!=-1);	// fork failed: can't happen
 
 			if(child_id==0)				// child process:
 			{
-				execve(cc[0], (char**)cc, environ);	// exec cmd
-				exit(errno);				// exec failed: return errno: will be printed in error msg, but is ambiguous with cc exit code
+				if(c_zi==0) { c_flags.append("-o"); c_flags.append(fqn_z); } else { c_flags[c_zi] = fqn_z; }
+				if(c_qi==0) {                       c_flags.append(fqn_q); } else { c_flags[c_qi] = fqn_q; }
+				c_flags.append(NULL);
+				c_flags.insertat(0,c_compiler);
+
+				execve(c_compiler, (char**)c_flags.getData(), environ);	// exec cmd
+				exit(errno);			// exec failed: return errno: will be printed in error msg, but is ambiguous with cc exit code
 			}
 			else						// parent process:
 			{
@@ -1002,11 +1121,11 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 				if(WIFEXITED(status))				// child process exited normally
 				{
 					if(WEXITSTATUS(status)!=0)		// child process returned error code
-						throw fatal_error(usingstr("%s returned exit code %i", quotedstr(cc[0]), (int)WEXITSTATUS(status)));
+						throw fatal_error(usingstr("%s returned exit code %i", quotedstr(c_compiler), (int)WEXITSTATUS(status)));
 				}
 				else if(WIFSIGNALED(status))		// child process terminated by signal
 				{
-					throw fatal_error(usingstr("%s terminated by signal %i", quotedstr(cc[0]), (int)WTERMSIG(status)));
+					throw fatal_error(usingstr("%s terminated by signal %i", quotedstr(c_compiler), (int)WTERMSIG(status)));
 				}
 				else IERR();
 			}
@@ -1051,8 +1170,10 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	if(!target) throw fatal_error("#target declaration missing");
 
 	cstr name = upperstr(q.nextWord());
-	if(!is_letter(*name) && *name!='_') throw syntax_error("segment name expected");
+	if(!is_letter(*name) && *name!='_') throw fatal_error("segment name expected");
 	Segment* segment = segments.find(name);
+	XXXASSERT(!segment || eq(segment->name,name));
+	if(segment && segment->is_data != is_data) throw fatal_error("#code/#data mismatch");
 	if(pass==1 ? segment!=NULL : q.peekChar()!=',') { current_segment_ptr = segment; return; }	// --> expect eol
 
 	int32 address	= 0;
@@ -1089,6 +1210,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 		uint8 fillbyte = is_data || ne(target,"ROM") ? 0x00 : 0xFF;
 		segment = new Segment(name,is_data,fillbyte,relocatable,resizable);
 		segments.append(segment);
+		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid));
 	}
 	current_segment_ptr = segment;
 
@@ -1161,10 +1283,35 @@ wlen1:
 	{
 		w = lowerstr(q.nextWord());
 
-		if(eq(w,"module"))			{ q.skip_to_eol(); return; }	// for listing
-		if(startswith(w,"optsdcc"))	{ q.skip_to_eol(); return; }	// .optsdcc -mz80
-		if(startswith(w,"area"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
-		if(startswith(w,"globl"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
+		if(eq(w,"module"))				// for listing
+		{
+			q.skip_to_eol();
+			return;
+		}
+		if(startswith(w,"optsdcc"))		// .optsdcc -mz80
+		{
+			if(!q.testChar('-') )
+				throw syntax_error("- expected");
+			if(ne(q.nextWord(),"mz80"))
+				throw syntax_error("mz80 expected");
+			return;
+		}
+		if(startswith(w,"area"))		// select segment for following code
+		{
+			cstr name = upperstr(q.nextWord());
+			if(!is_letter(*name) && *name!='_') throw fatal_error("segment name expected");
+			Segment* segment = segments.find(name);
+			if(!segment) throw fatal_error("segment not found");
+			current_segment_ptr = segment;
+			q.skip_to_eol();			// TODO: parse & validate acc. to SDASZ80 syntax
+			return;
+		}
+		if(startswith(w,"globl"))		// declare global label for linker
+		{
+			q.skip_to_eol();
+			fprintf(stderr,"SDASZ80 opcode \".%s\": TODO\n",w);
+			return;
+		}
 		if(startswith(w,"db"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 		if(startswith(w,"ds"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 		if(startswith(w,"ascii"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));

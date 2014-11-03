@@ -73,22 +73,27 @@ static cstr help =
 "  send bug reports to: kio@little-bat.de\n\n"
 
 "syntax:\n"
-"  zasm [-vwbxs] [-i] inputfile [[-l] listfile] [[-o] outfile]\n\n"
+"  zasm [-uwbxs] [-i] inputfile [[-l] listfile_or_dir] [[-o] outfile_or_dir]\n\n"
+
+"  default output dir = source dir\n"
+"  default list dir = output dir\n\n"
 
 "examples:\n"
 "  zasm speccirom.asm\n"
-"  zasm -vw speccirom.src rom_v2.0.1.rom\n\n"
+"  zasm -uw speccirom.src rom_v2.0.1.rom\n\n"
 
 "options:\n"
-"  -v  include object code in list file\n"
-"  -w  include label list in list file\n"
-"  -b  write output to binary file (default)\n"
-"  -x  write output in intel hex format\n\n"
-"  -s  silent: no summary on stderr\n\n"
+"  -u   include object code in list file\n"
+"  -w   include label list in list file\n"
+"  -b   write output to binary file (default)\n"
+"  -x   write output in intel hex format\n"
+"  -s   write output in motorola s-record format\n"
+"  -o0  don't write output file"
+"  -l0  don't write list file"
+"  -v[0,1,2]       tweak messages to stderr (0=off,1=dflt,2=more)\n"
+"  -c path/to/cc   set path to c compiler   (default: sdcc in $PATH)\n"
+"  -t path/to/dir  set path to temp dir     (default: output dir)\n\n"
 
-"If no listfile is given, then no list file is generated.\n"
-"The listfile may refer to a directory.\n"
-"The outfile may be omited or refer to a directory.\n"
 "–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\n"
 "";
 
@@ -101,14 +106,15 @@ static cstr help =
 int main( int argc, cstr argv[] )
 {
 // options:
-	bool listv   = no;		// object code included in listing
-	bool listw   = no;		// label listing appended to listing
-	bool silent	 = no;		// no summary on stderr (except if the Ass is not even started due to file not found etc.)
-	char style	 ='b';		// 'b' / 'x' == default/binary/intel hex
+	uint verbose     = 1;	// 0=off, 1=default, 2=verbose
+	uint outputstyle = 'b';	// 0=none, 'b'=binary, 'x'=intel hex, 's'=motorola s-records
+	uint liststyle   = 1;	// 0=none, 1=plain, 2=with objcode, 4=with label listing, 6=both
 // filepaths:
 	cstr inputfile  = NULL;
-	cstr outputfile = NULL;
-	cstr listfile   = NULL;
+	cstr outputfile = NULL;	// or dir
+	cstr listfile   = NULL;	// or dir
+	cstr tempdir    = NULL;
+	cstr c_compiler = NULL;
 
 //	eval arguments:
 	int i=1;
@@ -128,14 +134,23 @@ int main( int argc, cstr argv[] )
 		{
 			switch(c)
 			{
-			case 'v': listv=yes; continue;
-			case 'w': listw=yes; continue;
-			case 's': silent=yes;continue;
-			case 'x': style='x'; continue;
-			case 'b': style='b'; continue;
+			case 'u': liststyle |= 2; continue;
+			case 'w': liststyle |= 4; continue;
+			case 's': outputstyle=c; continue;
+			case 'x': outputstyle=c; continue;
+			case 'b': outputstyle=c; continue;
+
+			case 'v': if(*(s+1)>='0' && *(s+1)<='3') verbose = *++s - '0'; else ++verbose; break;
+
 			case 'i': if(inputfile  || i==argc) goto h; else inputfile  = argv[i++]; continue;
-			case 'o': if(outputfile || i==argc) goto h; else outputfile = argv[i++]; continue;
-			case 'l': if(listfile   || i==argc) goto h; else listfile   = argv[i++]; continue;
+			case 'o': if(*(s+1)=='0') { outputstyle = 0; ++s; continue; }
+					  if(outputfile || i==argc) goto h; else outputfile = argv[i++]; continue;
+			case 'l': if(*(s+1)=='0') { liststyle = 0; ++s; continue; }
+					  if(listfile   || i==argc) goto h; else listfile   = argv[i++]; continue;
+
+			case 'c': if(c_compiler || i==argc) goto h; else c_compiler = argv[i++]; continue;
+			case 't': if(tempdir || i==argc) goto h; else tempdir = argv[i++]; continue;
+
 			default:  goto h;
 			}
 		}
@@ -144,28 +159,61 @@ int main( int argc, cstr argv[] )
 // check source file:
 	if(!inputfile) h: abort(help, version, compiledatestr(), _PLATFORM);
 	inputfile = fullpath(inputfile);
-	if(errno) { fprintf(stderr, "--> sourcefile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
-	if(!is_file(inputfile)) { fprintf(stderr, "--> sourcefile: not a regular file\nzasm: 1 error\n");  return 1; }
+	if(errno)				{ if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", inputfile, strerror(errno)); return 1; }
+	if(!is_file(inputfile))	{ if(verbose) fprintf(stderr, "--> %s: not a regular file\nzasm: 1 error\n", inputfile);  return 1; }
 
-// check list file:
-	if(listfile)
-	{
-		listfile = fullpath(listfile);
-		if(errno && errno!=ENOENT) { fprintf(stderr, "--> listfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
-		if(lastchar(listfile)=='/') listfile = catstr( listfile, basename_from_path(inputfile), ".txt" );
-	}
-
-// check output file:
+// check output file or dir:
 	if(!outputfile) outputfile = directory_from_path(inputfile);
 	outputfile = fullpath(outputfile);
-	if(errno && errno!=ENOENT) { fprintf(stderr, "--> outputfile: %s\nzasm: 1 error\n", strerror(errno)); return 1; }
-	if(lastchar(outputfile)=='/') outputfile = catstr( outputfile, basename_from_path(inputfile), ".$" );	// '$' will be replaced by #target
+	if(errno && errno!=ENOENT) { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", outputfile, strerror(errno)); return 1; }
+
+// check list file or dir:
+	if(!listfile) listfile = directory_from_path(outputfile);
+	listfile = fullpath(listfile);
+	if(errno && errno!=ENOENT) { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", listfile, strerror(errno)); return 1; }
+
+// check temp dir:
+	if(!tempdir) tempdir = directory_from_path(outputfile);
+	tempdir = fullpath(tempdir);
+	if(errno && errno!=ENOENT) { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", tempdir, strerror(errno)); return 1; }
+	if(lastchar(tempdir)!='/') { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", tempdir, strerror(ENOTDIR)); return 1; }
+
+// check cc_path:
+	if(c_compiler)
+	{
+		if(c_compiler[0]!='/')
+		{
+			cstr s = quick_fullpath(c_compiler);
+			if(is_file(s))
+				c_compiler = s;
+			else
+			{
+				Array<str> ss;
+				split(ss, getenv("PATH"), ':');
+				for(uint i=0; i<ss.count(); i++)
+				{
+					s = catstr(ss[i],"/",c_compiler);
+					if(is_file(s)) { c_compiler = s; break; }
+				}
+			}
+		}
+//		if(!exists_node(c_compiler))	throw fatal_error("file not found");
+//		if(!is_file(c_compiler))		throw fatal_error("not a regular file");
+//		if(!is_executable(c_compiler))	throw fatal_error("not executable");
+
+		c_compiler = fullpath(c_compiler);
+		if(errno)					{ if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", c_compiler, strerror(errno)); return 1; }
+		if(!is_file(c_compiler))	{ if(verbose) fprintf(stderr, "--> %s: not a regular file\nzasm: 1 error\n", c_compiler);  return 1; }
+		if(!is_executable(c_compiler)) { if(verbose) fprintf(stderr, "--> %s: not executable\nzasm: 1 error\n", c_compiler);  return 1; }
+	}
 
 // DO IT!
 	Z80Assembler ass;
-	ass.assembleFile( inputfile, outputfile, listfile, listv, listw, style);
+	ass.verbose = verbose;
+	if(c_compiler) ass.c_compiler = c_compiler;
+	ass.assembleFile( inputfile, outputfile, listfile, listfile, liststyle, outputstyle);
 
-	if(silent) return ass.errors.count()>0;		// 0=ok, 1=error(s)
+	if(!verbose) return ass.errors.count()>0;		// 0=ok, 1=error(s)
 
 	if(ass.errors.count()==0)
 	{

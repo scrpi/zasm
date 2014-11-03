@@ -31,67 +31,132 @@
 #include "Z80Assembler.h"
 
 
+
+/*	Helper: write one line with address, code and text to log file
+	address	= base address of opcode
+	bytes	= pointer to start of opcode
+	count	= size of opcode (num. bytes)
+	offset	= offset in bytes[]
+	text	= source line etc.
+
+	returns:  bytes printed. (may be faked to 'oll' for longish fillers)
+
+	if multiple lines must be printed for an opcode (a 'defs' or similar)
+	then address, bytes and count must not be incremented by the caller
+	instead the caller only increments offset
+
+	format:
+	1234: 12345678	sourceline
+*/
+uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uint offset, cstr text)
+{
+	address += offset;
+	bytes   += offset;
+	count   -= offset;
+
+	switch(count)
+	{
+	case 0:	fd.write_fmt("%04X:         \t%s\n",  address&0xffff,		  text); return 0;
+	case 1:	fd.write_fmt("%04X: %02X      \t%s\n",address, peek1X(bytes), text); return 1;
+	case 2: fd.write_fmt("%04X: %04X    \t%s\n",  address, peek2X(bytes), text); return 2;
+	case 3: fd.write_fmt("%04X: %06X  \t%s\n",    address, peek3X(bytes), text); return 3;
+	case 4:
+	default:
+		// wenn zuletzt 4 gleiche Bytes geloggt wurden
+		// und noch mehr als 4 Bytes folgen
+		// und nur noch diese Bytes folgen
+		// dann verkürze die ausgegebenen Datenbytes mit "...":
+		if(offset>=4 && count>4)
+		{
+			uint8* p = bytes-4;
+			uint8* e = bytes+count;
+			uint8  c = *p++;
+			while(p<e && *p==c) ++p;
+			if(p==e)
+			{
+				fd.write_fmt("%04X: %02X...   \t%s\n", address, peek1X(bytes), text);
+				return count;
+			}
+		}
+
+		fd.write_fmt("%04X: %08X\t%s\n", address, peek4X(bytes), text);
+		return 4;
+	}
+}
+
+
+
 /* ==============================================================
 		Write List File
 ============================================================== */
 
 
-void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
+void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 {
-	XLogLine("writeListfile %s, %s%s", listpath, v?"v":"", w?"w":"");
+	XLogLine("writeListfile %s (style=%i)", listpath, style);
 
 	XXXASSERT(listpath && *listpath);
 	XXXASSERT(source.count()); 	// da muss zumindest das selbst erzeugte #include in Zeile 0 drin sein
 
 	FD fd(listpath,'w');
 
+//	for(uint i=0;i<segments.count();i++)				// TODO XXX
+//		fd.write_fmt("%s\n",segments[i].name);
+
+
 	uint si=0,ei=0;	// source[] index, errors[] index
 	while( si<source.count() )
 	{
-		SourceLine* sourceline = &source[si++];
+		SourceLine& sourceline = source[si++];
+		Segment& segment = *sourceline.segment;
+		if(&segment==NULL) break;		// after '#end'
 
-		if(v)	// include objcode:
+		if(style&2)	// include objcode:
 		{
-			uint ocode_size = sourceline->bytecount;
-			if(ocode_size==0)
+//			if(segment.size_valid && sourceline.byteptr+sourceline.bytecount > segment.size)
+//			{
+//				fd.write_fmt("%s: %i+%i>%i\n",segment.name,sourceline.byteptr,sourceline.bytecount,segment.size);
+//				continue;
+//			}
+
+			XXXASSERT(!segment.size_valid || sourceline.bytecount<=0x10000);
+			XXXASSERT(!segment.size_valid || sourceline.byteptr+sourceline.bytecount <= segment.size);
+
+			uint count   = sourceline.bytecount;			// bytes to print
+			uint offset  = sourceline.byteptr;				// offset from segment start
+			uint8* bytes = segment.core.getData() + offset;// ptr -> opcode
+			uint address = segment.address + offset;		// "physical" address of opcode
+			// offset = 0;									// offset in opcode
+
+			// print line with address, up to 4 opcode bytes and source line:
+			// note: real z80 opcodes have max. 4 bytes
+			offset = write_line_with_objcode(fd, address, bytes, count, 0, sourceline.text);
+
+			// print errors and suppress printing of further opcode bytes:
+			while( ei<errors.count() && errors[ei].sourceline == &sourceline )
 			{
-				fd.write_str("              \t");
+				fd.write_fmt("***ERROR***   \t%s^ %s\n", sourceline.whitestr(), errors[ei++].text);
+				offset = count;
 			}
-			else
+
+			// print remaining opcode bytes
+			// note: real z80 opcodes have max. 4 bytes
+			// but some pseudo opcodes like 'defm' or 'defs' may have more:
+			while(offset<count)
 			{
-				Segment* segment = sourceline->segment;
-				uint ocode_index = sourceline->byteptr;
-
-				XXXASSERT(segment);
-				XXXASSERT(!segment->size_valid || ocode_size<=0x10000);
-				XXXASSERT(!segment->size_valid || ocode_index+ocode_size <= segment->size);
-
-				uint8* core = segment->core.getData();
-
-				while(ocode_size>4)
-				{
-					uint32 data = peek4X(core+ocode_index);
-					if(data != segment->fillbyte*0x01010101u)					// exclude (large) ranges of empty space
-					{
-						fd.write_fmt("%04X: ",segment->address+ocode_index);	// address
-						fd.write_fmt("%08X\n",data);							// 4 data bytes; note: assumes int==int32
-					}
-					ocode_index += 4;
-					ocode_size  -= 4;
-				}
-
-				fd.write_fmt("%04X: ",segment->address+ocode_index);							// address
-				for(uint n=0; n<ocode_size; n++) { fd.write_fmt("%02X",core[ocode_index++]); }  // 1..4 data bytes
-				fd.write_str(&"        \t"[ocode_size*2]);						// padding for bytes less than 4; plus tab
+				offset += write_line_with_objcode(fd, address, bytes, count, offset, "");
 			}
 		}
-
-		fd.write_str(sourceline->text); fd.write_char('\n');					// source line
-
-		while( ei<errors.count() && errors[ei].sourceline == sourceline )
+		else	// plain listing without object code:
 		{
-			if(v) fd.write_str(usingstr("***ERROR***   \t%s^ %s\n", sourceline->whitestr(), errors[ei++].text));
-			else  fd.write_str(usingstr("%s^ ***ERROR*** %s\n", sourceline->whitestr(), errors[ei++].text));
+			// print source line
+			fd.write_str(sourceline.text); fd.write_char('\n');
+
+			// print errors and suppress printing of further opcode bytes:
+			while( ei<errors.count() && errors[ei].sourceline == &sourceline )
+			{
+				fd.write_fmt("%s^ ***ERROR*** %s\n", sourceline.whitestr(), errors[ei++].text);
+			}
 		}
 	}
 
@@ -101,7 +166,7 @@ void Z80Assembler::writeListfile(cstr listpath, bool v, bool w) throw(any_error)
 	}
 
 	// TODO: Labelliste
-	if(w) addError("writeListfile: write label list: TODO");
+	if(style&4) addError("writeListfile: write label list: TODO");
 
 	fd.close_file();
 }
