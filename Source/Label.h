@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -63,6 +63,7 @@ public:
 	void		add(Label* l)				{ ObjHashMap::add(l->name,l); }
 	Label&		find(cstr name)				{ return ObjHashMap::get(name); }
 	Label const& find(cstr name) const		{ return ObjHashMap::get(name); }
+	Array<Label*> getItems()				{ return ObjHashMap::getItems(); }
 };
 
 

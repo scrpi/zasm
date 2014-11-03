@@ -247,7 +247,8 @@ int main( int argc, cstr argv[] )
 	if(c_compiler) ass.c_compiler = c_compiler;
 	ass.assembleFile( inputfile, outputfile, listfile, listfile, liststyle, outputstyle);
 
-	if(!verbose) return ass.errors.count()>0;		// 0=ok, 1=error(s)
+	if(!verbose)
+		return ass.errors.count()>0;		// 0=ok, 1=error(s)
 
 	if(ass.errors.count()==0)
 	{

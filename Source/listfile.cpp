@@ -29,7 +29,8 @@
 #define SAFE 3
 #define LOG 1
 #include "Z80Assembler.h"
-
+#include "unix/files.h"
+#include "unix/tempmem.h"
 
 
 /*	Helper: write one line with address, code and text to log file
@@ -48,6 +49,7 @@
 	format:
 	1234: 12345678	sourceline
 */
+static
 uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uint offset, cstr text)
 {
 	address += offset;
@@ -85,6 +87,17 @@ uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uin
 }
 
 
+/*	compare two labels by name
+	for sort()
+*/
+static
+bool gt_by_name(Label*& a, Label*& b)
+{
+	return gt(a->name,b->name);
+//	return gt(lowerstr(a->name),lowerstr(b->name));
+}
+
+
 
 /* ==============================================================
 		Write List File
@@ -93,28 +106,32 @@ uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uin
 
 void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 {
-	XLogLine("writeListfile %s (style=%i)", listpath, style);
-
 	XXXASSERT(listpath && *listpath);
 	XXXASSERT(source.count()); 	// da muss zumindest das selbst erzeugte #include in Zeile 0 drin sein
 
 	FD fd(listpath,'w');
-
+	TempMemPool tempmempool;	// be nice in case zasm is included in another project
 	uint si=0,ei=0;	// source[] index, errors[] index
-	while( si<source.count() )
-	{
-		SourceLine& sourceline = source[si++];
-		Segment& segment = *sourceline.segment;
-		if(&segment==NULL) break;		// after '#end'
 
-		if(style&2)	// include objcode:
+
+	// Listing with object code:
+	// lines after #end are not included in the list file!
+	//
+	if(style&2)
+	{
+		while( si<source.count() )
 		{
+			SourceLine& sourceline = source[si++];
+
+			Segment& segment = *sourceline.segment;
+			if(&segment==NULL) break;		// after '#end'
+
 			XXXASSERT(!segment.size_valid || sourceline.bytecount<=0x10000);
 			XXXASSERT(!segment.size_valid || sourceline.byteptr+sourceline.bytecount <= segment.size);
 
 			uint count   = sourceline.bytecount;			// bytes to print
 			uint offset  = sourceline.byteptr;				// offset from segment start
-			uint8* bytes = segment.core.getData() + offset;// ptr -> opcode
+			uint8* bytes = segment.core.getData() + offset;	// ptr -> opcode
 			uint address = segment.address + offset;		// "physical" address of opcode
 			// offset = 0;									// offset in opcode
 
@@ -137,8 +154,17 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				offset += write_line_with_objcode(fd, address, bytes, count, offset, "");
 			}
 		}
-		else	// plain listing without object code:
+	}
+
+	// Plain listing without object code:
+	// all lines are included in the list file
+	//
+	else
+	{
+		while( si<source.count() )
 		{
+			SourceLine& sourceline = source[si++];
+
 			// print source line
 			fd.write_str(sourceline.text); fd.write_char('\n');
 
@@ -150,13 +176,90 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 		}
 	}
 
-	while(ei<errors.count())	// remaining errors (presumably without associated source line)
+	// List remaining errors:
+	// without associated source line
+	//
+	while(ei<errors.count())
 	{
 		fd.write_fmt("***ERROR*** %s\n",errors[ei++].text);
 	}
 
-	// TODO: Labelliste
-	if(style&4) addError("writeListfile: write label list: TODO");
+	// List Labels:
+	// labels are listed in groups by locality, globals first
+	// within each group they are sorted by name
+	// TODO: option sort by
+	//		 Segment + Adresse
+	//		 Segment + Name
+	//		 File
+	//
+	if(style&4)
+	{
+		{	fd.write_str("\n; +++ global symbols +++\n\n");
+
+			Array<Label*> globals = this->labels[0].getItems();
+			Array<Label*> labels(globals.copy());
+			labels.sort(&gt_by_name);		// sort by name
+
+			uint maxlen = 0;
+			for(uint j=0; j<labels.count(); j++) maxlen = max(maxlen,(uint)strlen(labels[j]->name));
+			limit(7u,maxlen,19u);
+			str spaces = spacestr(maxlen);
+			XXASSERT(labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(none)" should be first => exclude from listing
+
+			for(uint j=0+1; j<labels.count(); j++)
+			{
+				Label* l = labels[j];
+			//	cstr		name = l->name;
+			//	Segment*	segment = l->segment;
+				int			value = l->value;
+			//	bool		is_valid = l->is_valid;
+			//	uint		sourcelinenumber = l->sourceline;
+				SourceLine&	sourceline = source[l->sourceline];
+			//	cstr		text = sourceline.text;
+				cstr		sourcefile = filename_from_path(sourceline.sourcefile);
+				uint		linenumber = sourceline.sourcelinenumber;
+
+				// name  equ $1234 ; -12345 segment sourcefile:linenumber
+				uint namelen = strlen(l->name);
+				fd.write_str(l->name);
+				if(namelen<maxlen) fd.write_str(spaces+namelen);
+				if(l->is_valid)
+					 fd.write_fmt(" equ $%04X ;%8i  %s  %s:%u\n", value&0xffff, value, l->segment->name, sourcefile, linenumber);
+				else fd.write_fmt(" equ $0000 ; invalid  %s  %s:%u\n", l->segment->name, sourcefile, linenumber);
+			}
+		}
+
+		for(uint i=1; i<labels.count(); i++)
+		{
+			fd.write_str("\n; +++ local symbols +++\n\n");
+
+			Array<Label*> labels = this->labels[i].getItems();
+
+			uint maxlen = 0;
+			for(uint j=0; j<labels.count(); j++) maxlen = max(maxlen,(uint)strlen(labels[j]->name));
+			limit(7u,maxlen,19u);
+			str spaces = spacestr(maxlen);
+
+			for(uint j=0; j<labels.count(); j++)
+			{
+				Label* l = labels[j];
+				int			value = l->value;
+				SourceLine&	sourceline = source[l->sourceline];
+				cstr		sourcefile = filename_from_path(sourceline.sourcefile);
+				uint		linenumber = sourceline.sourcelinenumber;
+
+				// name  equ $1234 ; -12345 segment sourcefile:linenumber
+				uint namelen = strlen(l->name);
+				fd.write_str(l->name);
+				if(namelen<maxlen) fd.write_str(spaces+namelen);
+				if(l->is_valid)
+					 fd.write_fmt(" equ $%04X ;%8i  %s  %s:%u\n", value&0xffff, value, l->segment->name, sourcefile, linenumber);
+				else fd.write_fmt(" equ $0000 ; invalid  %s  %s:%u\n", l->segment->name, sourcefile, linenumber);
+			}
+		}
+
+		fd.write_char('\n');
+	}
 
 	fd.close_file();
 }

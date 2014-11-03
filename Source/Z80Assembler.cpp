@@ -61,7 +61,7 @@ static double now()
 
 // name for default code segment, if no #target is given:
 //
-const char DEFAULT_CODE_SEGMENT[] = "DEFAULT_CODE_SEGMENT";
+const char DEFAULT_CODE_SEGMENT[] = "(none)";
 
 
 // for character set translation:
@@ -1315,7 +1315,7 @@ wlen1:
 		if(startswith(w,"globl"))		// declare global label for linker
 		{
 			q.skip_to_eol();
-			fprintf(stderr,"SDASZ80 opcode \".%s\": TODO\n",w);
+			if(pass==1) fprintf(stderr,"SDASZ80 opcode \".%s\": TODO\n",w);
 			return;
 		}
 		if(startswith(w,"db"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
