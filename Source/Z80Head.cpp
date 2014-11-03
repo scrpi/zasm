@@ -60,35 +60,36 @@ Model Z80Head::getZxspModel()
 
 // Version 3.0 and later:
 
-		//	model:          Meaning
-		//	-----------------------------------------------------
-		//	  7             Spectrum +3
-		//	  8             [mistakenly used by some versions of XZX-Pro to indicate a +3]
-		//	  9             Pentagon (128K)
-		//    10            Scorpion (256K)
-		//    11            Didaktik-Kompakt
-		//    12            Spectrum +2
-		//    13            Spectrum +2A
-		//    14            TC2048
-		//    15            TC2068
-		//   128            TS2068
+	//	model:          Meaning
+	//	-----------------------------------------------------
+	//	  7             Spectrum +3
+	//	  8             [mistakenly used by some versions of XZX-Pro to indicate a +3]
+	//	  9             Pentagon (128K)
+	//    10            Scorpion (256K)
+	//    11            Didaktik-Kompakt
+	//    12            Spectrum +2
+	//    13            Spectrum +2A
+	//    14            TC2048
+	//    15            TC2068
+	//   128            TS2068
 
-		// While most emulators using these extensions write version 3 files, some write version 2 files
-		// so it's probably best to assume any of these values can be seen in either version 2 or version 3 files.
+	// While most emulators using these extensions write version 3 files, some write version 2 files
+	// so it's probably best to assume any of these values can be seen in either version 2 or version 3 files.
 
-		//  rldiremu    Bit 7 = 1: Modify hardware
-		//				If bit 7 is set, the hardware types are modified slightly:
-		//				any 48K machine becomes a 16K machine,
-		//				any 128K machines becomes a +2
-		//				and any +3 machine becomes a +2A.
-		//	im          Bit 2 = 1: Issue2 emulation
+	//  rldiremu    Bit 7 = 1: Modify hardware
+	//				If bit 7 is set, the hardware types are modified slightly:
+	//				any 48K machine becomes a 16K machine,
+	//				any 128K machines becomes a +2
+	//				and any +3 machine becomes a +2A.
+	//	im          Bit 2 = 1: Issue2 emulation
 
     switch(model)
     {
     case 2:     //return -1;				// SamRam
     case 0:
     case 1:
-    case 3:     return rldiremu>>7 ? zxsp_i1 : im&4 ? zxsp_i2 : (rldiremu>>5)&1 ? zxplus : zxsp_i3;    // 46k, modify hw: 16k
+    case 3:		// 46k, modify hw: 16k
+				return rldiremu>>7 ? zxsp_i1 : im&4 ? zxsp_i2 : (rldiremu>>5)&1 ? zxplus : zxsp_i3;
 
     case 4:
     case 5:

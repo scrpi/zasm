@@ -211,7 +211,8 @@ void Z80Assembler::checkTargetfile() throw(any_error)
 	for(uint i=1; i<segments.count(); i++)
 	{
 		if(segments[i].isData()) continue;
-		for(int j=i-1; j>=0 && segments[j].isData(); j--) kio::swap(*(segments.getData()+j),*(segments.getData()+(j+1)));
+		for(int j=i-1; j>=0 && segments[j].isData(); j--)
+			kio::swap(*(segments.getData()+j),*(segments.getData()+(j+1)));
 	}
 
 	// remove empty DEFAULT_CODE_SEGMENT:
@@ -276,16 +277,21 @@ void Z80Assembler::checkSnaFile() throw(any_error)
 
 	// verify that first block is the header:
 	Segment& hs = segments[0];
-	if(hs.size!=27) throw syntax_error(usingstr("target SNA: first code segment must be .sna header and 27 bytes long (size=%u)", (uint)hs.size));
+	if(hs.size!=27) throw syntax_error(
+		usingstr("target SNA: first code segment must be .sna header and 27 bytes long (size=%u)", (uint)hs.size));
 	SnaHead* head = (SnaHead*)hs.getData();
 
 	// verify some values from header:
-	if((head->i>>6)==1) addError(usingstr("segment %i: i register must not be in range [0x40 .. 0x7F] (i=0x%02X)", hs.name, head->i));
+	if((head->i>>6)==1) addError(
+		usingstr("segment %i: i register must not be in range [0x40 .. 0x7F] (i=0x%02X)", hs.name, head->i));
 	if(head->iff2&~4) addError(usingstr("segment %i: iff2 byte must be 0 or 4 (iff2=0x%02X)", hs.name, head->iff2));
 	uint16 sp = head->spl + 256*head->sph;
-	if(sp>0 && sp<0x4002) addError(usingstr("segment %i: sp register must not be in range [0x0001 .. 0x4001] (sp=0x%04X)", hs.name, sp));
-	if(head->int_mode>2) addError(usingstr("segment %i: interrupt mode must be in range 0 .. 2 (im=%u)", hs.name, head->int_mode));
-	if(head->border>7) addError(usingstr("segment %i: border color byte must not be in range 0 .. 7 (brdr=%u)", hs.name, head->border));
+	if(sp>0 && sp<0x4002) addError(
+		usingstr("segment %i: sp register must not be in range [0x0001 .. 0x4001] (sp=0x%04X)", hs.name, sp));
+	if(head->int_mode>2) addError(
+		usingstr("segment %i: interrupt mode must be in range 0 .. 2 (im=%u)", hs.name, head->int_mode));
+	if(head->border>7) addError(
+		usingstr("segment %i: border color byte must not be in range 0 .. 7 (brdr=%u)", hs.name, head->border));
 	if(errors.count()) return;
 
 	// verify ram segments:
@@ -293,11 +299,14 @@ void Z80Assembler::checkSnaFile() throw(any_error)
 	for(uint i=1; i<segments.count() && segments[i].isCode(); i++)
 	{
 		Segment& s = segments[i];
-		if(s.address!=addr) addError(usingstr("segment %s should start at 0x%04X (size=0x%04X)", s.name, (uint)addr, (uint)s.address));
+		if(s.address!=addr) addError(
+			usingstr("segment %s should start at 0x%04X (size=0x%04X)", s.name, (uint)addr, (uint)s.address));
 		addr += s.size;
-		if(addr>0x10000) { addError(usingstr("segment %s extends beyond ram end (end=0x%05X)", s.name, (uint)addr)); break; }
+		if(addr>0x10000) { addError(
+			usingstr("segment %s extends beyond ram end (end=0x%05X)", s.name, (uint)addr)); break; }
 	}
-	if(addr<0x10000) addError(usingstr("target SNA: total ram size must be 0xC000 bytes (size=0x%04X)", (uint)addr-0x4000));
+	if(addr<0x10000) addError(
+			usingstr("target SNA: total ram size must be 0xC000 bytes (size=0x%04X)", (uint)addr-0x4000));
 //	if(errors.count()) return;
 }
 
@@ -320,16 +329,19 @@ void Z80Assembler::checkAceFile() throw(any_error)
 	segments.checkNoFlagsSet();
 	uint32 ramsize = segments.totalCodeSize();
 	bool ramsize_valid = ramsize==0x2000 || ramsize==0x6000 || ramsize==0xA000;
-	if(!ramsize_valid) addError(usingstr("total ram size is not supported: must be 0x2000 (3k), 0x6000 (3+16k) or 0xA000 (3+32k)"));
+	if(!ramsize_valid) addError(
+		usingstr("total ram size is not supported: must be 0x2000 (3k), 0x6000 (3+16k) or 0xA000 (3+32k)"));
 
 	uint32 addr = 0x2000;	// current address := ram start
 	for(uint i=0; i<segments.count() && segments[i].isCode(); i++)
 	{
 		Segment& s = segments[i];
 		if(s.size==0) continue;		// skip & don't check address
-		if(s.address!=addr) addError(usingstr("segment %s should start at 0x%04X (address=0x%04X)", s.name, (uint)addr, (uint)s.address));
+		if(s.address!=addr) addError(
+			usingstr("segment %s should start at 0x%04X (address=0x%04X)", s.name, (uint)addr, (uint)s.address));
 		if(addr>=0x3C00) { addr+=s.size; continue; }	// Program Ram: segments may be any size
-		if(s.size&0x3ff) throw syntax_error(usingstr("segment %s size must be a multiple of 0x400 (size=0x%04X)", s.name, (uint)s.size));
+		if(s.size&0x3ff) throw syntax_error(
+			usingstr("segment %s size must be a multiple of 0x400 (size=0x%04X)", s.name, (uint)s.size));
 
 		for(uint32 offs=0; offs<s.size; offs+=0x400, addr+=0x400)
 		{
@@ -342,24 +354,38 @@ void Z80Assembler::checkAceFile() throw(any_error)
 				for(uint i=0; i<8;  i++) zbu[0x41+2*i]=0;	// clear settings
 				for(uint i=0; i<18; i++) zbu[0x81+2*i]=0;	// clear registers
 				bool empty=yes; for(int i=1; i<0x200 && empty; i++) { empty = zbu[i]==0; }
-				if(!empty) { addError(usingstr("segment %s must be empty except for settings and registers", s.name)); break; }
+				if(!empty) { addError(
+					usingstr("segment %s must be empty except for settings and registers", s.name)); break; }
 
 				// check registers:
 				AceHead* head = (AceHead*)&s[offs];
-				if(peek2Z(&head->flag_8001) != 0x8001) addError(usingstr("segment %s: segment[0].flag must be 0x8001", s.name));
+				if(peek2Z(&head->flag_8001) != 0x8001) addError(
+					usingstr("segment %s: segment[0].flag must be 0x8001", s.name));
 				uint ramtop = peek2Z(&head->ramtop);
-				if(ramsize_valid && ramtop!=0x2000+ramsize) addError(usingstr("segment %s: settings[0].ramtop != ram end address 0x%04X (ramtop=0x%04X)", s.name, 0x2000+(uint)ramsize, ramtop));
+				if(ramsize_valid && ramtop!=0x2000+ramsize) addError(
+					usingstr("segment %s: settings[0].ramtop != ram end address 0x%04X (ramtop=0x%04X)",
+						s.name, 0x2000+(uint)ramsize, ramtop));
 
 				uint sp = peek2Z(&head->sp);
-				if(sp<0x2002) addError(usingstr("segment %s: z80_regs[6].sp must not be in range [0x0000 .. 0x2001] (sp=0x%04X)", s.name, sp));
-				if(sp>ramtop) addError(usingstr("segment %s: z80_regs[6].sp points behind settings[0].ramtop (sp=0x%04X, ramtop=0x%04X)", s.name, sp, ramtop));
+				if(sp<0x2002) addError(
+					usingstr("segment %s: z80_regs[6].sp must not be in range [0x0000 .. 0x2001] (sp=0x%04X)",
+						s.name, sp));
+				if(sp>ramtop) addError(
+					usingstr("segment %s: z80_regs[6].sp points behind settings[0].ramtop (sp=0x%04X, ramtop=0x%04X)",
+						s.name, sp, ramtop));
 
-				if(peek2Z(&head->im)>2)   addError(usingstr("segment %s: z80_regs[12].int_mode must be in range 0 .. 2 (im=%u)", s.name, head->im));
-				if(peek2Z(&head->iff1)>1) addError(usingstr("segment %s: z80_regs[13].iff1 must be 0 or 1 (iff1=%u)", s.name, head->iff1));
-				if(peek2Z(&head->iff2)>1) addError(usingstr("segment %s: z80_regs[14].iff2 must be 0 or 1 (iff2=%u)", s.name, head->iff2));
-				if(peek2Z(&head->i)>255)  addError(usingstr("segment %s: z80_regs[15].reg_i must be in range 0 .. 0xff (i=%u)", s.name, head->i));
-				if(peek2Z(&head->r)>255)  addError(usingstr("segment %s: z80_regs[16].reg_r must be in range 0 .. 0xff (r=%u)", s.name, head->r));
-				if(peek2Z(&head->flag_80) != 0x80) addError(usingstr("segment %s: z80_regs[17].flag must be 0x80", s.name));
+				if(peek2Z(&head->im)>2)   addError(
+					usingstr("segment %s: z80_regs[12].int_mode must be in range 0 .. 2 (im=%u)", s.name, head->im));
+				if(peek2Z(&head->iff1)>1) addError(
+					usingstr("segment %s: z80_regs[13].iff1 must be 0 or 1 (iff1=%u)", s.name, head->iff1));
+				if(peek2Z(&head->iff2)>1) addError(
+					usingstr("segment %s: z80_regs[14].iff2 must be 0 or 1 (iff2=%u)", s.name, head->iff2));
+				if(peek2Z(&head->i)>255)  addError(
+					usingstr("segment %s: z80_regs[15].reg_i must be in range 0 .. 0xff (i=%u)", s.name, head->i));
+				if(peek2Z(&head->r)>255)  addError(
+					usingstr("segment %s: z80_regs[16].reg_r must be in range 0 .. 0xff (r=%u)", s.name, head->r));
+				if(peek2Z(&head->flag_80) != 0x80) addError(
+					usingstr("segment %s: z80_regs[17].flag must be 0x80", s.name));
 				break;
 			}
 
@@ -368,14 +394,18 @@ void Z80Assembler::checkAceFile() throw(any_error)
 			case 0x3400:	// Prog RAM 2nd mirror
 			case 0x3800:	// Prog RAM 3rd mirror
 			{
-				uint32* bu = (uint32*)&s[offs]; bool empty=yes; for(int i=0; i<0x100 && empty; i++) { empty = bu[i]==0; }
-				if(!s.isEmpty()) addError(usingstr("segment %s: page 0x%04X-0x%04X must be empty", s.name, (uint)addr, (uint)addr+0x3ff));
+				uint32* bu = (uint32*)&s[offs]; bool empty=yes;
+				for(int i=0; i<0x100 && empty; i++) { empty = bu[i]==0; }
+				if(!s.isEmpty()) addError(
+					usingstr("segment %s: page 0x%04X-0x%04X must be empty", s.name, (uint)addr, (uint)addr+0x3ff));
 			}
 //			case 0x2400:	// VRAM
 //			case 0x2C00:	// CRAM
 			default:		// Prog RAM
 				XXXASSERT(addr==0x3C00);
-				throw syntax_error(usingstr("segment %s extends into program ram at 0x3C00 (segment end=0x%04X)",s.name,(uint)(addr-offs+s.size)));
+				throw syntax_error(
+					usingstr("segment %s extends into program ram at 0x3C00 (segment end=0x%04X)",
+						s.name,(uint)(addr-offs+s.size)));
 			}
 		}
 	}
@@ -390,29 +420,29 @@ void Z80Assembler::checkZX80File() throw(any_error)
 {
 	struct ZX80Head
 	{
-		uint8	ERR_NR;		//	db	$FF		;  1  16384 $4000 IY+$00	One less than report code.
-		uint8	FLAGS;		//	db	$04		; X1  16385 $4001 IY+$01	Various Flags to control BASIC System:
-		uint16	PPC;		//	dw	$FFFE	;  2  16386 $4002 IY+$02	Line number of current line.
-		uint16	P_PTR;		//	dw	$434A	; N2  16388 $4004 IY+$04	Position in RAM of [K] or [L] cursor.
-		uint16	E_PPC;		//	dw	0		;  2  16390 $4006 IY+$06	Number of current line with [>] cursor.
-		uint16	VARS;		//	dw	$4349	; X2  16392 $4008 IY+$08	Address of start of variables area.
-		uint16	E_LINE;		//	dw	$434A	; X2  16394 $400A IY+$0A	Address of start of Edit Line.
-		uint16	D_FILE;		//	dw	$434C	; X2  16396 $400C IY+$0C	Start of Display File.
-		uint16	DF_EA;		//	dw	$458C	; X2  16398 $400E IY+$0E	Address of the start of lower screen.
-		uint16	DF_END;		//	dw	$458F	; X2  16400 $4010 IY+$10	Display File End.
-		uint8	DF_SZ;		//	db	2		; X1  16402 $4012 IY+$12	Number of lines in lower screen.
-		uint8	S_TOPlo, S_TOPhi;	// dw 0	;  2  16403 $4013 IY+$13	The number of first line on screen.
-		uint8	X_PTRlo, X_PTRhi;	// dw 0	;  2  16405 $4015 IY+$15	Address of the character preceding the [S] marker.
-		uint8	OLDPPClo, OLDPPChi;	// dw 0	;  2  16407 $4017 IY+$17	Line number to which continue jumps.
-		uint8	FLAGX;		//	db	0		; N1  16409 $4019 IY+$19	More flags:
-		uint16	T_ADDR;		//	dw	$07A2	; N2  16410 $401A IY+$1A	Address of next item in syntax table.
-		uint16	SEED;		//	dw	0		; U2  16412 $401C IY+$1C	The seed for the random number.
-		uint16	FRAMES;		//	dw	$7484	; U2  16414 $401E IY+$1E	Count of frames shown since start-up.
-		uint16	DEST;		//	dw	$4733	; N2  16416 $4020 IY+$20	Address of variable in statement.
-		uint16	RESULT;		//	dw	$3800	; N2  16418 $4022 IY+$22	Value of the last expression.
-		uint8	S_POSN_X;	//	db	$21		; X1  16420 $4024 IY+$24	Column number for print position.
-		uint8	S_POSN_Y;	//	db	$17		; X1  16421 $4025 IY+$25	Line number for print position.
-		uint16	CH_ADD;		//	dw	$FFFF	; X2  16422 $4026 IY+$26	Address of next character to be interpreted.
+	uint8	ERR_NR;		//	db	$FF		;  1  16384 $4000 IY+$00 One less than report code.
+	uint8	FLAGS;		//	db	$04		; X1  16385 $4001 IY+$01 Various Flags to control BASIC System:
+	uint16	PPC;		//	dw	$FFFE	;  2  16386 $4002 IY+$02 Line number of current line.
+	uint16	P_PTR;		//	dw	$434A	; N2  16388 $4004 IY+$04 Position in RAM of [K] or [L] cursor.
+	uint16	E_PPC;		//	dw	0		;  2  16390 $4006 IY+$06 Number of current line with [>] cursor.
+	uint16	VARS;		//	dw	$4349	; X2  16392 $4008 IY+$08 Address of start of variables area.
+	uint16	E_LINE;		//	dw	$434A	; X2  16394 $400A IY+$0A Address of start of Edit Line.
+	uint16	D_FILE;		//	dw	$434C	; X2  16396 $400C IY+$0C Start of Display File.
+	uint16	DF_EA;		//	dw	$458C	; X2  16398 $400E IY+$0E Address of the start of lower screen.
+	uint16	DF_END;		//	dw	$458F	; X2  16400 $4010 IY+$10 Display File End.
+	uint8	DF_SZ;		//	db	2		; X1  16402 $4012 IY+$12 Number of lines in lower screen.
+	uint8	S_TOPlo, S_TOPhi;	// dw 0	;  2  16403 $4013 IY+$13 The number of first line on screen.
+	uint8	X_PTRlo, X_PTRhi;	// dw 0	;  2  16405 $4015 IY+$15 Address of the character preceding the [S] marker.
+	uint8	OLDPPClo, OLDPPChi;	// dw 0	;  2  16407 $4017 IY+$17 Line number to which continue jumps.
+	uint8	FLAGX;		//	db	0		; N1  16409 $4019 IY+$19 More flags:
+	uint16	T_ADDR;		//	dw	$07A2	; N2  16410 $401A IY+$1A Address of next item in syntax table.
+	uint16	SEED;		//	dw	0		; U2  16412 $401C IY+$1C The seed for the random number.
+	uint16	FRAMES;		//	dw	$7484	; U2  16414 $401E IY+$1E Count of frames shown since start-up.
+	uint16	DEST;		//	dw	$4733	; N2  16416 $4020 IY+$20 Address of variable in statement.
+	uint16	RESULT;		//	dw	$3800	; N2  16418 $4022 IY+$22 Value of the last expression.
+	uint8	S_POSN_X;	//	db	$21		; X1  16420 $4024 IY+$24 Column number for print position.
+	uint8	S_POSN_Y;	//	db	$17		; X1  16421 $4025 IY+$25 Line number for print position.
+	uint16	CH_ADD;		//	dw	$FFFF	; X2  16422 $4026 IY+$26 Address of next character to be interpreted.
 	};
 
 	static_assert(sizeof(ZX80Head)==0x28,"sizeof(ZX80Head) wrong!");
@@ -421,20 +451,24 @@ void Z80Assembler::checkZX80File() throw(any_error)
 	uint32 ramsize = segments.totalCodeSize();
 	// valid ram size: 1k, 2k, 3k, 4k, 16k
 	bool ramsize_valid = ramsize>=sizeof(ZX80Head)+1 && ramsize<=16 kB;
-	if(!ramsize_valid) addError(usingstr("total ram size out of range: must be ≥40+1 ($2A+1) and ≤16k (size=$%04X",ramsize));
+	if(!ramsize_valid) addError(
+		usingstr("total ram size out of range: must be ≥40+1 ($2A+1) and ≤16k (size=$%04X",ramsize));
 	if(ramsize<sizeof(ZX80Head)) return;
 
 	Segment& hs = segments[0];
-	if(hs.size<sizeof(ZX80Head)) throw syntax_error(usingstr("segment %s must be at least 40 ($28) bytes long (size=%u)",hs.name,(uint)hs.size));
+	if(hs.size<sizeof(ZX80Head)) throw syntax_error(
+		usingstr("segment %s must be at least 40 ($28) bytes long (size=%u)",hs.name,(uint)hs.size));
 
 	ZX80Head* head = (ZX80Head*)hs.getData();
 	uint16 E_LINE = peek2Z(&head->E_LINE);
-	if(ramsize_valid && E_LINE != 0x4000+ramsize) addError(usingstr(
-		"segment %s: E_LINE ($400A) must match ram end address $%04X (E_LINE=$%04X)",hs.name, 0x4000+(uint)hs.size, E_LINE));
+	if(ramsize_valid && E_LINE != 0x4000+ramsize) addError(
+		usingstr("segment %s: E_LINE ($400A) must match ram end address $%04X (E_LINE=$%04X)",
+			hs.name, 0x4000+(uint)hs.size, E_LINE));
 
 //	uint16 VARS = peek2Z(&head->VARS);
 //	if(VARS<0x4028) addError(usingstr("segment %s: VARS too low",hs.name));
-//	if(VARS>=E_LINE) addError(usingstr("segment %s: VARS must be < E_LINE (VARS=$%04X, E_LINE=$%04X)",hs.name,VARS,E_LINE));
+//	if(VARS>=E_LINE) addError(
+//		usingstr("segment %s: VARS must be < E_LINE (VARS=$%04X, E_LINE=$%04X)",hs.name,VARS,E_LINE));
 //	if(head.S_POSN_X>0x21) 	addError(usingstr("segment %s: S_POSN_X too high",hs.name));
 //	if(head.S_POSN_Y>0x17) 	addError(usingstr("segment %s: S_POSN_Y too high",hs.name));
 
@@ -443,7 +477,8 @@ void Z80Assembler::checkZX80File() throw(any_error)
 	for(i=0;i<segments.count()&&segments[i].isCode();i++)
 	{
 		Segment& s = segments[i];
-		if(s.address!=addr) addError(usingstr("segment %s should start at $%04X (address=$%04X)", s.name, (uint)addr, (uint)s.address));
+		if(s.address!=addr) addError(
+			usingstr("segment %s should start at $%04X (address=$%04X)", s.name, (uint)addr, (uint)s.address));
 		addr += s.size;
 	}
 
@@ -465,41 +500,41 @@ void Z80Assembler::checkZX81File() throw(any_error)
 
 	struct ZX81Head		// SYSVARs $4009++
 	{
-		uint8 VERSN;			//	db	0		; 0 identifies 8K ZX81 Basic in saved programs.
-		uint8 E_PPC,E_PPChi;	//	dw	0		; Number of current line (with program cursor).
-		uint8 D_FILE,D_FILEhi;	//	dw	0		; Address of Display File (screen data) in memory.
-		uint8 DF_CC,DF_CChi;	//	dw	0		; Address of PRINT position in display file. Can be poked so that PRINT output is sent elsewhere.
-		uint8 VARS,VARShi;		//	dw	0		; Address of user program variables in memory.
-		uint8 DEST,DESThi;		//	dw	0		; Address of variable in assignment.
-		uint8 E_LINE,E_LINEhi;	//	dw	0		; Address of line being editted in memory.
-		uint8 CH_ADD,CH_ADDhi;	//	dw	0		; Address of the next character to be interpreted: the character after the argument of PEEK, or the ENTER/NEWLINE at the end of a POKE statement.
-		uint8 X_PTR,X_PTRhi;	//	dw	0		; Address of the character preceding the [S] marker.
-		uint8 STKBOT,STKBOThi;	//	dw	0		; Address of the Calculator stack in memory. This is where Basic does the math calculations.
-		uint8 STKEND,STKENDhi;	//	dw	0		; End of the Calculator stack.
-		uint8 BREG;				//	db	0		; Calculator’s b register.
-		uint8 MEM,MEMhi;		//	dw	0		; Address of area used for calculator’s memory. (Usually MEMBOT but not always.)
-		uint8 x1;				//	db	0		; not used
-		uint8 DF_SZ;			//	db	0		; The number of lines (including one blank line) in the lower part of the screen.
-		uint8 S_TOP,S_TOPhi;	//	dw	0		; The number of the top program line in automatic listings.
-		uint8 LAST_K,LAST_Khi;	//	dw	0		; Shows which keys pressed
-		uint8 x2;				//	db	0		; Debounce status of keyboard.
-		uint8 MARGIN;			//	db	0		; Number of blank lines above or below picture: 55 in Britain (50Hz), 31 in America (60Hz).
-		uint8 NXTLIN,NXTLINhi;	//	dw	0		; Address of next program line to be executed.
-		uint8 OLDPPC,OLDPPChi;	//	dw	0		; Line number to which CONT jumps.
-		uint8 FLAGX;			//	db	0		; Various flags.
-		uint8 STRLEN,STRLENhi;	//	dw	0		; Length of string type designation in assignment.
-		uint8 T_ADDR,T_ADDRhi;	//	dw	0		; Address of next item in syntax table (very unlikely to be useful).
-		uint8 SEED,SEEHhi;		//	dw	0		; The seed for RND. This is the variable that is set by RAND.
-		uint8 FRAMES,FRAMEShi;	//	dw	0		; Counts the frames displayed on the television.
-		uint8 CORD_X;			//	db	0		; x-coordinate of last point PLOTed.
-		uint8 CORD_Y;			//	db	0		; y-coordinate of last point PLOTed.
-		uint8 PR_CC;			//	db	0		; Less significant byte of address of next position for LPRINT to print at (in PRBUFF).
-		uint8 S_POSN_X;			//	db	0		; Column number for PRINT position.
-		uint8 S_POSN_Y;			//	db	0		; Line number for PRINT position.
-		uint8 CDFLAG;			//	db	0		; Various flags. Bit 7 is on (1) during compute and display (SLOW) mode.
-	//	PRBUFF	ds	33		; Printer buffer (33rd character is ENTER/NEWLINE).
-	//	MEMBOT	ds	30		; Calculator’s memory area; used to store numbers that cannot conveniently be put on the calculator stack.
-	//			dw	0		; not used
+	uint8 VERSN;			//	0 identifies 8K ZX81 Basic in saved programs.
+	uint8 E_PPC,E_PPChi;	//	Number of current line (with program cursor).
+	uint8 D_FILE,D_FILEhi;	//	Address of Display File (screen data) in memory.
+	uint8 DF_CC,DF_CChi;	//	Address of PRINT position in display file.
+	uint8 VARS,VARShi;		//	Address of user program variables in memory.
+	uint8 DEST,DESThi;		//	Address of variable in assignment.
+	uint8 E_LINE,E_LINEhi;	//	Address of line being editted in memory.
+	uint8 CH_ADD,CH_ADDhi;	//	Address of the next character to be interpreted
+	uint8 X_PTR,X_PTRhi;	//	Address of the character preceding the [S] marker.
+	uint8 STKBOT,STKBOThi;	//	Address of the Calculator stack in memory.
+	uint8 STKEND,STKENDhi;	//	End of the Calculator stack.
+	uint8 BREG;				//	Calculator’s b register.
+	uint8 MEM,MEMhi;		//	Address of area used for calculator’s memory. (Usually MEMBOT but not always.)
+	uint8 x1;				//	not used
+	uint8 DF_SZ;			//	The number of lines (including one blank line) in the lower part of the screen.
+	uint8 S_TOP,S_TOPhi;	//	The number of the top program line in automatic listings.
+	uint8 LAST_K,LAST_Khi;	//	Shows which keys pressed
+	uint8 x2;				//	Debounce status of keyboard.
+	uint8 MARGIN;			//	Number of blank lines above or below picture
+	uint8 NXTLIN,NXTLINhi;	//	Address of next program line to be executed.
+	uint8 OLDPPC,OLDPPChi;	//	Line number to which CONT jumps.
+	uint8 FLAGX;			//	Various flags.
+	uint8 STRLEN,STRLENhi;	//	Length of string type designation in assignment.
+	uint8 T_ADDR,T_ADDRhi;	//	Address of next item in syntax table (very unlikely to be useful).
+	uint8 SEED,SEEHhi;		//	The seed for RND. This is the variable that is set by RAND.
+	uint8 FRAMES,FRAMEShi;	//	Counts the frames displayed on the television.
+	uint8 CORD_X;			//	x-coordinate of last point PLOTed.
+	uint8 CORD_Y;			//	y-coordinate of last point PLOTed.
+	uint8 PR_CC;			//	Less significant byte of address of next position for LPRINT to print at.
+	uint8 S_POSN_X;			//	Column number for PRINT position.
+	uint8 S_POSN_Y;			//	Line number for PRINT position.
+	uint8 CDFLAG;			//	Various flags. Bit 7 is on (1) during compute and display (SLOW) mode.
+//	PRBUFF	ds	33	; Printer buffer (33rd character is ENTER/NEWLINE).
+//	MEMBOT	ds	30	; Calculator’s memory area; used to store numbers that cannot be put on the calculator stack.
+//			dw	0	; not used
 	};
 
 	static_assert(sizeof(ZX81Head)==125 -9 -65, "sizeof(ZX81Head) wrong!");		// 125 == 0x7D
@@ -516,7 +551,8 @@ void Z80Assembler::checkZX81File() throw(any_error)
 
 a:		Segment& s = segments[hi++];
 		if(s.size==0) goto a;
-		if(s.size>128) throw syntax_error(usingstr("segment %s: program name too long: max=128 bytes (size=%u)",s.name,(uint)s.size));
+		if(s.size>128) throw syntax_error(
+			usingstr("segment %s: program name too long: max=128 bytes (size=%u)",s.name,(uint)s.size));
 
 		uint i=0;
 		while(i<s.size && s[i]<0x40) i++;
@@ -527,19 +563,23 @@ a:		Segment& s = segments[hi++];
 
 	// valid ram size: sizeof(sysvars)-9+1 .. 16k-9
 	bool ramsize_valid = ramsize >= 125+1 && ramsize <= 16 kB;
-	if(!ramsize_valid) addError(usingstr("total ram size out of range: must be ≥125+1 ($7D+1) and ≤16k (size=$%04X)",ramsize));
+	if(!ramsize_valid) addError(
+		usingstr("total ram size out of range: must be ≥125+1 ($7D+1) and ≤16k (size=$%04X)",ramsize));
 
 	Segment& hs = segments[hi];
-	if(hs.size<125-9) throw syntax_error(usingstr("segment %s must be at least 125-9 ($7D-9) bytes long (size=%u)",hs.name,(uint)hs.size));
+	if(hs.size<125-9) throw syntax_error(
+		usingstr("segment %s must be at least 125-9 ($7D-9) bytes long (size=%u)",hs.name,(uint)hs.size));
 
 	ZX81Head* head = (ZX81Head*)hs.getData();
 	uint16 E_LINE = peek2Z(&head->E_LINE);
-	if(ramsize_valid && E_LINE != 0x4000+ramsize) addError(usingstr(
-		"segment %s: E_LINE must match ram end address $%04X (E_LINE=$%04X)",hs.name, 0x4000+(uint)hs.size, E_LINE));
+	if(ramsize_valid && E_LINE != 0x4000+ramsize) addError(
+		usingstr("segment %s: E_LINE must match ram end address $%04X (E_LINE=$%04X)",
+			hs.name, 0x4000+(uint)hs.size, E_LINE));
 
 //	uint16 VARS = peek2Z(&head->VARS);
 //	if(VARS<0x4028) addError(usingstr("segment %s: VARS too low",hs.name));
-//	if(VARS>=E_LINE) addError(usingstr("segment %s: VARS must be < E_LINE (VARS=$%04X, E_LINE=$%04X)",hs.name,VARS,E_LINE));
+//	if(VARS>=E_LINE) addError(
+//		usingstr("segment %s: VARS must be < E_LINE (VARS=$%04X, E_LINE=$%04X)",hs.name,VARS,E_LINE));
 //	if(head.S_POSN_X>0x21) 	addError(usingstr("segment %s: S_POSN_X too high",hs.name));
 //	if(head.S_POSN_Y>0x17) 	addError(usingstr("segment %s: S_POSN_Y too high",hs.name));
 
@@ -548,7 +588,8 @@ a:		Segment& s = segments[hi++];
 	for(i=hi;i<segments.count()&&segments[i].isCode();i++)
 	{
 		Segment& s = segments[i];
-		if(s.address!=addr) addError(usingstr("segment %s should start at $%04X (address=$%04X)", s.name, (uint)addr, (uint)s.address));
+		if(s.address!=addr) addError(
+			usingstr("segment %s should start at $%04X (address=$%04X)", s.name, (uint)addr, (uint)s.address));
 		addr += s.size;
 	}
 
@@ -594,22 +635,27 @@ void Z80Assembler::checkZ80File() throw(any_error)
 	// v2.0++
 	// check header:
 
-	if(hs.size < z80v3len && hs.size!=z80v2len) throw syntax_error("header: length must be 30 (v1.45), 55 (v2.01) or 86++ (v3++)");
+	if(hs.size < z80v3len && hs.size!=z80v2len)
+		throw syntax_error("header: length must be 30 (v1.45), 55 (v2.01) or 86++ (v3++)");
 	if(head.pch || head.pcl) throw syntax_error("header v2++: PC at offset 6 must be 0");
 
 	uint n = head.h2lenl + 256 * head.h2lenh;	// length of header extension
-	if(32+n != hs.size) throw syntax_error(usingstr("header v2++: wrong header extension length at offset 30: %u + 32 != %u", n, hs.size ));
+	if(32+n != hs.size) throw syntax_error(
+		usingstr("header v2++: wrong header extension length at offset 30: %u + 32 != %u", n, hs.size ));
 
 	Model model = head.getZxspModel();
 	if(model==void_model) throw syntax_error("header: illegal model");
-	if(model>=zxplus3 && model<=zxplus2a_span && hs.size<z80v3len+1) throw syntax_error("header: size must be ≥ 87 for +3/+2A for port_1ffd byte (warajewo/xzx extension)");
+	if(model>=zxplus3 && model<=zxplus2a_span && hs.size<z80v3len+1)
+		throw syntax_error("header: size must be ≥ 87 for +3/+2A for port_1ffd byte (warajewo/xzx extension)");
 
 //	uint32 cc = head.getCpuCycle(model_info->cpu_cycles_per_frame);
 //	if(cc>70000) {}
 
 	bool spectra_used = head.isVersion300() && (head.rldiremu & 0x08);
-	if(spectra_used && model>inves) throw syntax_error("header: SPECTRA extension can only be attached to ZX Spectrum 48k models (rldiremu&8)");
-	if(spectra_used && hs.size<89) throw syntax_error("header: size must be ≥ 89 bytes for SPECTRA extension (rldiremu&8)");
+	if(spectra_used && model>inves)
+		throw syntax_error("header: SPECTRA extension can only be attached to ZX Spectrum 16/48k (rldiremu&8)");
+	if(spectra_used && hs.size<89)
+		throw syntax_error("header: size must be ≥ 89 bytes for SPECTRA extension (rldiremu&8)");
 
 	// v2.0++
 	// check pages:
@@ -619,10 +665,11 @@ void Z80Assembler::checkZ80File() throw(any_error)
 //	bool fuller_ay	= head.rldiremu & 0x40;				// only if ay_used
 //	bool if1_used	= head.model==1 || head.model==5;
 //	bool mgt_used	= head.model==3 || head.model==6;
-	bool paged_mem	= (model>=zx128 && model<=zxplus2a_span) || model==pentagon || model==scorpion || model==samcoupe;
+	bool paged_mem	= (model>=zx128 && model<=zxplus2a_span) || (model>=pentagon && model<=samcoupe);
 	bool varying_pagesize = model>=zx80;
 
-	static uint sz[num_models] = {16,48,48,48,48,48,128,128,128,128,128,128,128,128,128,48,48,48,48,48,48,128,256,256,1,1,2,16,16,3};
+	static uint sz[num_models] = {16,48,48,48,48,48,128,128,128,128,128,128,128,128,128,
+								  48,48,48,48,48,48,128,256,256,1,1,2,16,16,3};
 	uint32 ramsize = (varying_pagesize && head.spectator ? head.spectator : sz[model]) * 1024;
 
 	uint32 addr = 0;	// for varying_pagesize
@@ -637,10 +684,11 @@ void Z80Assembler::checkZ80File() throw(any_error)
         switch (page_id)
         {
         case 2:	// rom at address 0x4000
-				if(!paged_mem) addError(usingstr("segment %s: invalid page ID: this model does not have 32 kB of rom",s.name));
+				if(!paged_mem) addError(
+					usingstr("segment %s: invalid page ID: this model does not have 32 kB of rom",s.name));
         case 0:	// rom at address 0x0000
         case 1:	// IF1, Disciple or Plus D Rom
-				goto anypage;			// TODO: b&w machines may have different rom size (not yet supported in zxsp)
+				goto anypage;		// TODO: b&w machines may have different rom size (not yet supported in zxsp)
         case 11: // Multiface Rom or ram page if ram size > 128k
 				if(ramsize>128 kB) goto rampage; else goto anypage;
 		case 12: // SPECTRA Rom
@@ -654,21 +702,28 @@ void Z80Assembler::checkZ80File() throw(any_error)
 rampage:	page_id -= 3;
 			if(varying_pagesize)	// b&w machines:
 			{
-				if(page_id>7) { addError(usingstr("segment %s: page ID out of range",s.name)); continue; }
-				if(loaded & (1<<page_id)) { addError(usingstr("segment %s: page ID occured twice",s.name)); continue; }
+				if(page_id>7)
+					{ addError(usingstr("segment %s: page ID out of range",s.name)); continue; }
+				if(loaded & (1<<page_id))
+					{ addError(usingstr("segment %s: page ID occured twice",s.name)); continue; }
 				loaded |= 1<<page_id;
 				uint32 size = 1024 << page_id;
-				if(size!=s.size) { addError(usingstr("segment %s: page size does not match page ID",s.name)); continue; }
-				if(addr+size>s.size) { addError(usingstr("segment %s: sum of page sizes exceeds ram size",s.name)); continue; }
+				if(size!=s.size)
+					{ addError(usingstr("segment %s: page size does not match page ID",s.name)); continue; }
+				if(addr+size>s.size)
+					{ addError(usingstr("segment %s: sum of page sizes exceeds ram size",s.name)); continue; }
 				addr += size;
 			}
 			else	// std. 16k page:
 			{
-				if(page_id >= ramsize>>14) { addError(usingstr("segment %s: page ID out of range",s.name)); continue; }
-				if(loaded & (1<<page_id)) { addError(usingstr("segment %s: page ID occured twice",s.name)); continue; }
+				if(page_id >= ramsize>>14)
+					{ addError(usingstr("segment %s: page ID out of range",s.name)); continue; }
+				if(loaded & (1<<page_id))
+					{ addError(usingstr("segment %s: page ID occured twice",s.name)); continue; }
 				loaded |= 1<<page_id;
 				addr += 16 kB;
-anypage:		if(s.size!=16 kB) { addError(usingstr("segment %s: page size must be 16 kB",s.name)); continue; }
+anypage:		if(s.size!=16 kB)
+					{ addError(usingstr("segment %s: page size must be 16 kB",s.name)); continue; }
 			}
 			continue;
         }

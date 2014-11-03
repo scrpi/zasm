@@ -277,7 +277,8 @@ void Z80Assembler::addError( cstr text )
 		segments[];		// code and data segments
 		errors[];
 */
-void Z80Assembler::assembleFile(cstr sourcefile, cstr destpath, cstr listpath, cstr temppath, int liststyle, int deststyle) throw()
+void Z80Assembler::assembleFile( cstr sourcefile, cstr destpath, cstr listpath, cstr temppath,
+								 int liststyle, int deststyle ) throw()
 {
 	sourcefile = fullpath(sourcefile);			XXASSERT(errno==ok && is_file(sourcefile));
 	if(destpath) destpath = fullpath(destpath); XXASSERT(errno==ok || errno==ENOENT);
@@ -447,7 +448,8 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 				if(seg.address_valid)
 				{
 					Label& l = global_labels().find(seg.name);
-					if(l.is_valid && l.value!=(int32)seg.address) { addError(usingstr("label %s redefined",seg.name)); return; }
+					if(l.is_valid && l.value!=(int32)seg.address)
+						{ addError(usingstr("label %s redefined",seg.name)); return; }
 					l.value = seg.address;
 					l.is_valid = yes;
 				}
@@ -630,7 +632,8 @@ label:	Label* l = &local_labels().find(w);
 		else if(local_labels_index!=0 && (l = &global_labels().find(w)))		// globales Label
 		{
 			n = l->value;
-			valid = valid && pass>1 && l->is_valid;	// in pass1 kann ein gefundenes glob. label noch durch ein später definiertes lokales label verdeckt werden
+			valid = valid && pass>1 && l->is_valid;	// in pass1 kann ein gefundenes glob. label noch durch
+													// ein später definiertes lokales label verdeckt werden
 			if(!valid) final = false;
 		}
 		else	// Label nicht gefunden
@@ -1107,7 +1110,8 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 				c_flags.insertat(0,c_compiler);
 
 				execve(c_compiler, (char**)c_flags.getData(), environ);	// exec cmd
-				exit(errno);			// exec failed: return errno: will be printed in error msg, but is ambiguous with cc exit code
+				exit(errno);			// exec failed: return errno: will be printed in error msg,
+										//				but is ambiguous with cc exit code
 			}
 			else						// parent process:
 			{
@@ -1121,11 +1125,13 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 				if(WIFEXITED(status))				// child process exited normally
 				{
 					if(WEXITSTATUS(status)!=0)		// child process returned error code
-						throw fatal_error(usingstr("%s returned exit code %i", quotedstr(c_compiler), (int)WEXITSTATUS(status)));
+						throw fatal_error(usingstr("%s returned exit code %i",
+							quotedstr(c_compiler), (int)WEXITSTATUS(status)));
 				}
 				else if(WIFSIGNALED(status))		// child process terminated by signal
 				{
-					throw fatal_error(usingstr("%s terminated by signal %i", quotedstr(c_compiler), (int)WTERMSIG(status)));
+					throw fatal_error(usingstr("%s terminated by signal %i",
+							quotedstr(c_compiler), (int)WTERMSIG(status)));
 				}
 				else IERR();
 			}
@@ -1500,9 +1506,9 @@ rr:		n = getRegister(q);
 		if(i==AF&&n==AF) storeOpcode(EX_AF_AF);
 		else if(i==HL&&n==DE) storeOpcode(EX_DE_HL);
 		else if(i==HL&&n==OPEN) storeOpcode(EX_HL_xSP);
-//		else if(i==IX&&n==DE) store_IX_opcode(EX_DE_HL); 		// ex de,hl always changes only de and hl. 2006-09-13 kio
-		else if(i==IX&&n==OPEN) store_IX_opcode(EX_HL_xSP); 	// valid illegal. 2006-09-13 kio
-//		else if(i==IY&&n==DE) store_IY_opcode(EX_DE_HL); 		// ex de,hl always changes only de and hl. 2006-09-13 kio
+//		else if(i==IX&&n==DE) store_IX_opcode(EX_DE_HL); 	// ex de,hl always changes only de and hl. 2006-09-13 kio
+		else if(i==IX&&n==OPEN) store_IX_opcode(EX_HL_xSP); // valid illegal. 2006-09-13 kio
+//		else if(i==IY&&n==DE) store_IY_opcode(EX_DE_HL); 	// ex de,hl always changes only de and hl. 2006-09-13 kio
 		else if(i==IY&&n==OPEN) store_IY_opcode(EX_HL_xSP);	// valid illegal. 2006-09-13 kio
 		else goto ill_reg;
 		return;
@@ -1598,7 +1604,7 @@ cp:		s=q.p;
 			i = getRegister(q);
 			if (i>=0)	// (reg)
 			{
-				if(i==IX||i==IY) n = q.peekChar()==')' ? 0 : value(q,pAny,v);	// 2007-09-25 kio: added (IX) and (IY) w/o offset
+				if(i==IX||i==IY) n = q.peekChar()==')' ? 0 : value(q,pAny,v);
 			}
 			else		// (nn)
 			{
@@ -1621,7 +1627,7 @@ cp:		s=q.p;
 			j = getRegister(q);
 			if(j>=0)	// (reg)
 			{
-				if(j==IX||j==IY) m = q.peekChar()==')' ? 0 : value(q,pAny,u);	// 2007-09-25 kio: added (IX) and (IY) w/o offset
+				if(j==IX||j==IY) m = q.peekChar()==')' ? 0 : value(q,pAny,u);
 			}
 			else		// (nn)
 			{
@@ -1645,12 +1651,12 @@ cp:		s=q.p;
 				case -1:	 storeOpcode(LD_B_N+i*8); storeByte(m,u); return;
 				case 100+IX: store_IX_byte_opcode(LD_B_xHL+i*8,m,u); return;
 				case 100+IY: store_IY_byte_opcode(LD_B_xHL+i*8,m,u); return;
-				case XH:														// 2006-09-08 kio: for ill. IX/IY opcodes
-				case XL:	if (i==RH||i==RL||i==OPEN) break;					// 2006-09-08 kio: for ill. IX/IY opcodes
-							store_IX_opcode(LD_B_B+i*8+(j-XH+RH)); return;		// 2006-09-08 kio: for ill. IX/IY opcodes
-				case YH:														// 2006-09-08 kio: for ill. IX/IY opcodes
-				case YL:	if (i==RH||i==RL||i==OPEN) break;					// 2006-09-08 kio: for ill. IX/IY opcodes
-							store_IY_opcode(LD_B_B+i*8+(j-YH+RH)); return;		// 2006-09-08 kio: for ill. IX/IY opcodes
+				case XH:													// for ill. IX/IY opcodes
+				case XL:	if (i==RH||i==RL||i==OPEN) break;				// for ill. IX/IY opcodes
+							store_IX_opcode(LD_B_B+i*8+(j-XH+RH)); return;	// for ill. IX/IY opcodes
+				case YH:													// for ill. IX/IY opcodes
+				case YL:	if (i==RH||i==RL||i==OPEN) break;				// for ill. IX/IY opcodes
+							store_IY_opcode(LD_B_B+i*8+(j-YH+RH)); return;	// for ill. IX/IY opcodes
 				case RB:
 				case RC:
 				case RD:
@@ -2156,7 +2162,7 @@ sh:			if(n&1) throw syntax_error("even number of hex characters expected");
 	}
 	case 'djnz':
 	{
-		n = value(q,pAny,v=1);			// kio 2014-02-09: vor storeOpcode(DJNZ) vorgezogen wg. Bezug eines evtl. genutzen $
+		n = value(q,pAny,v=1);		// vor storeOpcode(DJNZ) wg. Bezug eines evtl. genutzen $
 		storeOpcode(DJNZ);
 		storeOffset( n - (currentAddress()+1), v && currentAddressValid() );
 		return;
@@ -2174,354 +2180,6 @@ ill_dest:		throw syntax_error("illegal destination");
 
 
 
-
-#if 0
-/* ----	assemble single line ------------------
-		if you assemble line by line:
-			reset()					<- only if reusing Ass instance
-			n* assembleLine(str)	<- only if forward references used
-			setupPass2()
-			n* assembleLine(str)
-*/
-void Z80Assembler::assembleLine( cstr source ) throw(any_error)
-{
-	current_sourceline_index = i;
-	current_sourceline = source[i];
-
-	XXASSERT(source);
-
-	cstr w;
-	const char* oldSrcPtr = q.p;		// in case of recursive calls
-	q.p   = source;
-	dest_ptr0 = dest_ptr;
-	cstr error = NULL;
-
-	line++;
-	lines++;
-
-	if(*source==0) {}			// empty line ?
-	else if(*source==';') {}	// comment starting in column 1 ?
-
-	else if(*source=='#')		// #directive ?
-	{
-		q.p++;
-		w = lowerstr(nextWord());
-		try
-		{
-			if(!assDirect(w)) throw fatal_error( catstr("unknown directive '#",w,"'") );
-		}
-		catch(syntax_error& e)
-		{
-			throw fatal_error(e.error(),e.what());
-		}
-	}
-
-	else if(cond_off) {}		// assembling conditionally off ?
-
-	else try					// label definition + opcode:
-	{
-	// label definition:
-		if((uchar)*source>' ') defineLabel(nextWord());
-
-	// opcode or pseudo opcode:
-		w = lowerstr(nextWord());
-		if(!assInstr(w)) throw syntax_error( "unknown opcode " );
-		expectEol();
-	}
-	catch(syntax_error& e)
-	{
-		error = e.what();
-		errors++;
-	}
-
-// write listing
-	if(listv && listf) writeHexDump(fd_listing);
-	if(listf) write_fmt(fd_listing,"%s\n",source);
-
-// list error:
-	if(error)
-	{
-		if(listf) write_fmt( fd_listing, "%s%s^ ***ERROR***: %s\n", spacestr(15*(listv&&listf)), whitestr(substr(source,q.p-1)), error );
-		if(!listf || fd_listing!=STDERR) write_fmt( STDERR, "%s\n%s^ ***ERROR***: %s\n", source, whitestr(substr(source,q.p-1)), error );
-	}
-
-	q.p = oldSrcPtr;		// in case of recursive calls
-}
-#endif
-
-
-
-
-#if 0
-
-
-static char sna_dflt[] = {	0x3f,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,1,7 };
-static char z80_dflt[] = {	0,0,0,0,0,0,0,0,0,0,0,0,0x3f,0,7<<1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1+(1<<6),
-							0,23,0,0,0,0,0,7,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
- 							0,0,0,0,0,0,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-							0	};
-
-
-void Z80Assembler::compressPageZ80(Array<uint8>& qbu)
-{
-	TODO();
-
-//	if(in_head) return;			// header data is not compressed
-
-//// compress page(s):
-
-//	uint qsize = qbu.count();
-//	Array<uint8> zbu; zbu.grow(qsize*5/3+3*8);	// worst case size
-//	uint8* q = qbu.getData();
-//	uint8* z = zbu.getData();
-
-//	if(z80_page!=0xff)			// zxsp memory page or rom
-//	{
-//		XXXASSERT(qsize==0x4000);	// todo: rom
-
-//		z = compress_z80( z80_page, q, qsize, z );
-//	}
-//	else if(z80_varying_ramsize)	// zx80 clones, jupiter et. al.
-//	{
-//		XXXASSERT(qsize>=0x400 && qsize<=0x20000 && (qsize&0x3ff)==0);
-
-//		uint32 addr = 0;
-//		for(int i=0;i<8;i++)	// save pages with id 3..10 and size 1k..128k
-//		{
-//			uint32 n = 0x400<<i;
-//			if(qsize & n) { z = compress_z80( 3+i, q+addr, n, z); addr += n; }
-//		}
-//	}
-//	else						// zxsp with no paged ram or default ram pages
-//	{
-//		XXXASSERT(qsize==0x4000 || qsize==0x8000 || qsize==0xC000);
-
-//						 z = compress_z80(8, q+0x0000, 0x4000, z);
-//		if(qsize>0x4000) z = compress_z80(4, q+0x4000, 0x4000, z);
-//		if(qsize>0x8000) z = compress_z80(5, q+0x8000, 0x4000, z);
-//	}
-
-//	zbu.shrink(z-zbu.getData());
-//	qbu.swap(zbu);
-}
-
-
-
-
-
-
-/* ==============================================================
-		handle TAP directives
-============================================================== */
-
-void Z80Assembler::writeTapeBlock()
-{
-	if(!dest_bu) return;
-
-// store length
-	dest_bu[0] = (dest_ptr-(dest_bu+2)+1);
-	dest_bu[1] = (dest_ptr-(dest_bu+2)+1)>>8;
-
-// calc checksum
-	char crc = 0;
-	if(pass2) for( char*p=dest_bu+2; p<dest_ptr; p++ ) { crc^=*p; }
-	storeByte(crc);
-
-	writeSegment(yes);		// TAP: all segments are truncated
-}
-
-
-void Z80Assembler::handleCodeTap()
-{
- 	writeTapeBlock();
-
-// #code start,len,sync
-
-	int n = value(pAny|pForce);	expectComma(); if (n!=(int16)n&&n!=(uint16)n) throw fatal_error("illegal origin");
-	int m = value(pAny|pForce); expectComma(); if (m<=0||m>=0x10000) throw fatal_error("illegal length");
-	int s = value(q); if (s<-128||s>255) throw fatal_error("sync byte out of range");
-//	if (error) return;
-
-//			defw	len
-// 			defb	sync
-//	org:	defb	<object code>
-//			defb	crc
-
-	newDestBu(m+4,0); //if (error) return;	// preset with $00 for defs instruction
-	org = n-3;
-	storeWord(0);				// length (not yet known: sized to fit)
-	storeByte(s);				// store the sync byte
-}
-
-
-void Z80Assembler::handleEndTap()
-{
-	writeTapeBlock();
-	Assembler::handleEnd(yes);
-}
-
-
-/* ==============================================================
-		handle .80 / .o file directives  (tape for ZX80)
-============================================================== */
-
-void Z80Assembler::handleCodeZX80 ( )
-{
-	if(dest_bu) throw fatal_error(".80 / .o files cannot have multiple segments");
-
-//	#code $4000, len
-	int n = value(pAny|pForce);	expectComma(); if (n!=0x4000) throw fatal_error("origin must be $4000");
-	int m = value(pAny|pForce); if (m<=0x0028||m>=0x0c000) throw fatal_error("illegal length");
-
-	newDestBu(m,0);											// preset with $00 for defs instruction
-	org = 0x4000;
-}
-
-void Z80Assembler::handleEndZX80()
-{
-	poke2Z( dest_bu+0x000A, 0x4000+dest_ptr-dest_bu );		// E_LINE  (end of input line == end of used ram)
-	Assembler::handleEnd(yes);
-}
-
-
-/* ==============================================================
-		handle .81 / .p file directives  (tape for ZX81)
-============================================================== */
-
-void Z80Assembler::handleCodeZX81 ( )
-{
-	if(dest_bu) throw fatal_error(".81 / .p files cannot have multiple segments");
-
-
-//	#code $4009, len
-	int n = value(pAny|pForce);	expectComma(); if (n!=0x4009) throw fatal_error("origin must be $4009");
-	int m = value(pAny|pForce); if (m<=0x3c-0x09||m>=0x0c000-0x09) throw fatal_error("illegal length");
-
-	newDestBu(m,0);											// preset with $00 for defs instruction
-	org = 0x4009;
-}
-
-void Z80Assembler::handleEndZX81()
-{
-	poke2Z(dest_bu+0x14-0x09, 0x4009+dest_ptr-dest_bu);		// E_LINE  (end of input line == end of used ram)
-	Assembler::handleEnd(yes);
-}
-
-
-/* ==============================================================
-		handle ACE directives
-============================================================== */
-
-//	$2000 - $2400: all-zero: echo of video ram, fast access for CPU ($2000-$2148: ACE32 settings and Z80 registers)
-//	$2400 - $2800: 1k video ram
-//	$2800 - $2C00: all-zero: echo of character ram, fast access for CPU
-//	$2C00 - $3000: 1k character ram
-//	$3000 - $3C00: all-zero: 3 echoes of built-in program ram
-//	$3C00 - $4000: 1k buint-in program ram
-//	$4000 -		 : external ram pack
-
-void Z80Assembler::handleCodeAce()
-{
-	XXXASSERT(target==' ace');
-	XXXASSERT(targetstyle=='b');
-
-	uint addr = value(pAny|pForce);
-//	if(addr<0x2000) throw fatal_error("#code address must be ≥ $2000");
-	if(addr&0x3FF)  throw fatal_error("#code address must be a multiple of 1K");
-	expectComma();
-	uint size = value(pAny|pForce);
-	if(size&0x3FF || size==0)  throw fatal_error("#code size must be a multiple of 1K");
-	if(addr+size>0x10000) throw fatal_error("#code addr+size exceeds $10000");
-
-	if(dest_bu && pass2)
-	{
-		uint sz = dest_end-dest_bu;
-		Array<uint8> bu; bu.grow(sz);
-		memcpy(bu.getData(),dest_bu,sz);
-		compressPageAce(bu);
-		write_bytes(fd_dest,bu.getData(),bu.count());
-	}
-
-	newDestBu(size,0);
-	org = addr;
-}
-
-
-void Z80Assembler::handleEndAce()
-{
-	XXXASSERT(target==' ace');
-	XXXASSERT(targetstyle=='b');
-
-	if(!dest_bu) throw syntax_error("no #code segment found");
-
-	if(pass2)
-	{
-		uint sz = dest_end-dest_bu;
-		Array<uint8> bu; bu.grow(sz);
-		memcpy(bu.getData(),dest_bu,sz);
-		compressPageAce(bu);
-		write_bytes(fd_dest,bu.getData(),bu.count());
-		static uint8 ed00[2]={0xed,0};
-		write(fd_dest,ed00,2);
-	}
-
-	delete[] dest_bu;
-	org += dest_ptr-dest_bu;		// => list code position in #end
-	dest_bu = dest_ptr0 = dest_ptr = dest_end = NULL;
-
-// if intel hex file append closing record
-//	if(fd_dest && targetstyle=='x') write_str(fd_dest, ":00000001FF\r\n");
-
-// close target file (if not stdout/stderr)
-	if (fd_dest>2) close_file(fd_dest); fd_dest = -1;
-	target = 0;
-}
-
-
-/* ==============================================================
-		handle SNA directives
-============================================================== */
-
-void Z80Assembler::handleHeadSna()
-{
-	if(dest_bu) throw syntax_error("#head segment already defined");
-
-	int n = value(pAny|pForce);
-	if(n!=27) throw syntax_error("#head segment size must be 27 for sna files");
-
-	newDestBu(n,0);
-
-	org = 0;
-	memcpy(dest_bu, sna_dflt, n);
-	in_head = true;				// flag: #head segment in progress
-}
-
-
-void Z80Assembler::handleCodeSna()
-{
-	if(!dest_bu) throw syntax_error("#head segment missing");
-	if(!in_head) throw syntax_error("#code segment already defined");
-
-	// write #head segment
-	writeSegment(no);			// not truncated
-	in_head = false;
-
-	org = value(pAny|pForce); if(org!=0x4000) throw syntax_error("address must be $4000");
-	expectComma();
-	int size = value(pAny|pForce); if(size!=0x4000 && size!=0xC000) throw syntax_error("length must be 16K or 48K");
-	newDestBu(size,0);
-}
-
-
-void Z80Assembler::handleEndSna()
-{
-	if(!dest_bu||in_head) throw syntax_error("#code segment missing");
-
-	Assembler::handleEnd(no);
-}
-
-
-#endif
 
 
 

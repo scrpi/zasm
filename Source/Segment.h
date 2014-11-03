@@ -46,16 +46,17 @@ public:
 	Core		core;
 
 	cstr		name;
-	bool		is_data;				// => no actual code storing allowed
-	uint8		fillbyte;				// $FF for ROM else $00
-	bool		relocatable;			// address has not been explicitely set => append to prev. segment
-	bool		resizable;				// size has not been explicitely set    => shrink to fit
+	bool		is_data;			// => no actual code storing allowed
+	uint8		fillbyte;			// $FF for ROM else $00
+	bool		relocatable;		// address has not been explicitely set => append to prev. segment
+	bool		resizable;			// size has not been explicitely set    => shrink to fit
 
-	uint32		address;				// "physical" segment start address (as set in segment header or calculated when appended to prev. segment)
-	uint32		size;					// segment size
-	uint32		dpos;					// code deposition index
-	int32		org_base_address;		// base address for "logical" address (at dpos==0)
-	int			flag;					// flag for .z80 and .tap code segments
+	uint32		address;			// "physical" segment start address (as set in segment header
+									// or calculated when appended to prev. segment)
+	uint32		size;				// segment size
+	uint32		dpos;				// code deposition index
+	int32		org_base_address;	// base address for "logical" address (at dpos==0)
+	int			flag;				// flag for .z80 and .tap code segments
 
 	bool		address_valid;
 	bool		size_valid;
@@ -79,6 +80,7 @@ public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, 
 	void		storeHexBytes	(cptr data, int n)				throw(syntax_error);
 	void		setOrigin		(int32 a, bool a_valid)			throw(syntax_error);
 
+	uint8&		operator[]		(uint32 i)						{ return core[i]; }
 	uint8		popLastByte		()								{ XXXASSERT(dpos>0); return core[--dpos]; }
 
 	void		rewind			();
@@ -86,18 +88,18 @@ public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, 
 	void		setSize			(uint32 n)						throw(syntax_error);
 	void		setFlag			(int32 n)						throw(syntax_error);
 
-	bool		isAtStart		()								{ return dpos_valid && dpos==0; }
-	uint32		currentPosition	()								{ return dpos; }						// write position (offset in core)
-	bool		currentPositionValid()							{ return dpos_valid; }					// … valid?
-	uint32		physicalAddress	()								{ return address + dpos; }				// phy. address of write position (segment_address + dpos)
-	bool		physicalAddressValid()							{ return address_valid && dpos_valid; }	// … valid?
-	int32		logicalAddress	()								{ return org_base_address + dpos; }		// log. address of write position (org + dpos)
-	bool		logicalAddressValid()							{ return org_valid; }					// … valid?
-	bool		isData			()								{ return is_data; }
-	bool		isCode			()								{ return !is_data; }
-	uint8*		getData			()								{ return core.getData(); }
-	bool		isEmpty			()								{ bool empty=yes; for(uint i=0; i<size && empty; i++) empty = core[i]==fillbyte; return empty; }
-	uint8&		operator[]		(uint32 i)						{ return core[i]; }
+	bool		isAtStart		()		{ return dpos_valid && dpos==0; }
+	uint32		currentPosition	()		{ return dpos; }						// offset in core
+	bool		currentPositionValid()	{ return dpos_valid; }					// … valid?
+	uint32		physicalAddress	()		{ return address + dpos; }				// segment_address + dpos
+	bool		physicalAddressValid()	{ return address_valid && dpos_valid; }	// … valid?
+	int32		logicalAddress	()		{ return org_base_address + dpos; }		// org + dpos
+	bool		logicalAddressValid()	{ return org_valid; }					// … valid?
+	bool		isData			()		{ return is_data; }
+	bool		isCode			()		{ return !is_data; }
+	uint8*		getData			()		{ return core.getData(); }
+	bool		isEmpty			()		{ bool empty=yes; for(uint i=0; i<size && empty; i++)
+										  empty = core[i]==fillbyte; return empty; }
 };
 
 
@@ -107,12 +109,49 @@ class Segments : public ObjArray<Segment>
 public:
 	void		add(Segment* s)					{ ObjArray<Segment>::append(s); }
 	Segment*	find(cstr name);
-	uint32		totalCodeSize()					{ uint32 sz=0; for(uint i=count();i--;){Segment* s = data[i]; if(!s->is_data) sz+=s->size; } return sz; }
-	int			firstCodeSegmentWithValidFlag()	{ for(uint i=0;i<count()&&data[i]->isCode();i++) { if(data[i]->flag_valid) return i; } return -1; }
-	void		checkNoFlagsSet()				throw(syntax_error) { for(uint i=0;i<count();i++) { if(data[i]->flag_valid) throw syntax_error(usingstr("segment %s must not have flag set", data[i]->name)); }  }
-	uint		numCodeSegments()				{ uint n=0; for(uint i=0;i<count();i++) n += data[i]->isCode(); return n; }
+INL	uint32		totalCodeSize();
+INL	int			firstCodeSegmentWithValidFlag();
+INL	void		checkNoFlagsSet()		 throw(syntax_error);
+INL	uint		numCodeSegments();
 };
 
+
+
+INL uint32 Segments::totalCodeSize()
+{
+	uint32 sz=0;
+	for(uint i=count();i--;)
+	{
+		Segment* s = data[i];
+		if(!s->is_data) sz += s->size;
+	}
+	return sz;
+}
+
+INL int Segments::firstCodeSegmentWithValidFlag()
+{
+	for(uint i=0; i<count()&&data[i]->isCode(); i++)
+	{
+		if(data[i]->flag_valid) return i;
+	}
+	return -1;
+}
+
+INL void Segments::checkNoFlagsSet() throw(syntax_error)
+{
+	for(uint i=0; i<count(); i++)
+	{
+		if(data[i]->flag_valid)
+			throw syntax_error(usingstr("segment %s must not have flag set", data[i]->name));
+	}
+}
+
+INL uint Segments::numCodeSegments()
+{
+	uint n=0;
+	for(uint i=0;i<count();i++) n += data[i]->isCode();
+	return n;
+}
 
 
 

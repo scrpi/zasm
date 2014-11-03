@@ -40,7 +40,7 @@
 
 extern const char DEFAULT_CODE_SEGMENT[];
 
-
+#define TAE	throw(any_error)
 
 
 
@@ -74,7 +74,8 @@ public:
 	char				temp_label_suffix[8];
 
 // cond. assembly:
-	uint32		cond_off;		// effective final on/off state of conditions nested: 0 = assemble; !0 => assembly off
+	uint32		cond_off;		// effective final on/off state of conditions nested:
+								// 0 = assemble; !0 => assembly off
 	char		cond[32];		// cond. state for up to 32 nested conditional blocks
 	enum 	{	no_cond=0, 		// no conditional assembly
 				cond_if,		// #if or #elif pending and no path 'on' up to now
@@ -97,38 +98,38 @@ public:
 	uint		c_zi;			// index of output file in cc_argv[]
 
 private:
-	int32	value			(SourceLine&, int prio, bool& valid) throw(any_error);
-	void	asmLabel		(SourceLine&)				throw(any_error);
-	void	asmDirect		(SourceLine&)				throw(fatal_error);		// processor specific #directives
-	void	asmIf			(SourceLine&)				throw(any_error);
-	void	asmElif			(SourceLine&)				throw(any_error);
-	void	asmElse			(SourceLine&)				throw(any_error);
-	void	asmEndif		(SourceLine&)				throw(any_error);
-	void	asmTarget		(SourceLine&)				throw(any_error);
-	void	asmInclude		(SourceLine&)				throw(any_error);
-	void	asmInsert		(SourceLine&)				throw(any_error);
-	void	asmSegment		(SourceLine&,bool)			throw(any_error);
-	void	asmCFlags		(SourceLine&)				throw(any_error);
-	void	asmLocal		(SourceLine&)				throw(any_error);
-	void	asmEndLocal		(SourceLine&)				throw(any_error);
-	void	asmEnd			(SourceLine&)				throw(any_error);
-	void	asmInstr		(SourceLine&)				throw(any_error);
+	int32	value			(SourceLine&, int prio, bool& valid) TAE;
+	void	asmLabel		(SourceLine&)				TAE;
+	void	asmDirect		(SourceLine&)				throw(fatal_error);		// #directives
+	void	asmIf			(SourceLine&)				TAE;
+	void	asmElif			(SourceLine&)				TAE;
+	void	asmElse			(SourceLine&)				TAE;
+	void	asmEndif		(SourceLine&)				TAE;
+	void	asmTarget		(SourceLine&)				TAE;
+	void	asmInclude		(SourceLine&)				TAE;
+	void	asmInsert		(SourceLine&)				TAE;
+	void	asmSegment		(SourceLine&,bool)			TAE;
+	void	asmCFlags		(SourceLine&)				TAE;
+	void	asmLocal		(SourceLine&)				TAE;
+	void	asmEndLocal		(SourceLine&)				TAE;
+	void	asmEnd			(SourceLine&)				TAE;
+	void	asmInstr		(SourceLine&)				TAE;
 
-//	void	store			(int n)						throw(any_error)	{ current_segment().store(n); }
-//	void	store			(int n,int m)				throw(any_error)	{ current_segment().store(n,m); }
-//	void	store			(int a,int b,int c)			throw(any_error)	{ current_segment().store(a,b,c); }
-//	void	store			(int a,int b,int c,int d)	throw(any_error)	{ current_segment().store(a,b,c,d); }
-	void	storeOpcode     (int n)						throw(any_error)	{ current_segment().store(n); }
-	void 	storeWord		(int n)						throw(any_error)	{ current_segment().storeWord(n); }
-	void	storeBlock		(cstr blk, int n)			throw(any_error)	{ current_segment().storeBlock(blk,n); }
-	void	storeHexbytes	(cstr hex, int n)			throw(any_error)	{ current_segment().storeHexBytes(hex,n); }
+//	void	store			(int n)						TAE	{ current_segment().store(n); }
+//	void	store			(int n,int m)				TAE	{ current_segment().store(n,m); }
+//	void	store			(int a,int b,int c)			TAE	{ current_segment().store(a,b,c); }
+//	void	store			(int a,int b,int c,int d)	TAE	{ current_segment().store(a,b,c,d); }
+	void	storeOpcode     (int n)						TAE	{ current_segment().store(n); }
+	void 	storeWord		(int n)						TAE	{ current_segment().storeWord(n); }
+	void	storeBlock		(cstr blk, int n)			TAE	{ current_segment().storeBlock(blk,n); }
+	void	storeHexbytes	(cstr hex, int n)			TAE	{ current_segment().storeHexBytes(hex,n); }
 
-	void	storeByte 		(int n, bool valid)			throw(any_error);
-	void	storeOffset 	(int n, bool valid)			throw(any_error);
-	void	storeSpace		(int n, bool valid, int c)	throw(any_error)	{ current_segment().storeSpace(n,valid,c); }
-	void	storeSpace		(int n, bool valid)			throw(any_error)	{ current_segment().storeSpace(n,valid); }
-	void	store_XYCB_op	(int pfx, int op, int dis, bool valid)	throw(any_error);
-	void	store_XY_byte_op(int pfx, int op, int dis, bool valid)	throw(any_error);
+	void	storeByte 		(int n, bool valid)			TAE;
+	void	storeOffset 	(int n, bool valid)			TAE;
+	void	storeSpace		(int n, bool valid, int c)	TAE	{ current_segment().storeSpace(n,valid,c); }
+	void	storeSpace		(int n, bool valid)			TAE	{ current_segment().storeSpace(n,valid); }
+	void	store_XYCB_op	(int pfx, int op, int dis, bool valid)	TAE;
+	void	store_XY_byte_op(int pfx, int op, int dis, bool valid)	TAE;
 	uint8	popLastByte		()							{ return current_segment().popLastByte(); }
 
 	uint32	currentPosition	()							{ return current_segment().currentPosition(); }
@@ -148,33 +149,33 @@ private:
 
 public:
 			Z80Assembler	();
-	void	assembleFile	(cstr sourcepath,				// source file must exist
-							 cstr destpath=NULL,			// dflt = same as source directory, may be dir or filename
-							 cstr listpath=NULL,			// dflt = same as dest direcory, may be dir or filename
-							 cstr temppath=NULL,			// dflt = same as dest dir, must be dir
-							 int liststyle='1',				// '0'=none, '1'=plain, '2'=with objcode, '4'=with labels
-							 int deststyle='b')		throw();// '0'=none, 'b'=binary, 'x'=intel hex, 's'=motorola s-record
+	void	assembleFile	(cstr sourcepath,			// source file must exist
+							 cstr destpath=NULL,		// dflt = source directory, may be dir or filename
+							 cstr listpath=NULL,		// dflt = dest direcory, may be dir or filename
+							 cstr temppath=NULL,		// dflt = dest dir, must be dir
+							 int liststyle='1',			// '0'=none, '1'=plain, '2'=w/ocode, '4'=w/labels
+							 int deststyle='b')		throw();// '0'=none, 'b'=bin, 'x'=intel hex, 's'=moto s19
 	void	assemble		(StrArray& sourcelines)	throw();
-	void	assembleLine	(SourceLine&)			throw(any_error);
+	void	assembleLine	(SourceLine&)			TAE;
 
-	void	checkTargetfile	()	throw(any_error);
-	void	writeListfile	(cstr filepath, int style) throw(any_error);
-	void	writeTargetfile	(cstr filepath, int style)	throw(any_error);
-	void	writeBinFile	(FD&)	throw(any_error);
-	void	writeHexFile	(FD&)	throw(any_error);
-	void	writeTapFile	(FD&)	throw(any_error);
-	void	writeZ80File	(FD&)	throw(any_error);
-	void	writeSnaFile	(FD&)	throw(any_error);
-	void	writeAceFile	(FD&)	throw(any_error);
-	void	writeZX80File	(FD&)	throw(any_error);
-	void	writeZX81File	(FD&)	throw(any_error);
-	void	checkBinFile	()	throw(any_error);
-	void	checkTapFile	()	throw(any_error);
-	void	checkZ80File	()	throw(any_error);
-	void	checkSnaFile	()	throw(any_error);
-	void	checkAceFile	()	throw(any_error);
-	void	checkZX80File	()	throw(any_error);
-	void	checkZX81File	()	throw(any_error);
+	void	checkTargetfile	()		TAE;
+	void	writeListfile	(cstr filepath, int style) TAE;
+	void	writeTargetfile	(cstr filepath, int style) TAE;
+	void	writeBinFile	(FD&)	TAE;
+	void	writeHexFile	(FD&)	TAE;
+	void	writeTapFile	(FD&)	TAE;
+	void	writeZ80File	(FD&)	TAE;
+	void	writeSnaFile	(FD&)	TAE;
+	void	writeAceFile	(FD&)	TAE;
+	void	writeZX80File	(FD&)	TAE;
+	void	writeZX81File	(FD&)	TAE;
+	void	checkBinFile	()		TAE;
+	void	checkTapFile	()		TAE;
+	void	checkZ80File	()		TAE;
+	void	checkSnaFile	()		TAE;
+	void	checkAceFile	()		TAE;
+	void	checkZX80File	()		TAE;
+	void	checkZX81File	()		TAE;
 };
 
 

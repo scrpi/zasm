@@ -100,10 +100,6 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 	FD fd(listpath,'w');
 
-//	for(uint i=0;i<segments.count();i++)				// TODO XXX
-//		fd.write_fmt("%s\n",segments[i].name);
-
-
 	uint si=0,ei=0;	// source[] index, errors[] index
 	while( si<source.count() )
 	{
@@ -113,12 +109,6 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 		if(style&2)	// include objcode:
 		{
-//			if(segment.size_valid && sourceline.byteptr+sourceline.bytecount > segment.size)
-//			{
-//				fd.write_fmt("%s: %i+%i>%i\n",segment.name,sourceline.byteptr,sourceline.bytecount,segment.size);
-//				continue;
-//			}
-
 			XXXASSERT(!segment.size_valid || sourceline.bytecount<=0x10000);
 			XXXASSERT(!segment.size_valid || sourceline.byteptr+sourceline.bytecount <= segment.size);
 

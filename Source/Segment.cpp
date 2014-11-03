@@ -122,8 +122,10 @@ void Segment::rewind()
 */
 void Segment::setAddress(int32 a) throw(syntax_error)
 {
-	if(address_valid && (uint32)a!=address) { address_valid=no; throw syntax_error("segment address redefined"); }
-	if(a>0x10000) { address_valid = no; throw syntax_error(usingstr("segment address out of range: %i",(int)a)); }
+	if(address_valid && (uint32)a!=address)
+		{ address_valid=no; throw syntax_error("segment address redefined"); }
+	if(a>0x10000)
+		{ address_valid = no; throw syntax_error(usingstr("segment address out of range: %i",(int)a)); }
 	if(size_valid && a + size > 0x10000)
 			throw syntax_error(usingstr("segment %s: address+size out of range: %u + %u = %u",
 			name, (uint)a, (uint)size, (uint)(a+size)));
@@ -142,12 +144,15 @@ void Segment::setAddress(int32 a) throw(syntax_error)
 */
 void Segment::setSize(uint32 sz) throw(syntax_error)
 {
-	if(size_valid && sz!=size) { size_valid = no; throw syntax_error("segment size redefined"); }
-	if(sz>0x10000) { size_valid = no; throw syntax_error(usingstr("segment size out of range: %i",(int)size)); }
-	if(dpos_valid && dpos>sz) { dpos_valid=no; throw syntax_error("segment overflow"); }
+	if(size_valid && sz!=size)
+		{ size_valid = no; throw syntax_error("segment size redefined"); }
+	if(sz>0x10000)
+		{ size_valid = no; throw syntax_error(usingstr("segment size out of range: %i",(int)size)); }
+	if(dpos_valid && dpos>sz)
+		{ dpos_valid=no; throw syntax_error("segment overflow"); }
 	if(address_valid && address + sz > 0x10000 )
-			throw syntax_error(usingstr("segment %s: address+size out of range: %u + %u = %u",
-			name, (uint)address, (uint)sz, (uint)(address+sz)));
+		{ throw syntax_error(usingstr("segment %s: address+size out of range: %u + %u = %u",
+			name, (uint)address, (uint)sz, (uint)(address+sz))); }
 
 	size = sz;
 	size_valid = yes;
@@ -246,8 +251,10 @@ void Segment::storeHexBytes(cptr data, int n ) throw(syntax_error)
 
 	while (n--)
 	{
-		char c = *data++; if(!is_hex_digit(c)) throw syntax_error(usingstr("only hex characters allowed: '%c'",c));
-		char d = *data++; if(!is_hex_digit(d)) throw syntax_error(usingstr("only hex characters allowed: '%c'",d));
+		char c = *data++;
+		if(!is_hex_digit(c)) throw syntax_error(usingstr("only hex characters allowed: '%c'",c));
+		char d = *data++;
+		if(!is_hex_digit(d)) throw syntax_error(usingstr("only hex characters allowed: '%c'",d));
 
 		store( (digit_value(c)<<4) + digit_value(d) );
 	}
@@ -264,7 +271,8 @@ void Segment::storeSpace( int sz, bool sz_valid, int c ) throw(syntax_error)
 		if(sz>0x10000) throw syntax_error("gap size > 0x10000");
 
 		if(dpos<0x10000) memset(&core[dpos], c, min((uint)sz,0x10000-dpos));
-		if((dpos+=sz)>size && dpos_valid && size_valid) { dpos_valid=no; throw syntax_error("segment overflow"); }
+		if((dpos+=sz)>size && dpos_valid && size_valid)
+			{ dpos_valid=no; throw syntax_error("segment overflow"); }
 	}
 	else
 	{

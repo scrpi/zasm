@@ -125,7 +125,8 @@ int main( int argc, cstr argv[] )
 		if(*s != '-')
 		{
 			if(!inputfile)  { inputfile = s; continue; }
-			if(!outputfile && i==argc) { outputfile = s; continue; }	// if outfile is not prefixed with -o then it must be the last argument
+			// if outfile is not prefixed with -o then it must be the last argument:
+			if(!outputfile && i==argc) { outputfile = s; continue; }
 			if(!listfile)   { listfile = s; continue; }
 			goto h;
 		}
@@ -159,24 +160,48 @@ int main( int argc, cstr argv[] )
 // check source file:
 	if(!inputfile) h: abort(help, version, compiledatestr(), _PLATFORM);
 	inputfile = fullpath(inputfile);
-	if(errno)				{ if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", inputfile, strerror(errno)); return 1; }
-	if(!is_file(inputfile))	{ if(verbose) fprintf(stderr, "--> %s: not a regular file\nzasm: 1 error\n", inputfile);  return 1; }
+	if(errno)
+	{
+		if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", inputfile, strerror(errno));
+		return 1;
+	}
+	if(!is_file(inputfile))
+	{
+		if(verbose) fprintf(stderr, "--> %s: not a regular file\nzasm: 1 error\n", inputfile);
+		return 1;
+	}
 
 // check output file or dir:
 	if(!outputfile) outputfile = directory_from_path(inputfile);
 	outputfile = fullpath(outputfile);
-	if(errno && errno!=ENOENT) { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", outputfile, strerror(errno)); return 1; }
+	if(errno && errno!=ENOENT)
+	{
+		if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", outputfile, strerror(errno));
+		return 1;
+	}
 
 // check list file or dir:
 	if(!listfile) listfile = directory_from_path(outputfile);
 	listfile = fullpath(listfile);
-	if(errno && errno!=ENOENT) { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", listfile, strerror(errno)); return 1; }
+	if(errno && errno!=ENOENT)
+	{
+		if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", listfile, strerror(errno));
+		return 1;
+	}
 
 // check temp dir:
 	if(!tempdir) tempdir = directory_from_path(outputfile);
 	tempdir = fullpath(tempdir);
-	if(errno && errno!=ENOENT) { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", tempdir, strerror(errno)); return 1; }
-	if(lastchar(tempdir)!='/') { if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", tempdir, strerror(ENOTDIR)); return 1; }
+	if(errno && errno!=ENOENT)
+	{
+		if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", tempdir, strerror(errno));
+		return 1;
+	}
+	if(lastchar(tempdir)!='/')
+	{
+		if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", tempdir, strerror(ENOTDIR));
+		return 1;
+	}
 
 // check cc_path:
 	if(c_compiler)
@@ -197,14 +222,23 @@ int main( int argc, cstr argv[] )
 				}
 			}
 		}
-//		if(!exists_node(c_compiler))	throw fatal_error("file not found");
-//		if(!is_file(c_compiler))		throw fatal_error("not a regular file");
-//		if(!is_executable(c_compiler))	throw fatal_error("not executable");
 
 		c_compiler = fullpath(c_compiler);
-		if(errno)					{ if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", c_compiler, strerror(errno)); return 1; }
-		if(!is_file(c_compiler))	{ if(verbose) fprintf(stderr, "--> %s: not a regular file\nzasm: 1 error\n", c_compiler);  return 1; }
-		if(!is_executable(c_compiler)) { if(verbose) fprintf(stderr, "--> %s: not executable\nzasm: 1 error\n", c_compiler);  return 1; }
+		if(errno)
+		{
+			if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", c_compiler, strerror(errno));
+			return 1;
+		}
+		if(!is_file(c_compiler))
+		{
+			if(verbose) fprintf(stderr, "--> %s: not a regular file\nzasm: 1 error\n", c_compiler);
+			return 1;
+		}
+		if(!is_executable(c_compiler))
+		{
+			if(verbose) fprintf(stderr, "--> %s: not executable\nzasm: 1 error\n", c_compiler);
+			return 1;
+		}
 	}
 
 // DO IT!
@@ -227,7 +261,11 @@ int main( int argc, cstr argv[] )
 	{
 		Error const& e = ass.errors[i];
 		SourceLine* sourceline = e.sourceline;
-		if(!sourceline) { if(current_file) fprintf(stderr,"\n"); current_file=NULL; fprintf(stderr,"--> %s\n",e.text); continue; }
+		if(!sourceline)
+		{
+			if(current_file) fprintf(stderr,"\n"); current_file=NULL; fprintf(stderr,"--> %s\n",e.text);
+			continue;
+		}
 
 		cstr filename = sourceline->sourcefile;
 		if(filename!=current_file)				// note: compare pointers!
