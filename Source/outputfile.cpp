@@ -43,7 +43,7 @@ void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
 {
 	XXXASSERT(errors.count()==0);
 	XXXASSERT(dname!=NULL);
-	XLogLine("writeTargetfile %s, '%c'", dname, style);
+//	XLogLine("writeTargetfile %s, '%c'", dname, style);
 
 	if(target==NULL) target="ROM";
 	cstr ext = lowerstr(target);
@@ -208,7 +208,7 @@ void Z80Assembler::writeAceFile(FD& fd) throw(any_error)	// no error checking!
 
 void Z80Assembler::checkTargetfile() throw(any_error)
 {
-	XLogLine("checkTargetfile");
+//	XLogLine("checkTargetfile");
 
 	// Prevent empty output:
 	if(segments.totalCodeSize()==0) throw syntax_error("code size = 0");

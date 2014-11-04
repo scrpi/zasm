@@ -102,10 +102,12 @@ public:
 class Source : private ObjArray<SourceLine>
 {
 public:
-	void	purge		()				{ ObjArray<SourceLine>::purge(); }
-	uint	count		()				{ return ObjArray<SourceLine>::count(); }
-	SourceLine& operator[](uint i)		{ return ObjArray<SourceLine>::operator[](i); }
-	void	append		(SourceLine* s)	{ ObjArray<SourceLine>::append(s); }
+	void	purge		()						{ ObjArray<SourceLine>::purge(); }
+	uint	count		()						{ return ObjArray<SourceLine>::count(); }
+	SourceLine& operator[](uint i)				{ return ObjArray<SourceLine>::operator[](i); }
+	void	append		(SourceLine* s)			{ ObjArray<SourceLine>::append(s); }
+	void	insertat	(uint i, SourceLine* l)	{ ObjArray<SourceLine>::insertat(i,l); }
+	void	insertat	(uint i, ObjArray& q)	{ ObjArray<SourceLine>::insertat(i,q); }
 
 	void	includeFile	(cstr filename_fqn, uint zeilen_index)	throw(fatal_error);
 };

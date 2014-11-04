@@ -86,7 +86,7 @@ Z80Assembler::Z80Assembler()
 	current_segment_ptr(NULL),
 	local_labels_index(0),
 	local_blocks_count(0),
-	temp_label_seen(no),
+//	temp_label_seen(no),
 	cond_off(0),
 	max_errors(5),	// 30
 	pass(0),
@@ -98,7 +98,7 @@ Z80Assembler::Z80Assembler()
 	c_zi(0)
 {
 	cond[0] = no_cond;			// memset(cond,no_cond,sizeof(cond));
-	temp_label_suffix[0] = 0;	// memcpy(temp_label_suffix,"_0",3);
+//	temp_label_suffix[0] = 0;	// memcpy(temp_label_suffix,"_0",3);
 	c_flags.append("-mz80");
 	c_flags.append("-S");
 }
@@ -386,8 +386,9 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		// init labels:
 		local_labels_index = 0;
 		local_blocks_count = 1;
-		temp_label_seen = no;
-		memcpy(temp_label_suffix,"$0",3);
+//		temp_label_seen = no;
+//		memcpy(temp_label_suffix,"$0",3);
+		reusable_label_basename = DEFAULT_CODE_SEGMENT;
 
 		// assemble source:
 		for(uint i=0; i<source.count() && !end; i++)
@@ -416,6 +417,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		if(errors.count()) return;
 		if(cond[0]!=no_cond) { addError("#endif missing"); return; }	// TODO: set error marker in '#if/#elif/#else' line
 		XXXASSERT(!cond_off);
+		if(local_labels_index!=0) { addError("#endlocal missing"); return; }	// TODO: set error marker in '#local' line
 
 		// concatenate segments:
 		// => set segment address for relocatable segments
@@ -606,10 +608,10 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 
 	if(is_dec_digit(w[0]))			// decimal number or temp. label
 	{
-		if(q.test_char('$'))		// temp. label
+		if(q.test_char('$'))		// reusable label
 		{
-			w = catstr(w,temp_label_suffix);
-			temp_label_seen = true;
+			w = catstr(reusable_label_basename,".",w,"$");
+//			temp_label_seen = true;
 			goto label;
 		}
 		else						// decimal number
@@ -717,8 +719,8 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 //	label	equ		expr			add "::" for global labels
 //	label	defl	expr			add "::" for global labels
 // SDASZ80:
-//	0123$:							local label
-//	label:							label
+//	0123$:							reusable label
+//	label:							local label  (except if declared with .globl)
 //	label::							global label
 //	label	=		expr			label
 //	label	==		expr			global label
@@ -732,11 +734,8 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 #endif
 
 	cstr name = q.nextWord();
-	bool is_temporaer = q.test_char('$');	// sdasz80 syntax
-	bool is_global    = q.test_char(':') && !is_temporaer && q.test_char(':');
-
-//	if(eq(name,"M323F"))
-//	Log("");
+	bool is_reusable = is_dec_digit(name[0]) && q.test_char('$');	// sdasz80 syntax
+	bool is_global   = q.test_char(':') && !is_reusable && q.test_char(':');
 
 	cstr s = q.p;
 	cstr w = q.nextWord();
@@ -745,18 +744,19 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 		w = q.nextWord();
 		if(eq(w,"equ"))			{}									// TODO: sdasz80 hat evtl. andere syntax
 		else if(eq(w,"gblequ"))	{ w="equ"; is_global = true; }		// TODO: sdasz80 hat evtl. andere syntax
-		else if(eq(w,"lclequ"))	{ w="equ"; is_temporaer = true; }	// TODO: sdasz80 hat evtl. andere syntax
+		else if(eq(w,"lclequ"))	{ w="equ"; is_global = false; }		// TODO: sdasz80 hat evtl. andere syntax
 		else throw(syntax_error(catstr("unknown opcode .",w)));
 	}
 	if(w[0]=='=')							// sdasz80
 	{
-		if(w[1]==':') { w = "equ"; is_temporaer = true; }			// TODO: sdasz80 hat evtl. andere syntax
+		if(w[1]==':') { w = "equ"; is_global = false; }				// TODO: sdasz80 hat evtl. andere syntax
 		if(w[1]=='=') { w = "equ"; is_global = true; }				// TODO: sdasz80 hat evtl. andere syntax
-		if(w[1]==0x0) { w = "equ"; }								// TODO: sdasz80 hat evtl. andere syntax
+		if(w[1]==0)   { w = "equ"; }								// TODO: sdasz80 hat evtl. andere syntax
 	}
 
-	XXXASSERT(is_temporaer == is_dec_digit(name[0]));				// Assumption: SDCC does not use it vice versa
-	if(is_temporaer) { name = catstr(name,temp_label_suffix); temp_label_seen = true; }
+//	XXXASSERT(is_reusable == is_dec_digit(name[0]));				// Assumption: SDCC does not use it vice versa
+//	if(is_reusable) { name = catstr(name,temp_label_suffix); temp_label_seen = true; }
+	if(is_reusable) name = catstr(reusable_label_basename,".",name,"$");
 
 	bool is_valid;
 	int32 value;
@@ -771,20 +771,22 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 		value = currentAddress();
 		is_valid = currentAddressValid();
 
-		// increment temp_label_suffix:
-		if(temp_label_seen)
-		{
-			ptr p = temp_label_suffix +1;	// suffix = "_12345"
-			for(;;)
-			{
-				if(++*p <= '9') break;		// incr. char from '0' -> '9'
-				*p++ = '0';					// overflow => char := '0'
-				if(*p) continue;			// and incr. next char
-				*p++='0'; *p=0;				// at end of string append '0'
-				break;
-			}
-			temp_label_seen = no;
-		}
+		if(!is_reusable) reusable_label_basename = name;
+
+//		// increment temp_label_suffix:
+//		if(temp_label_seen)
+//		{
+//			ptr p = temp_label_suffix +1;	// suffix = "_12345"
+//			for(;;)
+//			{
+//				if(++*p <= '9') break;		// incr. char from '0' -> '9'
+//				*p++ = '0';					// overflow => char := '0'
+//				if(*p) continue;			// and incr. next char
+//				*p++='0'; *p=0;				// at end of string append '0'
+//				break;
+//			}
+//			temp_label_seen = no;
+//		}
 	}
 
 	Labels& labels = is_global ? global_labels() : local_labels();
@@ -1217,6 +1219,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 		segment = new Segment(name,is_data,fillbyte,relocatable,resizable);
 		segments.append(segment);
 		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid));
+		reusable_label_basename = name;
 	}
 	current_segment_ptr = segment;
 
@@ -1278,7 +1281,7 @@ void Z80Assembler::asmInstr(SourceLine& q) throw(any_error)
 	case 2:		goto wlen2;
 	case 3:		goto wlen3;
 	case 4:		goto wlen4;
-	default:	goto unknown_opcode;	// error
+	default:	goto wlenXL;
 	}
 
 
@@ -1318,8 +1321,16 @@ wlen1:
 			if(pass==1) fprintf(stderr,"SDASZ80 opcode \".%s\": TODO\n",w);
 			return;
 		}
-		if(startswith(w,"db"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
-		if(startswith(w,"ds"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
+		if(startswith(w,"ds"))
+			goto ds;
+		if(startswith(w,"dw"))
+		{
+			q.expect('#');				// wahrscheinlich TODO ...
+			goto dw;
+		}
+			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
+		if(startswith(w,"db"))
+			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 		if(startswith(w,"ascii"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 /*		if(eq(opcode,"title"))			{ q.skip_to_eol(); return; }	// for listing
 		if(eq(opcode,"sbttl"))			{ q.skip_to_eol(); return; }	// for listing
@@ -1332,7 +1343,6 @@ wlen1:
 		if(eq(opcode,"endif"))			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// after .if
 		if(startswith(opcode,"byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
 		if(startswith(opcode,"fcb"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"dw"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
 		if(startswith(opcode,"word"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
 		if(startswith(opcode,"fcw"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
 		if(startswith(opcode,"3byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
@@ -1849,6 +1859,7 @@ wlen3:
 	switch(peek3X(w)|0x20202020)
 	{
 	default:		goto unknown_opcode;	// error
+	case ' mov':	throw fatal_error("this is no Z80 assembler source. ('mov' is no Z80 instruction)");
 	case ' scf':	storeOpcode(SCF); return;
 	case ' ccf':	storeOpcode(CCF); return;
 	case ' cpl':	storeOpcode(CPL); return;
@@ -2168,6 +2179,24 @@ sh:			if(n&1) throw syntax_error("even number of hex characters expected");
 		return;
 	}
 	}
+
+wlenXL:
+	if(eq(w,"align"))		// align <value> [,<filler>]	// note: current address is evaluated as uint
+	{
+		n = value(q,pAny,v=1);
+		if(v&&n<1) throw syntax_error("alignment value must be ≥ 1");
+		if(v&&n>0x4000) throw syntax_error("alignment value must be ≤ $4000");
+
+		int32 a = current_segment_ptr->logicalAddress();
+		v = v && current_segment_ptr->logicalAddressValid();
+		if(v && a<0 && (1<<(msbit(n)))!=n) throw syntax_error("alignment value must be 2^N if $ < 0");
+
+		n = n-1 - ((uint16)a+n-1) % n;
+
+		if(q.testComma()) { bool u=1; storeSpace(n,v,value(q,pAny,u)); } else storeSpace(n,v);
+	}
+	else goto unknown_opcode;	// error
+
 
 // generate error
 unknown_opcode:	throw syntax_error(catstr("unknown opcode: ",w));

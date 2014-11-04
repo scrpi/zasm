@@ -200,10 +200,16 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			Array<Label*> labels(globals.copy());
 			labels.sort(&gt_by_name);		// sort by name
 
-			uint maxlen = 0;
-			for(uint j=0; j<labels.count(); j++) maxlen = max(maxlen,(uint)strlen(labels[j]->name));
-			limit(7u,maxlen,19u);
-			str spaces = spacestr(maxlen);
+			uint maxlnamelen = 0;
+			for(uint j=0; j<labels.count(); j++)
+				maxlnamelen = max(maxlnamelen,(uint)strlen(labels[j]->name));
+			limit(7u,maxlnamelen,19u);
+			uint maxsnamelen = 0;
+			for(uint j=0; j<segments.count(); j++)
+				maxsnamelen = max(maxsnamelen,(uint)strlen(segments[j].name));
+			limit(7u,maxsnamelen,19u);
+			str lnamefiller = spacestr(maxlnamelen);
+			str snamefiller = spacestr(maxsnamelen);
 			XXASSERT(labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(none)" should be first => exclude from listing
 
 			for(uint j=0+1; j<labels.count(); j++)
@@ -220,12 +226,18 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				uint		linenumber = sourceline.sourcelinenumber;
 
 				// name  equ $1234 ; -12345 segment sourcefile:linenumber
-				uint namelen = strlen(l->name);
+
+				uint lnamelen = strlen(l->name);
 				fd.write_str(l->name);
-				if(namelen<maxlen) fd.write_str(spaces+namelen);
-				if(l->is_valid)
-					 fd.write_fmt(" equ $%04X ;%8i  %s  %s:%u\n", value&0xffff, value, l->segment->name, sourcefile, linenumber);
-				else fd.write_fmt(" equ $0000 ; invalid  %s  %s:%u\n", l->segment->name, sourcefile, linenumber);
+				if(lnamelen<maxlnamelen) fd.write_str(lnamefiller+lnamelen);
+
+				if(l->is_valid) fd.write_fmt(" = $%04X ;%8i  %s", value&0xffff, value, l->segment->name);
+				else			fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
+
+				uint snamelen = strlen(l->segment->name);
+				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);
+
+				fd.write_fmt(" %s:%u\n", sourcefile, linenumber);
 			}
 		}
 
@@ -235,10 +247,16 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 			Array<Label*> labels = this->labels[i].getItems();
 
-			uint maxlen = 0;
-			for(uint j=0; j<labels.count(); j++) maxlen = max(maxlen,(uint)strlen(labels[j]->name));
-			limit(7u,maxlen,19u);
-			str spaces = spacestr(maxlen);
+			uint maxlnamelen = 0;
+			for(uint j=0; j<labels.count(); j++)
+				maxlnamelen = max(maxlnamelen,(uint)strlen(labels[j]->name));
+			limit(7u,maxlnamelen,19u);
+			uint maxsnamelen = 0;
+			for(uint j=0; j<segments.count(); j++)
+				maxsnamelen = max(maxsnamelen,(uint)strlen(segments[j].name));
+			limit(7u,maxsnamelen,19u);
+			str lnamefiller = spacestr(maxlnamelen);
+			str snamefiller = spacestr(maxsnamelen);
 
 			for(uint j=0; j<labels.count(); j++)
 			{
@@ -249,18 +267,23 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				uint		linenumber = sourceline.sourcelinenumber;
 
 				// name  equ $1234 ; -12345 segment sourcefile:linenumber
-				uint namelen = strlen(l->name);
+
+				uint lnamelen = strlen(l->name);
 				fd.write_str(l->name);
-				if(namelen<maxlen) fd.write_str(spaces+namelen);
-				if(l->is_valid)
-					 fd.write_fmt(" equ $%04X ;%8i  %s  %s:%u\n", value&0xffff, value, l->segment->name, sourcefile, linenumber);
-				else fd.write_fmt(" equ $0000 ; invalid  %s  %s:%u\n", l->segment->name, sourcefile, linenumber);
+				if(lnamelen<maxlnamelen) fd.write_str(lnamefiller+lnamelen);
+
+				if(l->is_valid) fd.write_fmt(" = $%04X ;%8i  %s", value&0xffff, value, l->segment->name);
+				else			fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
+
+				uint snamelen = strlen(l->segment->name);
+				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);
+
+				fd.write_fmt(" %s:%u\n", sourcefile, linenumber);
 			}
 		}
-
-		fd.write_char('\n');
 	}
 
+	fd.write_fmt("\n%s error%s\n", errors.count()?numstr(errors.count()):"no", errors.count()==1?"":"s");
 	fd.close_file();
 }
 
