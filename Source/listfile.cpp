@@ -194,23 +194,24 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	//
 	if(style&4)
 	{
+		uint maxsnamelen = 0;
+		for(uint j=0; j<segments.count(); j++)
+			maxsnamelen = max(maxsnamelen,(uint)strlen(segments[j].name));
+		limit(7u,maxsnamelen,19u);
+		str snamefiller = spacestr(maxsnamelen);
+
 		{	fd.write_str("\n; +++ global symbols +++\n\n");
 
 			Array<Label*> globals = this->labels[0].getItems();
 			Array<Label*> labels(globals.copy());
 			labels.sort(&gt_by_name);		// sort by name
+			XXASSERT(labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(none)" should be first => exclude from listing
 
 			uint maxlnamelen = 0;
 			for(uint j=0; j<labels.count(); j++)
 				maxlnamelen = max(maxlnamelen,(uint)strlen(labels[j]->name));
 			limit(7u,maxlnamelen,19u);
-			uint maxsnamelen = 0;
-			for(uint j=0; j<segments.count(); j++)
-				maxsnamelen = max(maxsnamelen,(uint)strlen(segments[j].name));
-			limit(7u,maxsnamelen,19u);
 			str lnamefiller = spacestr(maxlnamelen);
-			str snamefiller = spacestr(maxsnamelen);
-			XXASSERT(labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(none)" should be first => exclude from listing
 
 			for(uint j=0+1; j<labels.count(); j++)
 			{
@@ -251,12 +252,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			for(uint j=0; j<labels.count(); j++)
 				maxlnamelen = max(maxlnamelen,(uint)strlen(labels[j]->name));
 			limit(7u,maxlnamelen,19u);
-			uint maxsnamelen = 0;
-			for(uint j=0; j<segments.count(); j++)
-				maxsnamelen = max(maxsnamelen,(uint)strlen(segments[j].name));
-			limit(7u,maxsnamelen,19u);
 			str lnamefiller = spacestr(maxlnamelen);
-			str snamefiller = spacestr(maxsnamelen);
 
 			for(uint j=0; j<labels.count(); j++)
 			{

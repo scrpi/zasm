@@ -104,6 +104,13 @@ Z80Assembler::Z80Assembler()
 }
 
 
+Z80Assembler::~Z80Assembler()
+{
+	// wg. Doppelreferenzierung auf .globl-Label müssen erst die lokalen Labels[] gelöscht werden:
+	while(labels.count()>1) labels.drop();
+}
+
+
 // --------------------------------------------------
 //					Helper
 // --------------------------------------------------
@@ -347,14 +354,14 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 
 	// setup labels:
 	labels.purge();
-	labels.append(new Labels(0));			// global_labels must exist
+	labels.append(new Labels(Labels::GLOBALS));		// global_labels must exist
 
 	// setup segments:
 	segments.purge();
 	segments.append(new Segment(DEFAULT_CODE_SEGMENT,no,0xff,no,yes));	// current_segment must exist
 	segments[0].address_valid = yes;		// "physical" address = $0000 is valid
 	segments[0].org_valid = yes;			// "logical"  address = $0000 is valid too
-	global_labels().add(new Label(DEFAULT_CODE_SEGMENT,&segments[0],0,0,yes));
+	global_labels().add(new Label(DEFAULT_CODE_SEGMENT,&segments[0],0,0,yes,yes));
 
 	// setup errors:
 	errors.purge();
@@ -794,6 +801,12 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 
 	if(l)
 	{
+		if(l->segment==NULL)
+		{
+			l->segment = current_segment_ptr;			// mit .globl deklarierte Label haben noch kein Segment
+			l->sourceline = current_sourceline_index;	// und keine Source-Zeilennummer
+		}
+
 		XXXASSERT(is_valid || !l->is_valid);
 		XXXASSERT(l->segment == current_segment_ptr);
 		XXXASSERT(l->sourceline == current_sourceline_index);
@@ -804,7 +817,7 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 	}
 	else
 	{
-		l = new Label(name, &current_segment(), current_sourceline_index, value, is_valid);
+		l = new Label(name, &current_segment(), current_sourceline_index, value, is_valid, is_global);
 		labels.add(l);
 	}
 }
@@ -1218,7 +1231,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 		uint8 fillbyte = is_data || ne(target,"ROM") ? 0x00 : 0xFF;
 		segment = new Segment(name,is_data,fillbyte,relocatable,resizable);
 		segments.append(segment);
-		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid));
+		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid,yes));
 		reusable_label_basename = name;
 	}
 	current_segment_ptr = segment;
@@ -1299,10 +1312,8 @@ wlen1:
 		}
 		if(startswith(w,"optsdcc"))		// .optsdcc -mz80
 		{
-			if(!q.testChar('-') )
-				throw syntax_error("- expected");
-			if(ne(q.nextWord(),"mz80"))
-				throw syntax_error("mz80 expected");
+			if(!q.testChar('-') )		throw syntax_error("-mz80 expected");
+			if(ne(q.nextWord(),"mz80"))	throw syntax_error("-mz80 expected");
 			return;
 		}
 		if(startswith(w,"area"))		// select segment for following code
@@ -1316,22 +1327,37 @@ wlen1:
 			return;
 		}
 		if(startswith(w,"globl"))		// declare global label for linker
-		{
-			q.skip_to_eol();
-			if(pass==1) fprintf(stderr,"SDASZ80 opcode \".%s\": TODO\n",w);
+		{								// das Label wird in mehrere Labels[] eingehängt! => special d'tor!
+			w = q.nextWord();
+			if(!is_letter(*w) && *w!='_') throw syntax_error("label name expected");
+			if(local_labels_index==0) return;		// locals[] === globals[]
+			Label* g = &global_labels().find(w);
+			Label* l = &local_labels().find(w);
+			if(l && !l->is_global) throw syntax_error("label already defined local");
+			XXXASSERT(!g||!l||g==l);
+
+			Label* label = l ? l : g ? g : new Label(w,NULL,current_sourceline_index,0,no,yes);
+			if(!l) local_labels().add(label);
+			if(!g) global_labels().add(label);
 			return;
 		}
 		if(startswith(w,"ds"))
+		{
 			goto ds;
+		}
 		if(startswith(w,"dw"))
 		{
 			q.expect('#');				// wahrscheinlich TODO ...
 			goto dw;
 		}
-			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 		if(startswith(w,"db"))
+		{
+			q.expect('#');				// wahrscheinlich TODO ...
+			goto db;
+		}
+		if(startswith(w,"ascii"))
 			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
-		if(startswith(w,"ascii"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
+
 /*		if(eq(opcode,"title"))			{ q.skip_to_eol(); return; }	// for listing
 		if(eq(opcode,"sbttl"))			{ q.skip_to_eol(); return; }	// for listing
 		if(eq(opcode,"list"))			{ q.skip_to_eol(); return; }	// for listing

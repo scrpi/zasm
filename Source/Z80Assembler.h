@@ -142,14 +142,13 @@ private:
 
 	int		getCondition	(cstr w)					throw(syntax_error);
 	int		getRegister		(SourceLine&);
-//	void	compressPageAce	(Array<uint8>&);
-//	void	compressPageZ80	(Array<uint8>&);
 
 	void	setError		(any_error&);				// set error for current file, line & column
 	void	addError		(cstr text);				// add error without source line
 
 public:
 			Z80Assembler	();
+			~Z80Assembler	();
 	void	assembleFile	(cstr sourcepath,			// source file must exist
 							 cstr destpath=NULL,		// dflt = source directory, may be dir or filename
 							 cstr listpath=NULL,		// dflt = dest direcory, may be dir or filename

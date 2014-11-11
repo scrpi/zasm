@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -37,16 +37,34 @@
 // --------------------------------------------
 
 
-Label::Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_valid)
+Label::Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_valid, bool is_global)
 :	name(name),
 	segment(segment),
 	sourceline(sourceline),
 	value(value),
-	is_valid(is_valid)
+	is_valid(is_valid),
+	is_global(is_global)
 {}
 
 
-
+/*	Destructor for Labels[]
+	nach der sdas-Anweisung .globl werden derart markierte globale Label
+	auch in die lokale Labellisten gelegt. Sie stehen also in mehreren Listen,
+	dürfen aber natürlich nicht mehrfach deleted werden.
+	Deshalb werden in nicht-globalen Labels[] alle globalen Labels genullt.
+	*NOTE* Die globalen Labels[] dürfen erst nach allen lokalen Labels[] gelöscht werden!
+*/
+Labels::~Labels()
+{
+	if(!is_global)
+	{
+		Array<Label*> labels = getItems();
+		for(uint i=0;i<labels.count();i++)
+		{
+			if(labels[i]->is_global) labels[i] = NULL;
+		}
+	}
+}
 
 
 

@@ -45,9 +45,10 @@ public:
 	uint		sourceline;
 	int32		value;
 	bool		is_valid;
+	bool		is_global;
 
 public:
-	Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_valid);
+	Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_valid, bool is_global);
 };
 
 
@@ -56,9 +57,14 @@ class Labels : private ObjHashMap<cstr,Label>
 {
 public:
 	uint		outer_index;		// index of surrounding Labels block in list of all Labels blocks
+	bool		is_global;			// this is the global Labels[]
+
+	enum GFlag { GLOBALS };
 
 public:
-				Labels(uint outer_index)	:outer_index(outer_index){}
+				Labels(GFlag)				:outer_index(0),is_global(yes){}
+				Labels(uint outer_index)	:outer_index(outer_index),is_global(no){}
+				~Labels();
 	void		purge()						{ ObjHashMap::purge(); }
 	void		add(Label* l)				{ ObjHashMap::add(l->name,l); }
 	Label&		find(cstr name)				{ return ObjHashMap::get(name); }
