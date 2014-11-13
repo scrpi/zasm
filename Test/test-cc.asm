@@ -1,6 +1,6 @@
 ;
 ;			Example C project for use with zasm
-; 			(c) 2014 - 2014	kio@little-bat.de 
+; 			(c) 2014 - 2014	kio@little-bat.de
 ;
 
 
@@ -43,7 +43,7 @@ _min_heap_size::	equ	0x1000	; for malloc
 ;
 #data 	_DATA, _ram_start		; uninitialized data
 #data 	_INITIALIZED			; initialized with data from code segment _INITIALIZER
-		
+
 #data 	_HEAP					; heap
 __sdcc_heap_start:: 			; --> sdcc malloc.c
 		ds	_min_heap_size		; minimum required size for malloc/free
@@ -53,7 +53,7 @@ __sdcc_heap_end:: 				; --> sdcc malloc.c
 
 
 ; ________________________________________________________________
-; Declare segments which are referenced by sdcc 
+; Declare segments which are referenced by sdcc
 ; but never (?) used:
 ;
 #data	_DABS,*,0				; used by sdcc: .area _DABS (ABS): absolute external ram data?
@@ -64,7 +64,7 @@ __sdcc_heap_end:: 				; --> sdcc malloc.c
 
 
 ; ================================================================
-; 	_HEADER segment: 
+; 	_HEADER segment:
 ; 	starts at 0x0000
 ; ================================================================
 
@@ -83,11 +83,11 @@ RST0::	di
 		defs	0x08-$
 RST1::	reti
 
-		defs	0x10-$		
+		defs	0x10-$
 RST2::	reti
 
 		defs	0x18-$
-RST3::	reti		
+RST3::	reti
 
 		defs	0x20-$
 RST4::	reti
@@ -113,7 +113,7 @@ RST7::	reti
 ; non-maskable interrupt handler:
 ; must return with RETN
 ;
-		defs   	0x66-$		
+		defs   	0x66-$
 NMI::	rst		0
 ;		retn
 
@@ -123,7 +123,9 @@ NMI::	rst		0
 ; 	The Payload:
 ; ================================================================
 
+#local
 #include "main.c"
+#endlocal
 
 
 ; ________________________________________________________________
@@ -160,7 +162,7 @@ _INITIALIZER_len:: equ $-0
 ;		ld	a,b
 ;		or	c
 ;		jr	z,$+4
-		ldir		
+		ldir
 #endif
 
 
@@ -171,9 +173,9 @@ _INITIALIZER_len:: equ $-0
 #code 	_GSINIT
 		call	_main		; execute main()
 _exit::	di					; system shut down
-1$: 	halt				; may resume after NMI
+_exit_0	halt				; may resume after NMI
 		rst		0			; then reboot
-
+		jp		_exit_0
 
 
 

@@ -199,6 +199,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			maxsnamelen = max(maxsnamelen,(uint)strlen(segments[j].name));
 		limit(7u,maxsnamelen,19u);
 		str snamefiller = spacestr(maxsnamelen);
+		Label* l;
 
 		{	fd.write_str("\n; +++ global symbols +++\n\n");
 
@@ -215,7 +216,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 			for(uint j=0+1; j<labels.count(); j++)
 			{
-				Label* l = labels[j];
+				l = labels[j];
 			//	cstr		name = l->name;
 			//	Segment*	segment = l->segment;
 				int			value = l->value;
@@ -232,8 +233,9 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				fd.write_str(l->name);
 				if(lnamelen<maxlnamelen) fd.write_str(lnamefiller+lnamelen);
 
+				if(l->segment==NULL) l->segment = &segments[0];
 				if(l->is_valid) fd.write_fmt(" = $%04X ;%8i  %s", value&0xffff, value, l->segment->name);
-				else			fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
+				else fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
 
 				uint snamelen = strlen(l->segment->name);
 				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);
@@ -256,7 +258,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 			for(uint j=0; j<labels.count(); j++)
 			{
-				Label* l = labels[j];
+				l = labels[j];
 				int			value = l->value;
 				SourceLine&	sourceline = source[l->sourceline];
 				cstr		sourcefile = filename_from_path(sourceline.sourcefile);
@@ -268,8 +270,9 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				fd.write_str(l->name);
 				if(lnamelen<maxlnamelen) fd.write_str(lnamefiller+lnamelen);
 
+				if(l->segment==NULL) l->segment = &segments[0];
 				if(l->is_valid) fd.write_fmt(" = $%04X ;%8i  %s", value&0xffff, value, l->segment->name);
-				else			fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
+				else fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
 
 				uint snamelen = strlen(l->segment->name);
 				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);

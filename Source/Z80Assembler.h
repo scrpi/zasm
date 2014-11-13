@@ -72,7 +72,7 @@ public:
 	uint				local_blocks_count;
 //	bool				temp_label_seen;
 //	char				temp_label_suffix[8];
-	cstr				reusable_label_basename;	// name of last normal label
+//	cstr				reusable_label_basename;	// name of last normal label
 
 // cond. assembly:
 	uint32		cond_off;		// effective final on/off state of conditions nested:

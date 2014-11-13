@@ -163,6 +163,7 @@ cstr SourceLine::nextWord()
 	case '|':	return "|";
 	case ',':	return ",";
 	case '.':	return ".";
+	case '=':	return "=";
 
 	case '"':								// "abcd"
 	case '\'':								// 'abcd'
@@ -184,11 +185,11 @@ cstr SourceLine::nextWord()
 		if(c=='=') return "!=";
 		p--;	   return "!";
 
-	case '=':
-		c = *p++;
-		if(c=='=') return "==";
-		if(c==':') return "=:";				// SDASZ80 compatibility
-		p--;	   return "=";
+//	case '=':
+//		c = *p++;
+//		if(c=='=') return "==";
+//		if(c==':') return "=:";				// SDASZ80 compatibility
+//		p--;	   return "=";
 
 	case '<':
 		c = *p++;
