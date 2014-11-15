@@ -37,13 +37,15 @@
 // --------------------------------------------
 
 
-Label::Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_valid, bool is_global)
+Label::Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_valid, bool is_global, bool is_defined, bool is_used)
 :	name(name),
 	segment(segment),
 	sourceline(sourceline),
 	value(value),
 	is_valid(is_valid),
-	is_global(is_global)
+	is_global(is_global),
+	is_defined(is_defined),
+	is_used(is_used)
 {}
 
 

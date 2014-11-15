@@ -44,11 +44,13 @@ public:
 	Segment*	segment;
 	uint		sourceline;
 	int32		value;
-	bool		is_valid;
-	bool		is_global;
+	bool		is_valid;			// value is valid
+	bool		is_global;			// global label: item in Z80Assembler.labels[0]
+	bool		is_defined;			// label is defined (value may be still in_valid) not only declared
+	bool		is_used;			// label is actually used
 
 public:
-	Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_valid, bool is_global);
+	Label(cstr name, Segment*, uint sourceline, int32 value, bool is_valid, bool is_global, bool is_defined, bool is_used);
 };
 
 

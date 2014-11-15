@@ -123,15 +123,48 @@ NMI::	rst		0
 ; 	The Payload:
 ; ================================================================
 
+; SDCC does not generate a .globl statement for these labels:
+; they must be declared before they are used,
+; else they are not marked 'used' and #include library won't load them
+;
+	.globl	__mulint
+	.globl	__divsint
+	.globl	__divuint
+	.globl	__modsint
+	.globl	__moduint
+	.globl	__muluchar
+	.globl	__mulschar
+	.globl	__divuchar
+	.globl	__divschar
+	.globl	__mullong
+	.globl	__divulong
+	.globl	__divslong
+	.globl	__rrulong
+	.globl	__rrslong
+	.globl	__rlulong
+	.globl	__rlslong
+
+; test environment with sdcc at non-standard location
+; --std-c99 must be given because 'bool' is used in library files
+;
+#cflags $CFLAGS --nostdinc -Iinclude --std-sdcc99
+
+; --- do it ---
+;
 #local
 #include "main.c"
+#include "rem.c"
 #endlocal
 
 
 ; ________________________________________________________________
 ; resolved missing labels from libraries:
 ;
-; TODO
+#include library "library/z80"
+
+#include library "library"
+
+#include library "library"
 
 
 

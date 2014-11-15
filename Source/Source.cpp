@@ -108,11 +108,14 @@ bool SourceLine::testChar( char c )
 	return test_char(c);
 }
 
-bool SourceLine::testWord( cstr z )
+/*	test for and skip next word
+	test is case insensitive
+*/
+bool SourceLine::testWord(cstr z )
 {
 	skip_spaces();
 	cptr q = p;
-	while(*z==*q) { z++; q++; }
+	while(to_lower(*z)==to_lower(*q)) { z++; q++; }
 	if(*z) return no;				// character mismatch
 	if(is_idf(*q)) return no;		// word in this.text longer than tested word
 	p = q; return yes;				// hit! => skip word and return true

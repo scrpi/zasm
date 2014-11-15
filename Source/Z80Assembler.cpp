@@ -30,6 +30,7 @@
 #include <sys/time.h>
 #include "unix/FD.h"
 #include "unix/files.h"
+#include "unix/MyFileInfo.h"
 #include "Z80Assembler.h"
 #include "Segment.h"
 #include "Z80/Z80opcodes.h"
@@ -99,8 +100,8 @@ Z80Assembler::Z80Assembler()
 
 	c_flags.append("-mz80");			// machine = Z80
 	c_flags.append("-S");				// Preprocess & compile only
-//	c_flags.append("--asm=zasm");		// generate syntax for zasm
-//	c_flags.append("--no-optsdcc-in-asm");
+//	c_flags.append("--nostdinc");
+//	c_flags.append("-Iinclude");		// <-- sollte cmd line option sein
 
 //	c_flags.append("--no-overlay");			// don't overlay args&vars of non-reentrant functions
 //	c_flags.append("--no-stdinc");			// don't search the std include path for header files
@@ -369,7 +370,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 	segments.append(new Segment(DEFAULT_CODE_SEGMENT,no,0xff,no,yes));	// current_segment must exist
 	segments[0].address_valid = yes;		// "physical" address = $0000 is valid
 	segments[0].org_valid = yes;			// "logical"  address = $0000 is valid too
-	global_labels().add(new Label(DEFAULT_CODE_SEGMENT,&segments[0],0,0,yes,yes));
+	global_labels().add(new Label(DEFAULT_CODE_SEGMENT,&segments[0],0,0,yes,yes,yes,no));
 
 	// setup errors:
 	errors.purge();
@@ -526,7 +527,7 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 #endif
 	else						// [label:] + opcode
 	{
-		if((uint8)q[0] > ' ' && q[0]!=';') asmLabel(q);	// label definition
+		if((uint8)q[0] > ' ' && q[0]!=';' && q[0]!='.') asmLabel(q);	// label definition
 		asmInstr(q);			// opcode or pseudo opcode
 		q.expectEol();			// expect end of line
 
@@ -639,6 +640,7 @@ label:	Label* l = &local_labels().find(w);
 			n = l->value;
 			valid = valid && l->is_valid;
 			if(!valid) final = false;
+			l->is_used = true;
 		}
 		else if(local_labels_index!=0 && (l = &global_labels().find(w)))		// globales Label
 		{
@@ -646,11 +648,11 @@ label:	Label* l = &local_labels().find(w);
 			valid = valid && pass>1 && l->is_valid;	// in pass1 kann ein gefundenes glob. label noch durch
 													// ein später definiertes lokales label verdeckt werden
 			if(!valid) final = false;
+			l->is_used = true;
 		}
 		else	// Label nicht gefunden
 		{
 			if(pass>1) throw syntax_error(usingstr("label \"%s\" not found",w));
-			//n = 0;
 			valid = no;
 			final = false;
 		}
@@ -757,6 +759,8 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 			l->sourceline = current_sourceline_index;	// und keine Source-Zeilennummer
 		}
 
+		if(l->sourceline != current_sourceline_index) throw syntax_error("label redefined");
+
 		XXXASSERT(is_valid || !l->is_valid);
 		XXXASSERT(l->segment == current_segment_ptr);
 		XXXASSERT(l->sourceline == current_sourceline_index);
@@ -764,10 +768,11 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 		if(l->is_valid && l->value!=value) throw syntax_error("value redefined");
 		l->value    = value;
 		l->is_valid = is_valid;
+		l->is_defined = true;
 	}
 	else
 	{
-		l = new Label(name, &current_segment(), current_sourceline_index, value, is_valid, is_global);
+		l = new Label(name, &current_segment(), current_sourceline_index, value, is_valid, is_global, yes, no);
 		labels.add(l);
 	}
 }
@@ -806,63 +811,6 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 }
 
 
-#if 0
-/*	#cc "path/to/c-compiler" <options>
-	define path to c compiler and options
-*/
-void Z80Assembler::asmCc(SourceLine& q) throw(any_error)
-{
-	cstr compiler = q.nextWord();
-	if(compiler[0]!='"') throw fatal_error("quoted filepath expected");
-	compiler = unquotedstr(compiler);
-
-	if(compiler[0]!='/')
-	{
-		Array<str> ss;
-		split(ss, getenv("PATH"), ':');
-		for(uint i=0; i<ss.count(); i++)
-		{
-			cstr s = catstr(ss[i],"/",compiler);
-			if(is_file(s)) { compiler = s; break; }
-		}
-	}
-	if(!exists_node(compiler))	 throw fatal_error("file not found");
-	if(!is_file(compiler))		 throw fatal_error("not a regular file");
-	if(!is_executable(compiler)) throw fatal_error("not executable");
-
-	cc[0] = compiler;
-	cc_qi = 0;
-	cc_zi = 0;
-
-	cstr options = "";		// accu for subdir in tempdir
-	uint i = 1;
-	while(!q.testEol())
-	{
-		if(i==NELEM(cc)-1) throw fatal_error("too many options to c-compiler call (max. 8 allowed)");
-		cptr a = q.p;
-		while((uint8)*q>' ') ++q;
-		cstr s = substr(a,q.p);
-		if(s[0]=='"') s = unquotedstr(s);
-		if(s[0]=='$' && eq(s,"$$SOURCE$$")) cc_qi = i;
-		if(s[0]=='$' && eq(s,"$$DEST$$"))   cc_zi = i;
-		cc[i++] = s;
-		options = catstr(options, " ", s);
-	}
-	cc[i] = NULL;
-
-	if(cc_qi==0) throw fatal_error("argument '$$SOURCE$$' is missing");
-	if(cc_zi==0) throw fatal_error("argument '$$DEST$$' is missing");
-
-	cstr tempdir = "/tmp/";
-	if(!is_dir(tempdir)) tempdir = getenv("TMPDIR");
-	if(!is_dir(tempdir)) throw fatal_error("temp dir not found!");
-	if(!is_writable(tempdir)) throw fatal_error("temp dir not writable!");
-	cc_basedir = fullpath(catstr(tempdir, "/", filename_from_path(compiler), options, "/"),1,1);
-	if(errno) throw fatal_error(usingstr("creating temp dir for intermediate files failed: %s",strerror(errno)));
-}
-#endif
-
-
 /*	#CFLAGS -opt1 -opt2 …
 	arguments may be quoted
 	detects special arguments $SOURCE, $DEST and $CFLAGS
@@ -890,6 +838,7 @@ void Z80Assembler::asmCFlags( SourceLine& q ) throw(any_error)
 			if(c_qi) c_qi += old_cflags.count();
 			if(c_zi) c_zi += old_cflags.count();
 			c_flags.append(old_cflags);	// moves contents
+			continue;
 		}
 		c_flags.append(s);
 	}
@@ -1020,90 +969,162 @@ void Z80Assembler::asmTarget( SourceLine& q ) throw(any_error)
 }
 
 
-/*	#include "sourcefile"
+/*	#INCLUDE "sourcefile"
 	the file is included in pass 1
-	filenames ending on ".c" are compiled with sdcc (or the preset compiler) into the temp directory
+	filenames ending on ".c" are compiled with sdcc (or the compiler set on the cmd line) into the temp directory
+
+	#INCLUDE LIBRARY "libdir" [ RESOLVE label1, label2 … ]
+	all source files for not-yet-defined labels which were declared with .globl found in libdir are included
+	if keyword RESOLVE is also present,
+		then only labels from this list are included.
+		labels already defined or not declared with .globl or not yet used are silently ignored
+		labels not found in libdir abort assembler
+	c source files are compiled into "temp_directory/lib/"
+	does not include recursively required definitions!
 */
 void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 {
 	if(pass>1) { q.skip_to_eol(); return; }
 
+	XXXASSERT(lastchar(temp_directory)=='/');
+
+	bool is_library = q.testWord("library");
 	cstr fqn = q.nextWord();
-	if(fqn[0]!='"') throw syntax_error("quoted filename expected");
+	if(fqn[0]!='"') throw syntax_error(is_library?"quoted directoryname expected":"quoted filename expected");
 	fqn = unquotedstr(fqn);
 	if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
 
-	if(endswith(fqn,".c"))
+	if(is_library)
 	{
-		if(c_compiler==NULL)
+		if(lastchar(fqn)!='/') fqn = catstr(fqn,"/");
+		bool resolve_all = yes;
+		Labels rlabels(0);				// local => d'tor will not delete contained labels!
+		Label* l;
+		if(q.testWord("resolve") && !q.testChar('*')) do
 		{
-			Array<str> ss;
-			split(ss, getenv("PATH"), ':');
-			for(uint i=0; i<ss.count(); i++)
-			{
-				cstr s = catstr(ss[i],"/sdcc");
-				if(is_file(s)) { c_compiler = s; break; }
-			}
-			if(!exists_node(c_compiler))	throw fatal_error("sdcc not found");
-			if(!is_file(c_compiler))		throw fatal_error("sdcc is not a regular file");
-			if(!is_executable(c_compiler))	throw fatal_error("sdcc is not executable");
+			resolve_all = no;
+			cstr w = q.nextWord();
+			if(w[0]!='_' && !is_letter(w[0])) throw syntax_error("label name expected");
+			l = &global_labels().find(w);
+			if(!l) continue;			// must have been declared with .globl
+			if(l->is_defined) continue;	// already defined
+			if(!l->is_used) continue;	// must have been used before position of #include library!
+			rlabels.add(l);
+		}
+		while(q.testComma());
+		q.expectEol();
 
-			c_flags.purge();
+		MyFileInfoArray files;
+		read_dir(fqn, files, yes);
+
+		for(uint i=0;i<files.count();i++)
+		{
+			cstr fname = files[i].fname();
+			cstr name = catstr("_", basename_from_path(fname));
+
+			l = resolve_all ? &global_labels().find(name) : &rlabels.find(name);
+			if(!l) continue;			// not in list / not used
+			if(l->is_defined) continue;	// already defined
+			if(!l->is_used) continue;	// must have been used before position of #include library!
+
+			if(endswith(fname,".c"))
+			{
+				create_dir(catstr(temp_directory,"lib"));
+				cstr zfile = compileFile(catstr(fqn,fname),catstr(temp_directory,"lib/"));
+				source.includeFile(zfile, current_sourceline_index+1);
+			}
+			else if(endswith(fname,".s") || endswith(fname,".ass") || endswith(fname,".asm"))
+			{
+				source.includeFile(catstr(fqn,fname), current_sourceline_index+1);
+			}
+			else continue;			// skip any unknown files: e.g. list files etc.
+			l->is_defined = true;	// note: don't remove from rlabels[]: multiple reference!
 		}
 
-		if(c_flags.count()==0)			// --> sdcc -mz80 -S
+		Label** _labels = rlabels.getItems().getData();
+		for(uint i=0;i<rlabels.getItems().count();i++)
+			if(!_labels[i]->is_defined)
+				throw fatal_error(usingstr("source for %s not found",_labels[i]->name));
+	}
+	else
+	{
+		if(endswith(fqn,".c")) fqn = compileFile(fqn,temp_directory);
+		source.includeFile(fqn, current_sourceline_index+1);
+	}
+}
+
+
+cstr Z80Assembler::compileFile(cstr fqn, cstr tempdir) throw(any_error)
+{
+	if(c_compiler==NULL)
+	{
+		Array<str> ss;
+		split(ss, getenv("PATH"), ':');
+		for(uint i=0; i<ss.count(); i++)
 		{
-			c_flags.append("-mz80");
-			c_flags.append("-S");
+			cstr s = catstr(ss[i],"/sdcc");
+			if(is_file(s)) { c_compiler = s; break; }
 		}
+		if(!exists_node(c_compiler))	throw fatal_error("sdcc not found");
+		if(!is_file(c_compiler))		throw fatal_error("sdcc is not a regular file");
+		if(!is_executable(c_compiler))	throw fatal_error("sdcc is not executable");
 
-		cstr fqn_q = fqn;
-		cstr fqn_z = fqn = catstr(temp_directory, basename_from_path(fqn), ".s");
-
-		// if the .a file does not exists or is older than the .c file, then compile the .c file:
-		// note: this does not handle modified header files or modified CFLAGS
-		if(!exists_node(fqn_z) || file_mtime(fqn_z) <= file_mtime(fqn_q))
-		{
-			pid_t child_id = fork();	// fork a child process
-			XXXASSERT(child_id!=-1);	// fork failed: can't happen
-
-			if(child_id==0)				// child process:
-			{
-				if(c_zi==0) { c_flags.append("-o"); c_flags.append(fqn_z); } else { c_flags[c_zi] = fqn_z; }
-				if(c_qi==0) {                       c_flags.append(fqn_q); } else { c_flags[c_qi] = fqn_q; }
-				c_flags.append(NULL);
-				c_flags.insertat(0,c_compiler);
-
-				execve(c_compiler, (char**)c_flags.getData(), environ);	// exec cmd
-				exit(errno);			// exec failed: return errno: will be printed in error msg,
-										//				but is ambiguous with cc exit code
-			}
-			else						// parent process:
-			{
-				int status;
-				for(int err; (err = waitpid(child_id,&status,0)) != child_id; )
-				{
-					XXXASSERT(err==-1);
-					if(errno!=EINTR) throw fatal_error(usingstr("waitpid: %s",strerror(errno)));
-				}
-
-				if(WIFEXITED(status))				// child process exited normally
-				{
-					if(WEXITSTATUS(status)!=0)		// child process returned error code
-						throw fatal_error(usingstr("%s returned exit code %i",
-							quotedstr(c_compiler), (int)WEXITSTATUS(status)));
-				}
-				else if(WIFSIGNALED(status))		// child process terminated by signal
-				{
-					throw fatal_error(usingstr("%s terminated by signal %i",
-							quotedstr(c_compiler), (int)WTERMSIG(status)));
-				}
-				else IERR();
-			}
-		}
+		c_flags.purge();
 	}
 
-	source.includeFile(fqn, current_sourceline_index+1);
+	if(c_flags.count()==0)			// --> sdcc -mz80 -S
+	{
+		c_flags.append("-mz80");
+		c_flags.append("-S");
+	}
+
+	cstr fqn_q = fqn;
+	cstr fqn_z = catstr(tempdir, basename_from_path(fqn), ".s");
+
+	// if the .a file exists and is newer than the .c file, then don't compile again:
+	// note: this does not handle modified header files or modified CFLAGS or upgraded SDCC itself!
+	if(exists_node(fqn_z) && file_mtime(fqn_z) > file_mtime(fqn_q)) return fqn_z;
+
+	// compile source file:
+
+	pid_t child_id = fork();	// fork a child process
+	XXXASSERT(child_id!=-1);	// fork failed: can't happen
+
+	if(child_id==0)				// child process:
+	{
+		if(c_zi==0) { c_flags.append("-o"); c_flags.append(fqn_z); } else { c_flags[c_zi] = fqn_z; }
+		if(c_qi==0) {                       c_flags.append(fqn_q); } else { c_flags[c_qi] = fqn_q; }
+		c_flags.append(NULL);
+		c_flags.insertat(0,c_compiler);
+
+		execve(c_compiler, (char**)c_flags.getData(), environ);	// exec cmd
+		exit(errno);			// exec failed: return errno: will be printed in error msg,
+								//				but is ambiguous with cc exit code
+	}
+	else						// parent process:
+	{
+		int status;
+		for(int err; (err = waitpid(child_id,&status,0)) != child_id; )
+		{
+			XXXASSERT(err==-1);
+			if(errno!=EINTR) throw fatal_error(usingstr("waitpid: %s",strerror(errno)));
+		}
+
+		if(WIFEXITED(status))				// child process exited normally
+		{
+			if(WEXITSTATUS(status)!=0)		// child process returned error code
+				throw fatal_error(usingstr("\"%s %s\" returned exit code %i",
+					filename_from_path(c_compiler), filename_from_path(fqn_q), (int)WEXITSTATUS(status)));
+		}
+		else if(WIFSIGNALED(status))		// child process terminated by signal
+		{
+			throw fatal_error(usingstr("\"%s %s\" terminated by signal %i",
+					filename_from_path(c_compiler), filename_from_path(fqn_q), (int)WEXITSTATUS(status)));
+		}
+		else IERR();
+	}
+
+	return fqn_z;
 }
 
 
@@ -1182,7 +1203,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 		uint8 fillbyte = is_data || ne(target,"ROM") ? 0x00 : 0xFF;
 		segment = new Segment(name,is_data,fillbyte,relocatable,resizable);
 		segments.append(segment);
-		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid,yes));
+		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid,yes,yes,no));
 		reusable_label_basename = name;
 	}
 	current_segment_ptr = segment;
@@ -1284,36 +1305,47 @@ wlen1:
 			}
 			return;
 		}
-		if(eq(w,"globl"))				// declare global label for linker
+		if(eq(w,"globl"))				// declare global label for linker: mark label for #include library "libdir"
 		{								// das Label wird in mehrere Labels[] eingehängt! => special d'tor!
 			w = q.nextWord();
 			if(!is_letter(*w) && *w!='_') throw syntax_error("label name expected");
-			if(local_labels_index==0) return;		// locals[] === globals[]
-			Label* g = &global_labels().find(w);
-			Label* l = &local_labels().find(w);
-			if(l && !l->is_global) throw syntax_error("label already defined local");
-			XXXASSERT(!g||!l||g==l);
 
-			Label* label = l ? l : g ? g : new Label(w,NULL,current_sourceline_index,0,no,yes);
-			if(!l) local_labels().add(label);
-			if(!g) global_labels().add(label);
+			if(local_labels_index)		// local context?
+			{
+				Label* g = &global_labels().find(w);
+				Label* l = &local_labels().find(w);
+				if(l && !l->is_global) throw syntax_error("label already defined local");
+				XXXASSERT(!g||!l||g==l);
+
+				Label* label = l ? l : g ? g : new Label(w,NULL,current_sourceline_index,0,no,yes,no,no);
+				if(!l) local_labels().add(label);
+				if(!g) global_labels().add(label);
+			}
+			else						// global context
+			{
+				Label* g = &global_labels().find(w);
+				Label* label = g ? g : new Label(w,NULL,current_sourceline_index,0,no,yes,no,no);
+				if(!g) global_labels().add(label);
+			}
 			return;
 		}
-		if(startswith(w,"ds"))
+		if(eq(w,"ds"))
 		{
 			goto ds;
 		}
-		if(startswith(w,"dw"))
+		if(eq(w,"dw"))
 		{
-//			q.expect('#');				// wahrscheinlich TODO ...
 			goto dw;
 		}
-		if(startswith(w,"db"))
+		if(eq(w,"db"))		// SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
 		{
-//			q.expect('#');				// wahrscheinlich TODO ...
 			goto db;
 		}
-//		if(startswith(w,"ascii"))
+		if(eq(w,"byte"))	// SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
+		{
+			goto db;
+		}
+//		if(eq(w,"ascii"))
 //			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 
 /*		if(eq(opcode,"title"))			{ q.skip_to_eol(); return; }	// for listing
@@ -1321,60 +1353,60 @@ wlen1:
 		if(eq(opcode,"list"))			{ q.skip_to_eol(); return; }	// for listing
 		if(eq(opcode,"nlist"))			{ q.skip_to_eol(); return; }	// for listing
 		if(eq(opcode,"page"))			{ q.skip_to_eol(); return; }	// for listing
-		if(startswith(opcode,"if"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"iif"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(eq(opcode,"else"))			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// after .if
-		if(eq(opcode,"endif"))			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// after .if
-		if(startswith(opcode,"byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"fcb"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"word"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"fcw"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"3byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"triple"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"4byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"quad"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"blkb"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"rmb"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"rs"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"blkw"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"blk3"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"blk4"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"str"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"fcc"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"ascis"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"strs"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"asciz"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"strz"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"radix"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"even"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"odd"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"bndry"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"arg"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"local"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"equ"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"gblequ"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"lclequ"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"include"))throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"define"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"undefine"))throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"setdp"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"16bit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"24bit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"32bit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"end"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
-		if(startswith(opcode,"macro"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"endm"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"mexit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"narg"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"nchr"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"ntyp"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"nval"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"irp"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"irpc"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"rept"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"mdelete"))throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"mlib"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
-		if(startswith(opcode,"mcall"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"if"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"iif"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"else"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// after .if
+		if(eq(opcode,"endif"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// after .if
+		if(eq(opcode,"byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"fcb"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"word"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"fcw"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"3byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"triple"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"4byte"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"quad"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"blkb"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"rmb"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"rs"))		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"blkw"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"blk3"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"blk4"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"str"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"fcc"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"ascis"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"strs"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"asciz"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"strz"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"radix"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"even"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"odd"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"bndry"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"arg"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"local"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"equ"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"gblequ"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"lclequ"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"include"))throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"define"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"undefine"))throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"setdp"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"16bit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"24bit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"32bit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"end"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));
+		if(eq(opcode,"macro"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"endm"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"mexit"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"narg"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"nchr"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"ntyp"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"nval"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"irp"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"irpc"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"rept"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"mdelete"))throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"mlib"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
+		if(eq(opcode,"mcall"))	throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",opcode));	// macro
 */
 		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 	}
@@ -1475,7 +1507,21 @@ wlen2:
 	case '  rr':
 	{
 		i = RR_B;
-rr:		n = getRegister(q);
+rr:		s=q.p;
+		n = getRegister(q);
+
+		if(n<0)			// n(XY)
+		{
+			q.p=s;
+			n=value(q,pAny,v=1);
+			q.expect('(');
+			int r=getRegister(q);
+			if(r!=IX&&r!=IY) goto ix_iy_expected;
+			q.expectClose();
+			store_XYCB_op(r==IX?PFX_IX:PFX_IY,i+OPEN,n,v);
+			return;
+		}
+
 		if(n<RB||n>RA) goto ill_target;
 		if(n==OPEN) 	// hl/ix/iy register indirect ?
 		{
@@ -1546,19 +1592,31 @@ cp:		s=q.p;
 		case -1:		// immediate value
 		{
 			q.p=s;
-			storeOpcode(i+CP_N-CP_B);
-			n=value(q,pAny,v=1); storeByte(n,v);
+			n = value(q,pAny,v=1);
+
+			if(q.testChar('('))		// n(XY)
+			{
+				r = getRegister(q);
+				if(r!=IX&&r!=IY) goto ix_iy_expected;
+				q.expectClose();
+				store_XY_byte_op(r==IX?PFX_IX:PFX_IY,i+r,n,v);
+			}
+			else
+			{
+				storeOpcode(i+CP_N-CP_B);
+				storeByte(n,v);
+			}
 			return;
 		}
 		case OPEN:		// hl/ix/iy register indirect ?
 		{
 			switch(getRegister(q))
 			{
-			case IX: 				// 2007-09-25 kio: (IX) w/o offset
+			case IX:
 				n=0; v=1; if(q.peekChar()!=')') n = value(q,pAny,v);
 				store_IX_byte_opcode(i+r,n,v);
 				break;
-			case IY:				// 2007-09-25 kio: (IY) w/o offset
+			case IY:
 				n=0; v=1; if(q.peekChar()!=')') n = value(q,pAny,v);
 				store_IY_byte_opcode(i+r,n,v);
 				break;
@@ -1596,7 +1654,20 @@ cp:		s=q.p;
 		// 			n = value (100-1) or offset (100+IX/100+IY)
 		// source:	j = register;  if no register: -1;  if indirect: 100 added
 		// 			m = value (100-1/-1) or offset (100+IX/100+IY)
-		i = getRegister(q);	if(i<0) goto ill_dest;
+		s=q.p;
+		i = getRegister(q);
+		if(i<0)			// n(XY)
+		{
+			q.p=s; n = value(q,pAny,v);
+			if(q.testChar('('))
+			{
+				i = getRegister(q);
+				if(i!=IX && i!=IY) goto ix_iy_expected;
+				i += 100;
+				q.expectClose();
+			}
+			else goto ill_dest;
+		}
 		if (i==OPEN)
 		{
 			s=q.p;
@@ -1619,6 +1690,13 @@ cp:		s=q.p;
 		if (j<0) 		// nn
 		{
 			q.p=s; m = value(q,pAny,u);
+			if(q.testChar('('))
+			{
+				j = getRegister(q);
+				if(j!=IX && j!=IY) goto ix_iy_expected;
+				j += 100;
+				q.expectClose();
+			}
 		}
 		else if (j==OPEN)
 		{
@@ -1940,7 +2018,21 @@ sbc:	if(n!=HL) goto ill_reg;
 bit:	n = value(q,pAny,v=1); if (v && (n<0 || n>7)) throw syntax_error("illegal bit number");
 		i += n*8;
 		q.expectComma();
+		s=q.p;
 		n = getRegister(q);
+
+		if(n<0)		// n(XY)
+		{
+			q.p=s;
+			m = value(q,pAny,v);
+			q.expect('(');
+			int r = getRegister(q);
+			if(r!=IX&&r!=IY) goto ix_iy_expected;
+			q.expectClose();
+			store_XYCB_op(r==IX?PFX_IX:PFX_IY,i+n, m, v);
+			return;
+		}
+
 		if(n<RB||n>RA) goto ill_target;
 		if(n!=OPEN) { store_CB_opcode(i+n); return; }
 		switch(getRegister(q))
@@ -2194,6 +2286,7 @@ ill_cond:		throw syntax_error("illegal condition");
 ill_target:		throw syntax_error("illegal target");
 ill_source:		throw syntax_error("illegal source");
 ill_dest:		throw syntax_error("illegal destination");
+ix_iy_expected:	throw syntax_error("IX or IY expected");
 }
 
 

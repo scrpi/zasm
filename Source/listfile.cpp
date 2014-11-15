@@ -220,7 +220,9 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			//	cstr		name = l->name;
 			//	Segment*	segment = l->segment;
 				int			value = l->value;
-			//	bool		is_valid = l->is_valid;
+				bool		is_valid = l->is_valid;
+				bool		is_used = l->is_used;
+				if(!is_valid&&!is_used) continue;
 			//	uint		sourcelinenumber = l->sourceline;
 				SourceLine&	sourceline = source[l->sourceline];
 			//	cstr		text = sourceline.text;
@@ -260,6 +262,9 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			{
 				l = labels[j];
 				int			value = l->value;
+				bool		is_valid = l->is_valid;
+				bool		is_used = l->is_used;
+				if(!is_valid&&!is_used) continue;
 				SourceLine&	sourceline = source[l->sourceline];
 				cstr		sourcefile = filename_from_path(sourceline.sourcefile);
 				uint		linenumber = sourceline.sourcelinenumber;
