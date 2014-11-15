@@ -84,6 +84,7 @@ public:
 	// these automatically skip white space:
 	char	peekChar	();
 	bool	testChar	(char);
+	bool	testWord	(cstr);
 	bool	testComma	()			{ return testChar(','); }
 	bool	testEol		();
 

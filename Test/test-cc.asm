@@ -173,9 +173,9 @@ _INITIALIZER_len:: equ $-0
 #code 	_GSINIT
 		call	_main		; execute main()
 _exit::	di					; system shut down
-_exit_0	halt				; may resume after NMI
+0$:		halt				; may resume after NMI
 		rst		0			; then reboot
-		jp		_exit_0
+		jp		0$
 
 
 

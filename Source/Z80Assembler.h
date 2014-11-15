@@ -55,24 +55,22 @@ public:
 	cstr		target;				// "BIN, "ROM", "SNA", ...
 
 // source:
-	Source		source;				// SourceLine[] accumulating total source
+	Source		source;						// SourceLine[] accumulating total source
 	uint		current_sourceline_index;
 	SourceLine&	current_sourceline()		{ return source[current_sourceline_index]; }
 
 // code:
-	Segments	segments;			// code and data segments
+	Segments	segments;					// code and data segments
 	Segment*	current_segment_ptr;
 	Segment&	current_segment()			{ return *current_segment_ptr; }
 
 // Labels:
-	ObjArray<Labels>	labels;
-	uint				local_labels_index;
-	Labels&				global_labels()		{ return labels[0]; }
-	Labels&				local_labels()		{ return labels[local_labels_index]; }
-	uint				local_blocks_count;
-//	bool				temp_label_seen;
-//	char				temp_label_suffix[8];
-//	cstr				reusable_label_basename;	// name of last normal label
+	ObjArray<Labels> labels;
+	uint		local_labels_index;
+	Labels&		global_labels()				{ return labels[0]; }
+	Labels&		local_labels()				{ return labels[local_labels_index]; }
+	uint		local_blocks_count;
+	cstr		reusable_label_basename;	// name of last normal label
 
 // cond. assembly:
 	uint32		cond_off;		// effective final on/off state of conditions nested:
@@ -116,10 +114,6 @@ private:
 	void	asmEnd			(SourceLine&)				TAE;
 	void	asmInstr		(SourceLine&)				TAE;
 
-//	void	store			(int n)						TAE	{ current_segment().store(n); }
-//	void	store			(int n,int m)				TAE	{ current_segment().store(n,m); }
-//	void	store			(int a,int b,int c)			TAE	{ current_segment().store(a,b,c); }
-//	void	store			(int a,int b,int c,int d)	TAE	{ current_segment().store(a,b,c,d); }
 	void	storeOpcode     (int n)						TAE	{ current_segment().store(n); }
 	void 	storeWord		(int n)						TAE	{ current_segment().storeWord(n); }
 	void	storeBlock		(cstr blk, int n)			TAE	{ current_segment().storeBlock(blk,n); }

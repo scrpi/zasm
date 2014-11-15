@@ -108,6 +108,16 @@ bool SourceLine::testChar( char c )
 	return test_char(c);
 }
 
+bool SourceLine::testWord( cstr z )
+{
+	skip_spaces();
+	cptr q = p;
+	while(*z==*q) { z++; q++; }
+	if(*z) return no;				// character mismatch
+	if(is_idf(*q)) return no;		// word in this.text longer than tested word
+	p = q; return yes;				// hit! => skip word and return true
+}
+
 /*	test for logical end of line
 	which may be physical end of line or start of a comment
 */
@@ -184,12 +194,6 @@ cstr SourceLine::nextWord()
 		c = *p++;
 		if(c=='=') return "!=";
 		p--;	   return "!";
-
-//	case '=':
-//		c = *p++;
-//		if(c=='=') return "==";
-//		if(c==':') return "=:";				// SDASZ80 compatibility
-//		p--;	   return "=";
 
 	case '<':
 		c = *p++;

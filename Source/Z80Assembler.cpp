@@ -85,7 +85,6 @@ Z80Assembler::Z80Assembler()
 	current_segment_ptr(NULL),
 	local_labels_index(0),
 	local_blocks_count(0),
-//	temp_label_seen(no),
 	cond_off(0),
 	max_errors(5),	// 30
 	pass(0),
@@ -97,11 +96,11 @@ Z80Assembler::Z80Assembler()
 	c_zi(0)
 {
 	cond[0] = no_cond;					// memset(cond,no_cond,sizeof(cond));
-//	temp_label_suffix[0] = 0;			// memcpy(temp_label_suffix,"_0",3);
 
 	c_flags.append("-mz80");			// machine = Z80
 	c_flags.append("-S");				// Preprocess & compile only
-	c_flags.append("--asm=zasm");		// generate syntax for zasm
+//	c_flags.append("--asm=zasm");		// generate syntax for zasm
+//	c_flags.append("--no-optsdcc-in-asm");
 
 //	c_flags.append("--no-overlay");			// don't overlay args&vars of non-reentrant functions
 //	c_flags.append("--no-stdinc");			// don't search the std include path for header files
@@ -110,7 +109,6 @@ Z80Assembler::Z80Assembler()
 //	c_flags.append("--all-callee-saves");	// all called functions save all registers
 //	c_flags.append("--int-long-reent");		// int and long math lib functions are compiled as reentrant
 //	c_flags.append("--float-reent");		// float math lib functions are compiled as reentrant
-
 }
 
 
@@ -380,8 +378,6 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 	cond_off = 0x00;
 	cond[0] = no_cond;
 
-	Array<Segment*> oldsegs;
-
 	// DOIT:
 	for(pass=1,final=no; pass<9 && !final && errors.count()==0; pass++)
 	{
@@ -403,9 +399,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 		// init labels:
 		local_labels_index = 0;
 		local_blocks_count = 1;
-//		temp_label_seen = no;
-//		memcpy(temp_label_suffix,"$0",3);
-//		reusable_label_basename = DEFAULT_CODE_SEGMENT;
+		reusable_label_basename = DEFAULT_CODE_SEGMENT;
 
 		// assemble source:
 		for(uint i=0; i<source.count() && !end; i++)
@@ -426,8 +420,6 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 				if(errors.count()>max_errors) return;
 				if(pass>1) source[i].segment->skipExistingData(source[i].bytecount);
 			}
-			if(pass==1) { assert(oldsegs.count()==i); oldsegs.append(source[i].segment); }			// TODO XXX
-			else assert(oldsegs[i]==source[i].segment);
 		}
 
 		// stop on errors:
@@ -559,13 +551,14 @@ int32 Z80Assembler::value( SourceLine& q, int prio, bool& valid ) throw(any_erro
 	int32 n = 0;						// value of expression
 
 // ---- expect term ----
-	cstr w = q.nextWord();				// get next word
+w:	cstr w = q.nextWord();				// get next word
 	if(w[0]==0) goto syntax_error;		// empty word
 
 	if(w[1]==0)							// 1 char word
 	{
 		switch(w[0])
 		{
+		case '#':	goto w;									// SDASZ80: immediate value prefix
 		case ';':	throw syntax_error("value expected");	// comment  =>  unexpected end of line
 		case '+':	n = +value(q,pUna,valid); goto op;		// plus sign
 		case '-':	n = -value(q,pUna,valid); goto op;		// minus sign
@@ -623,26 +616,24 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 		}
 	}
 
-	if(is_dec_digit(w[0]))			// decimal number or temp. label
+	if(is_dec_digit(w[0]))			// decimal number or reusable label
 	{
-//		if(q.test_char('$'))		// reusable label sdas
-//		{
-//			w = catstr(reusable_label_basename,".",w,"$");
-////			temp_label_seen = true;
-//			goto label;
-//		}
-//		else						// decimal number
+		if(q.test_char('$'))		// reusable label (SDASZ80)
 		{
-			while(is_dec_digit(*w)) { n = n*10 + *w-'0'; w++; }
-			if(*w!=0) goto syntax_error;
-			goto op;
+			w = catstr(reusable_label_basename,"$",w);
+			goto label;
 		}
+		else						// decimal number
+	{
+		while(is_dec_digit(*w)) { n = n*10 + *w-'0'; w++; }
+		if(*w!=0) goto syntax_error;
+		goto op;
+	}
 	}
 
-	if(is_idf(w[0]))				// name
+	if(is_letter(w[0]) || w[0]=='_')			// name
 	{
-//label:
-		Label* l = &local_labels().find(w);
+label:	Label* l = &local_labels().find(w);
 		if(l)						// lokales Label
 		{
 			n = l->value;
@@ -728,83 +719,31 @@ op:
 }
 
 
-/*	handle label definition
-	Unterscheidet global - lokal - temporär
-	Bei jedem nicht-temporären echten Label wird der temp_label_suffix erhöht
+/*	Handle Label Definition
+	Unterscheidet global - lokal - reusable
 */
 void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 {
-//	label	equ		expr			add "::" for global labels
-//	label	defl	expr			add "::" for global labels
-// SDASZ80:
-//	0123$:							reusable label
-//	label:							local label  (except if declared with .globl)
-//	label::							global label
-//	label	=		expr			label
-//	label	==		expr			global label
-//	label	=:		expr			local label
-//	label	.equ    expr			label
-//	label	.gblequ expr			global label
-//	label	.lclequ expr			local label
-
-#ifdef NDEBUG
-	XXXASSERT(q.p==q.text);			// may happen in test suite: lines with "!" which must fail
-#endif
+	XXXASSERT(q.p==q.text+(q[0]=='!'));
 
 	cstr name = q.nextWord();
-//	bool is_reusable = is_dec_digit(name[0]) && q.test_char('$');	// sdasz80 syntax
-	bool is_global   = q.test_char(':') /* && !is_reusable */ && q.test_char(':');
-
-	cstr s = q.p;
-	cstr w = q.nextWord();
-//	if(w[0]=='.')							// sdasz80
-//	{
-//		w = q.nextWord();
-//		if(eq(w,"equ"))			{}									// TODO: sdasz80 hat evtl. andere syntax
-//		else if(eq(w,"gblequ"))	{ w="equ"; is_global = true; }		// TODO: sdasz80 hat evtl. andere syntax
-//		else if(eq(w,"lclequ"))	{ w="equ"; is_global = false; }		// TODO: sdasz80 hat evtl. andere syntax
-//		else throw(syntax_error(catstr("unknown opcode .",w)));
-//	}
-//	if(w[0]=='=')							// sdasz80
-//	{
-//		if(w[1]==':') { w = "equ"; is_global = false; }				// TODO: sdasz80 hat evtl. andere syntax
-//		if(w[1]=='=') { w = "equ"; is_global = true; }				// TODO: sdasz80 hat evtl. andere syntax
-//		if(w[1]==0)   { w = "equ"; }								// TODO: sdasz80 hat evtl. andere syntax
-//	}
-
-//	XXXASSERT(is_reusable == is_dec_digit(name[0]));				// Assumption: SDCC does not use it vice versa
-//	if(is_reusable) { name = catstr(name,temp_label_suffix); temp_label_seen = true; }
-//	if(is_reusable) name = catstr(reusable_label_basename,".",name,"$");
+	bool is_reusable = is_dec_digit(name[0]) && q.test_char('$');				// SDASZ80
+	bool is_global   = q.test_char(':') && !is_reusable && q.test_char(':');
+	if(is_reusable) name = catstr(reusable_label_basename,"$",name);
 
 	bool is_valid;
 	int32 value;
 
-	if(eq(w,"equ") || eq(w,"defl") || eq(w,"="))
+	if(q.testWord("equ") || q.testWord("defl") || q.testChar('='))
 	{
 		value = this->value(q,pAny,is_valid=true);	// calc assigned value
 	}
 	else	// label: <opcode>
 	{
-		q.p = s;									// put back opcode
 		value = currentAddress();
 		is_valid = currentAddressValid();
 
-//		if(!is_reusable) reusable_label_basename = name;
-
-//		// increment temp_label_suffix:
-//		if(temp_label_seen)
-//		{
-//			ptr p = temp_label_suffix +1;	// suffix = "_12345"
-//			for(;;)
-//			{
-//				if(++*p <= '9') break;		// incr. char from '0' -> '9'
-//				*p++ = '0';					// overflow => char := '0'
-//				if(*p) continue;			// and incr. next char
-//				*p++='0'; *p=0;				// at end of string append '0'
-//				break;
-//			}
-//			temp_label_seen = no;
-//		}
+		if(!is_reusable) reusable_label_basename = name;
 	}
 
 	Labels& labels = is_global ? global_labels() : local_labels();
@@ -814,7 +753,7 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 	{
 		if(l->segment==NULL)
 		{
-			l->segment = current_segment_ptr;			// mit .globl deklarierte Label haben noch kein Segment
+			l->segment = current_segment_ptr;			// mit '.globl' deklarierte Label haben noch kein Segment
 			l->sourceline = current_sourceline_index;	// und keine Source-Zeilennummer
 		}
 
@@ -1201,10 +1140,11 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	// wenn #code oder #data benutzt werden, muss #target gesetzt worden sein:
 	if(!target) throw fatal_error("#target declaration missing");
 
-	cstr name = upperstr(q.nextWord());
+	cstr name = q.nextWord();
 	if(!is_letter(*name) && *name!='_') throw fatal_error("segment name expected");
 	Segment* segment = segments.find(name);
 	XXXASSERT(!segment || eq(segment->name,name));
+
 	if(segment && segment->is_data != is_data) throw fatal_error("#code/#data mismatch");
 	if(pass==1 ? segment!=NULL : q.peekChar()!=',') { current_segment_ptr = segment; return; }	// --> expect eol
 
@@ -1243,7 +1183,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 		segment = new Segment(name,is_data,fillbyte,relocatable,resizable);
 		segments.append(segment);
 		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid,yes));
-//		reusable_label_basename = name;
+		reusable_label_basename = name;
 	}
 	current_segment_ptr = segment;
 
@@ -1312,7 +1252,9 @@ void Z80Assembler::asmInstr(SourceLine& q) throw(any_error)
 // opcode len = 1:
 
 wlen1:
-	if(*w=='.')	// SDASZ80
+
+
+	if(*w=='.')							// SDASZ80 opcodes
 	{
 		w = lowerstr(q.nextWord());
 
@@ -1321,23 +1263,28 @@ wlen1:
 			q.skip_to_eol();
 			return;
 		}
-		if(startswith(w,"optsdcc"))		// .optsdcc -mz80
+		if(eq(w,"optsdcc"))				// .optsdcc -mz80
 		{
 			if(!q.testChar('-') )		throw syntax_error("-mz80 expected");
 			if(ne(q.nextWord(),"mz80"))	throw syntax_error("-mz80 expected");
 			return;
 		}
-		if(startswith(w,"area"))		// select segment for following code
+		if(eq(w,"area"))				// select segment for following code
 		{
 			cstr name = upperstr(q.nextWord());
 			if(!is_letter(*name) && *name!='_') throw fatal_error("segment name expected");
 			Segment* segment = segments.find(name);
 			if(!segment) throw fatal_error("segment not found");
 			current_segment_ptr = segment;
-			q.skip_to_eol();			// TODO: parse & validate acc. to SDASZ80 syntax
+
+			if((eq(name,"_CABS")||eq(name,"_DABS")) && q.testChar('('))	// SDCC generates: " .area _CABS (ABS)"
+			{
+				if(!q.testWord("ABS")) throw syntax_error("'ABS' expected");
+				q.expect(')');
+			}
 			return;
 		}
-		if(startswith(w,"globl"))		// declare global label for linker
+		if(eq(w,"globl"))				// declare global label for linker
 		{								// das Label wird in mehrere Labels[] eingehängt! => special d'tor!
 			w = q.nextWord();
 			if(!is_letter(*w) && *w!='_') throw syntax_error("label name expected");
@@ -1352,20 +1299,20 @@ wlen1:
 			if(!g) global_labels().add(label);
 			return;
 		}
-//		if(startswith(w,"ds"))
-//		{
-//			goto ds;
-//		}
-//		if(startswith(w,"dw"))
-//		{
+		if(startswith(w,"ds"))
+		{
+			goto ds;
+		}
+		if(startswith(w,"dw"))
+		{
 //			q.expect('#');				// wahrscheinlich TODO ...
-//			goto dw;
-//		}
-//		if(startswith(w,"db"))
-//		{
+			goto dw;
+		}
+		if(startswith(w,"db"))
+		{
 //			q.expect('#');				// wahrscheinlich TODO ...
-//			goto db;
-//		}
+			goto db;
+		}
 //		if(startswith(w,"ascii"))
 //			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 
@@ -1431,6 +1378,11 @@ wlen1:
 */
 		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
 	}
+	goto unknown_opcode;	// error
+
+
+
+
 
 
 // opcode len = 2:
@@ -2218,8 +2170,8 @@ sh:			if(n&1) throw syntax_error("even number of hex characters expected");
 	}
 
 wlenXL:
-	if(eq(w,"align"))		// align <value> [,<filler>]	// note: current address is evaluated as uint
-	{
+	if(eq(w,"align"))				// align <value> [,<filler>]
+	{								// note: current address is evaluated as uint
 		n = value(q,pAny,v=1);
 		if(v&&n<1) throw syntax_error("alignment value must be ≥ 1");
 		if(v&&n>0x4000) throw syntax_error("alignment value must be ≤ $4000");
@@ -2232,7 +2184,7 @@ wlenXL:
 
 		if(q.testComma()) { bool u=1; storeSpace(n,v,value(q,pAny,u)); } else storeSpace(n,v);
 	}
-	else goto unknown_opcode;	// error
+	else goto unknown_opcode;		// error
 
 
 // generate error
