@@ -26,10 +26,13 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
+// kio 2014-11-16	commented out #if and #undef ... to be tested
+
+
 #include <string.h>
 #include <sdcc-lib.h>
 
-#if !_SDCC_PORT_PROVIDES_STRCMP
+//#if !_SDCC_PORT_PROVIDES_STRCMP
 
 int strcmp ( const char * asrc, const char * adst )
 {
@@ -44,14 +47,25 @@ int strcmp ( const char * asrc, const char * adst )
 		++src, ++dst;
 
 	return *src - *dst;
+
 #else
 	register int ret = 0;
 
 	while( ! (ret = *(unsigned char *)asrc - *(unsigned char *)adst) && *adst)
+	{
 		++asrc, ++adst;
-
-	return( ret );
+	}
+	
+	return ret;
 #endif
 }
 
-#endif
+//#endif
+
+
+
+
+
+
+
+

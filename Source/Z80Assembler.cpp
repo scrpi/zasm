@@ -559,7 +559,7 @@ w:	cstr w = q.nextWord();				// get next word
 	{
 		switch(w[0])
 		{
-		case '#':	goto w;									// SDASZ80: immediate value prefix
+		case '#':	if(prio==pAny) goto w; else goto syntax_error;	// SDASZ80: immediate value prefix
 		case ';':	throw syntax_error("value expected");	// comment  =>  unexpected end of line
 		case '+':	n = +value(q,pUna,valid); goto op;		// plus sign
 		case '-':	n = -value(q,pUna,valid); goto op;		// minus sign
@@ -1020,7 +1020,7 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 		for(uint i=0;i<files.count();i++)
 		{
 			cstr fname = files[i].fname();
-			cstr name = catstr("_", basename_from_path(fname));
+			cstr name  = basename_from_path(fname);
 
 			l = resolve_all ? &global_labels().find(name) : &rlabels.find(name);
 			if(!l) continue;			// not in list / not used

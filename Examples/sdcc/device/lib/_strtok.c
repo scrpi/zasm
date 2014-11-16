@@ -26,12 +26,10 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#include <string.h>
+// kio 2014-11-16	removed presumable SDC51 code
 
-#if defined(__SDCC_MODEL_LARGE) || defined (__SDCC_MODEL_FLAT24)
-#pragma noinduction
-#pragma noinvariant
-#endif
+
+#include <string.h>
 
 char * strtok ( char * str, const char * control )
 {
@@ -43,7 +41,8 @@ char * strtok ( char * str, const char * control )
 	if ( !s )
 		return NULL;
 
-	while (*s) {
+	while (*s) 
+	{
 		if (strchr(control,*s))
 			s++;
 		else
@@ -52,8 +51,10 @@ char * strtok ( char * str, const char * control )
 
 	s1 = s;
 
-	while (*s) {
-		if (strchr(control,*s)) {
+	while (*s) 
+	{
+		if (strchr(control,*s)) 
+		{
 			*s++ = '\0';
 			return s1;
 		}
@@ -67,3 +68,7 @@ char * strtok ( char * str, const char * control )
 	else
 		return NULL;
 }
+
+
+
+

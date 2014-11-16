@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   _fseq.c - Floating point library in optimized assembly for 8051
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (c) 2004, Paul Stoffregen, paul@pjrc.com
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -13,7 +13,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License 
    along with this library; see the file COPYING. If not, write to the
    Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
    MA 02110-1301, USA.
@@ -26,34 +26,51 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
+/*
+** libgcc support for software floating point.
+** Copyright (C) 1991 by Pipeline Associates, Inc.  All rights reserved.
+** Permission is granted to do *anything* you want with this file,
+** commercial or otherwise, provided this message remains intact.  So there!
+** I would appreciate receiving any updates/patches/changes that anyone
+** makes, and am willing to be the repository for said changes (am I
+** making a big mistake?).
+**
+** Pat Wood
+** Pipeline Associates, Inc.
+** pipeline!phw@motown.com or
+** sun!pipeline!phw or
+** uunet!motown!pipeline!phw
+*/
 
-// kio 2014-11-16	commented out #if and #undef ... to be tested
+/* (c)2000/2001: hacked a little by johan.knol@iduna.nl for sdcc */
+
+// kio 2014-11-16	removed MCS51 asm code
 
 
-#include <string.h>
-#include <sdcc-lib.h>
+#include <float.h>
 
 
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
-
-
-void * memcpy (void * dst, const void * src, size_t acount)
+union float_long
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
+	float f;
+	long l;
+};
 
-	// copy from lower addresses to higher addresses
-	while (acount--) 
-	{
-		*d++ = *s++;
-	}
 
-	return ret;
+/* compare two floats 
+*/
+char __fseq (float a1, float a2)
+{
+	volatile union float_long fl1, fl2;
+
+	fl1.f = a1;
+	fl2.f = a2;
+
+	if (fl1.l == fl2.l)
+    	return (1);
+	if (((fl1.l | fl2.l) & 0x7FFFFFFF) == 0)
+    	return (1);
+	return (0);
 }
-
-//#endif
-
 
 

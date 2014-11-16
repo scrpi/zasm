@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   time.c - stdlib time conversion routines
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (C) 2001, Johan Knol <johan.knol AT iduna.nl>
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -10,10 +10,10 @@
 
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License 
    along with this library; see the file COPYING. If not, write to the
    Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
    MA 02110-1301, USA.
@@ -26,34 +26,22 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-
-// kio 2014-11-16	commented out #if and #undef ... to be tested
-
-
-#include <string.h>
-#include <sdcc-lib.h>
-
-
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
+// kio 2014-11-16	split file into individual files for each symbol:
+//					_time.c
+//					_check_struct_tm.c	(was static)
+//					_asctime.c
+//					_ctime.c
+//					_localtime.s
+//					_gmtime.c
+//					_mktime.c
 
 
-void * memcpy (void * dst, const void * src, size_t acount)
-{
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
 
-	// copy from lower addresses to higher addresses
-	while (acount--) 
-	{
-		*d++ = *s++;
-	}
+// required by _gmtime.c and _mktime.c
 
-	return ret;
-}
+//was: static 
+_CODE char days_per_month[]={31,28,31,30,31,30,31,31,30,31,30,31};
 
-//#endif
 
 
 

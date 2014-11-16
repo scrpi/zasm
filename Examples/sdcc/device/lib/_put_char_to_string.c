@@ -1,7 +1,8 @@
-/*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+/*-----------------------------------------------------------------
+   sprintf.c - formatted output conversion
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (C) 1999, Martijn van Balen <aed AT iae.nl>
+   Refactored by - Maarten Brock (2004)
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -13,7 +14,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License 
    along with this library; see the file COPYING. If not, write to the
    Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
    MA 02110-1301, USA.
@@ -26,34 +27,18 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-
-// kio 2014-11-16	commented out #if and #undef ... to be tested
-
-
-#include <string.h>
-#include <sdcc-lib.h>
+// kio 2014-11-16	split original file into 3 separate files, one for each defined symbol:
+//					_put_char_to_string.c
+//					_vsprintf.c
+// and				_sprintf.c
 
 
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
 
-
-void * memcpy (void * dst, const void * src, size_t acount)
+/*	helper for sprintf() and vsprintf()
+*/
+void put_char_to_string (char c, void* p) _REENTRANT
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
-
-	// copy from lower addresses to higher addresses
-	while (acount--) 
-	{
-		*d++ = *s++;
-	}
-
-	return ret;
+  char **buf = (char **)p;
+  *(*buf)++ = c;
 }
-
-//#endif
-
-
 

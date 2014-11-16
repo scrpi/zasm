@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   _itoa.c - integer to string conversion
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (c) 1999, Bela Torok, bela.torok@kssg.ch
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -13,7 +13,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License 
    along with this library; see the file COPYING. If not, write to the
    Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
    MA 02110-1301, USA.
@@ -26,34 +26,26 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-
-// kio 2014-11-16	commented out #if and #undef ... to be tested
-
-
-#include <string.h>
-#include <sdcc-lib.h>
+// kio 2014-11-16 	moved _uitoa() into it's own file
 
 
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
+void _uitoa(unsigned int value, char* string, unsigned char radix);
 
 
-void * memcpy (void * dst, const void * src, size_t acount)
+/*	_itoa(int value, char* string, int radix)
+
+ 	value  ->  Number to be converted
+ 	string ->  Result
+ 	radix  ->  Base of value (e.g.: 2 for binary, 10 for decimal, 16 for hex)
+*/
+void _itoa(int value, char* string, unsigned char radix)
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
-
-	// copy from lower addresses to higher addresses
-	while (acount--) 
+	if (value < 0 && radix == 10) 
 	{
-		*d++ = *s++;
+    	*string++ = '-';
+    	value = -value;
 	}
-
-	return ret;
+	_uitoa(value, string, radix);
 }
-
-//#endif
-
 
 

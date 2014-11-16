@@ -26,24 +26,23 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
+// kio 2014-11-16	commented out #if and #undef ... to be tested
+
+
 #include <string.h>
 
-#ifdef __SDCC_BROKEN_STRING_FUNCTIONS
-char * strrchr ( const char * string, char ch )
-#else
 char * strrchr ( const char * string, int ch )
-#endif
 {
-        const char * start = string;
+	const char * start = string;
 
-        while (*string++)                       /* find end of string */
-                ;
+	while (*string++)                       /* find end of string */
+		;
                                                 /* search towards front */
-        while (--string != start && *string != ch)
-                ;
+	while (--string != start && *string != ch)
+    	;
 
-        if (*string == ch)                      /* char found ? */
-                return( (char *)string );
+	if (*string == ch)                      /* char found ? */
+    	return( (char *)string );
 
-        return (NULL) ;
+	return (NULL) ;
 }

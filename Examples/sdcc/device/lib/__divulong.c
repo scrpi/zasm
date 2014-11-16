@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   _divulong.c - routine for division of 32 bit unsigned long
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (C) 1999, Jean-Louis Vern <jlvern AT gmail.com>
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -10,7 +10,7 @@
 
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
@@ -27,33 +27,38 @@
 -------------------------------------------------------------------------*/
 
 
-// kio 2014-11-16	commented out #if and #undef ... to be tested
+// kio 2014-11-16	remove 8051 assembler implementation
 
 
-#include <string.h>
-#include <sdcc-lib.h>
+#include <stdbool.h>
 
+#define MSB_SET(x) ((x >> (8*sizeof(x)-1)) & 1)
 
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
-
-
-void * memcpy (void * dst, const void * src, size_t acount)
+unsigned long
+_divulong (unsigned long x, unsigned long y)
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
+  unsigned long reste = 0L;
+  unsigned char count = 32;
+  bool c;
 
-	// copy from lower addresses to higher addresses
-	while (acount--) 
-	{
-		*d++ = *s++;
-	}
+  do
+  {
+    // reste: x <- 0;
+    c = MSB_SET(x);
+    x <<= 1;
+    reste <<= 1;
+    if (c)
+      reste |= 1L;
 
-	return ret;
+    if (reste >= y)
+    {
+      reste -= y;
+      // x <- (result = 1)
+      x |= 1L;
+    }
+  }
+  while (--count);
+  return x;
 }
-
-//#endif
-
 
 

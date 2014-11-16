@@ -1,7 +1,8 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   _modulong.c - routine for modulus of 32 bit unsigned long
 
    Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Bug fixes by Martijn van Balen, aed@iae.nl
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -13,7 +14,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License 
    along with this library; see the file COPYING. If not, write to the
    Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
    MA 02110-1301, USA.
@@ -26,34 +27,36 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-
-// kio 2014-11-16	commented out #if and #undef ... to be tested
-
-
-#include <string.h>
-#include <sdcc-lib.h>
+// kio 2014-11-16	removed MCS51 asm code
 
 
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
+#define MSB_SET(x) ((x >> (8*sizeof(x)-1)) & 1)
 
-
-void * memcpy (void * dst, const void * src, size_t acount)
+unsigned long _modulong (unsigned long a, unsigned long b)
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
+	unsigned char count = 0;
 
-	// copy from lower addresses to higher addresses
-	while (acount--) 
+	while (!MSB_SET(b))
 	{
-		*d++ = *s++;
+		b <<= 1;
+		if (b > a)
+		{
+			b >>=1;
+			break;
+		}
+		count++;
 	}
 
-	return ret;
-}
+  	do
+  	{
+		if (a >= b)
+			a -= b;
+		b >>= 1;
+	}
+	while (count--);
 
-//#endif
+	return a;
+}
 
 
 

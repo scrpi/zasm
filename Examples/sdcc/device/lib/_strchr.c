@@ -26,15 +26,14 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
+// kio 2014-11-16	commented out #if and #undef ... to be tested
+
+
 #include <string.h>
 
-#undef strchr /* Avoid conflict with builtin strchr() in Z80 and some related ports */
+//#undef strchr /* Avoid conflict with builtin strchr() in Z80 and some related ports */
 
-#ifdef __SDCC_BROKEN_STRING_FUNCTIONS
-char * strchr ( const char * string, char ch )
-#else
 char * strchr ( const char * string, int ch )
-#endif
 {
 	while (*string && *string != ch)
 		string++;
@@ -43,3 +42,7 @@ char * strchr ( const char * string, int ch )
 		return(string);
 	return ( NULL );
 }
+
+
+
+

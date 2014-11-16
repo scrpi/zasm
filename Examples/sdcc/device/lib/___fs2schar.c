@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   _fs2schar.c - Floating point library in optimized assembly for 8051
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (c) 2004, Paul Stoffregen, paul@pjrc.com
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -13,7 +13,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License 
    along with this library; see the file COPYING. If not, write to the
    Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
    MA 02110-1301, USA.
@@ -27,33 +27,21 @@
 -------------------------------------------------------------------------*/
 
 
-// kio 2014-11-16	commented out #if and #undef ... to be tested
+// kio 2014-11-16	removed 8051 assembler version
+	
+	
+#include <float.h>
 
-
-#include <string.h>
-#include <sdcc-lib.h>
-
-
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
-
-
-void * memcpy (void * dst, const void * src, size_t acount)
+/* convert float to signed char 
+*/
+signed char __fs2schar (float f)
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
-
-	// copy from lower addresses to higher addresses
-	while (acount--) 
-	{
-		*d++ = *s++;
-	}
-
-	return ret;
+	signed long sl=__fs2slong(f);
+	if (sl>=SCHAR_MAX)
+		return SCHAR_MAX;
+	if (sl<=SCHAR_MIN)
+		return -SCHAR_MIN;
+	return sl;
 }
-
-//#endif
-
 
 

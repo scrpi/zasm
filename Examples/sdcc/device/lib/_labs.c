@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   labs.c - computes absolute value of an integer.
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (C) 2004, Maarten Brock, sourceforge.brock@dse.nl
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -26,34 +26,15 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-
-// kio 2014-11-16	commented out #if and #undef ... to be tested
-
-
-#include <string.h>
-#include <sdcc-lib.h>
+// kio 2014-11-16	removed MCS51 asm code
 
 
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
+#include <stdlib.h>
 
 
-void * memcpy (void * dst, const void * src, size_t acount)
+long int labs(long int j)
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
-
-	// copy from lower addresses to higher addresses
-	while (acount--) 
-	{
-		*d++ = *s++;
-	}
-
-	return ret;
+	return (j < 0) ? -j : j;
 }
-
-//#endif
-
 
 

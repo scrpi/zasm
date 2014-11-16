@@ -26,9 +26,12 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
+// kio 2014-11-16	commented out #if and #undef ... to be tested
+
+
 #include <string.h>
 
-#undef strncpy /* Avoid conflict with builtin strncpy() in Z80 and some related ports */
+// #undef strncpy /* Avoid conflict with builtin strncpy() in Z80 and some related ports */
 
 char *strncpy ( char * d, const char * s, size_t n )
 {

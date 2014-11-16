@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   logf.c - Computes the natural log of a 32 bit float as outlined in [1].
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (C) 2001, 2002, Jesus Calvino-Fraga, jesusc@ieee.org
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -26,34 +26,62 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
+/* [1] William James Cody and W.  M.  Waite.  _Software manual for the
+   elementary functions_, Englewood Cliffs, N.J.:Prentice-Hall, 1980. */
 
-// kio 2014-11-16	commented out #if and #undef ... to be tested
+/* Version 1.0 - Initial release */
 
-
-#include <string.h>
-#include <sdcc-lib.h>
-
-
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
+// kio 2014-11-16	removed MCS51 asm code
+// kio 2014-11-16	removed MCS51 code
 
 
-void * memcpy (void * dst, const void * src, size_t acount)
+#include <math.h>
+#include <errno.h>
+
+
+
+/*Constants for 24 bits or less (8 decimal digits)*/
+#define A0 -0.5527074855E+0
+#define B0 -0.6632718214E+1
+#define A(w) (A0)
+#define B(w) (w+B0)
+
+#define C0  0.70710678118654752440
+#define C1  0.693359375 /*355.0/512.0*/
+#define C2 -2.121944400546905827679E-4
+
+float logf(float x) _FLOAT_FUNC_REENTRANT
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
+	//#if defined(__SDCC_mcs51) && defined(__SDCC_MODEL_SMALL) && !defined(__SDCC_NOOVERLAY)
+	//volatile
+	//#endif
+    float Rz;
+    float f, z, w, znum, zden, xn;
+    int n;
 
-	// copy from lower addresses to higher addresses
-	while (acount--) 
-	{
-		*d++ = *s++;
-	}
+    if (x<=0.0)
+    {
+        errno=EDOM;
+        return 0.0;
+    }
+    f=frexpf(x, &n);
+    znum=f-0.5;
+    if (f>C0)
+    {
+        znum-=0.5;
+        zden=(f*0.5)+0.5;
+    }
+    else
+    {
+        n--;
+        zden=znum*0.5+0.5;
+    }
+    z=znum/zden;
+    w=z*z;
 
-	return ret;
+    Rz=z+z*(w*A(w)/B(w));
+    xn=n;
+    return ((xn*C2+Rz)+xn*C1);
 }
-
-//#endif
-
 
 
