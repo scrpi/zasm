@@ -59,7 +59,7 @@ __sdcc_heap_end:: 				; --> sdcc malloc.c
 #data	_DABS,*,0				; used by sdcc: .area _DABS (ABS): absolute external ram data?
 #code 	_CABS,*,0				; used by sdcc: .area _CABS (ABS): ?
 #code 	_GSFINAL,*,0			; used by sdcc: .area _GSFINAL: ?
-
+#data	_RSEG,*,0				; used by kcc:  .area _RSEG (ABS)
 
 
 
@@ -145,9 +145,8 @@ NMI::	rst		0
 	.globl	__rlslong
 
 ; test environment with sdcc at non-standard location
-; --std-c99 must be given because 'bool' is used in library files
 ;
-#cflags $CFLAGS --nostdinc -Iinclude --std-sdcc99
+#cflags $CFLAGS --nostdinc -Iinclude
 
 ; --- do it ---
 ;

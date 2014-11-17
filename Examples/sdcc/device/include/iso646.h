@@ -26,8 +26,11 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef __SDC51_FLOAT_H
-#define __SDC51_FLOAT_H 1
+// kio 2014-11-17	fixed #ifndef
+	
+	
+#ifndef __ISO646_H
+#define __ISO646_H 1
 
 #define and &&
 #define and_eq &=

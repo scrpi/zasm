@@ -1298,7 +1298,8 @@ wlen1:
 			if(!segment) throw fatal_error("segment not found");
 			current_segment_ptr = segment;
 
-			if((eq(name,"_CABS")||eq(name,"_DABS")) && q.testChar('('))	// SDCC generates: " .area _CABS (ABS)"
+			if((eq(name,"_CABS")||eq(name,"_DABS")||eq(name,"_RSEG"))	// SDCC generates: " .area _CABS (ABS)"
+				&& q.testChar('('))										// KCC  generates: " .area _RSEG (ABS)"
 			{
 				if(!q.testWord("ABS")) throw syntax_error("'ABS' expected");
 				q.expect(')');
@@ -1344,6 +1345,12 @@ wlen1:
 		if(eq(w,"byte"))	// SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
 		{
 			goto db;
+		}
+		if(eq(w,"org"))
+		{
+			n = value(q,pAny,v=1);
+			current_segment().setOrigin(n,v);
+			return;
 		}
 //		if(eq(w,"ascii"))
 //			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));

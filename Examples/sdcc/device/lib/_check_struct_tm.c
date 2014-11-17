@@ -44,7 +44,8 @@
 
 
 // validate the tm structure
-static void check_struct_tm(struct tm *timeptr) 
+//was static 
+void check_struct_tm(struct tm *timeptr) 
 {
     // we could do some normalization here, e.g.
     // change 40 october to 9 november
