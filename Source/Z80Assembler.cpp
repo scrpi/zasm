@@ -450,6 +450,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 				else
 				{
 					if(seg.dpos_valid && seg.size_valid) seg.storeSpace(seg.size-seg.dpos, true);
+					else seg.dpos_valid = no;
 				}
 
 				if(seg.relocatable)

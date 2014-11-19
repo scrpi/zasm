@@ -242,7 +242,10 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				uint snamelen = strlen(l->segment->name);
 				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);
 
-				fd.write_fmt(" %s:%u\n", sourcefile, linenumber);
+				fd.write_fmt(" %s:%u", sourcefile, linenumber);
+
+				if(is_valid && !is_used) fd.write_str(" (unused)");
+				fd.write_uint8('\n');
 			}
 		}
 
@@ -282,7 +285,10 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				uint snamelen = strlen(l->segment->name);
 				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);
 
-				fd.write_fmt(" %s:%u\n", sourcefile, linenumber);
+				fd.write_fmt(" %s:%u", sourcefile, linenumber);
+
+				if(is_valid && !is_used) fd.write_str(" (unused)");
+				fd.write_uint8('\n');
 			}
 		}
 	}

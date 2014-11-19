@@ -41,8 +41,8 @@ __mulint:
 
 	;; Parameters:
 	;; hl, de (left, right irrelevant)
-;	ld		b,h		;kio 2014-11-16
-;	ld		c,l		;kio 2014-11-16
+;	ld		b,h		;removed kio 2014-11-16
+;	ld		c,l		;removed kio 2014-11-16
 
 	;; 16-bit multiplication
 	;;

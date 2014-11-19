@@ -23,7 +23,7 @@ _min_heap_size::	equ	0x1000	; for malloc
 
 ; ________________________________________________________________
 ; Define ordering of code segments in rom:
-; these will produce code in the output file!
+; these segments produce code in the output file!
 ;
 #code 	_HEADER, _rom_start		; RST vectors et.al.
 #code 	_HOME					; code that must not be put in a bank switched part of memory.
@@ -39,16 +39,16 @@ _min_heap_size::	equ	0x1000	; for malloc
 
 ; ________________________________________________________________
 ; Define ordering of data segments in ram:
-; define addresses: no actual code stored in the output file!
+; these segments define addresses: no code is stored in the output file!
 ;
 #data 	_DATA, _ram_start		; uninitialized data
 #data 	_INITIALIZED			; initialized with data from code segment _INITIALIZER
 
 #data 	_HEAP					; heap
-__sdcc_heap_start:: 			; --> sdcc malloc.c
+__sdcc_heap_start:: 			; --> sdcc _malloc.c
 		ds	_min_heap_size		; minimum required size for malloc/free
 		ds	_ram_end-$-1		; add all unused memory to the heap
-__sdcc_heap_end:: 				; --> sdcc malloc.c
+__sdcc_heap_end:: 				; --> sdcc _malloc.c
 		ds 	1
 
 
@@ -75,44 +75,47 @@ __sdcc_heap_end:: 				; --> sdcc malloc.c
 ;
 #code _HEADER
 
-; reset vector
-RST0::	di
+; RST 0: reset vector
+		di
 		ld		sp,0x0000	; Set stack pointer directly above top of memory.
 		jp		_GSINIT		; Initialize global variables, call main() and exit
 
+; RST 1:
 		defs	0x08-$
-RST1::	reti
+		reti
 
+; RST 2:
 		defs	0x10-$
-RST2::	reti
+		reti
 
+; RST 3:
 		defs	0x18-$
-RST3::	reti
+		reti
 
+; RST 4:
 		defs	0x20-$
-RST4::	reti
+		reti
 
+; RST 5:
 		defs	0x28-$
-RST5::	reti
+		reti
 
+; RST 6:
 		defs	0x30-$
-RST6::	reti
-
-
-
+		reti
 
 ; ________________________________________________________________
-; maskable interrupt handler in IM 1:
-;
+; RST 7: maskable interrupt handler in IM 1:
+
 		defs	0x38-$
-RST7::	reti
+		reti
 
 
 
 ; ________________________________________________________________
 ; non-maskable interrupt handler:
 ; must return with RETN
-;
+
 		defs   	0x66-$
 NMI::	rst		0
 ;		retn
@@ -146,7 +149,7 @@ NMI::	rst		0
 
 ; test environment with sdcc at non-standard location
 ;
-#cflags $CFLAGS --nostdinc -Iinclude
+#cflags $CFLAGS --nostdinc -Iinclude --reserve-regs-iy
 
 ; --- do it ---
 ;
@@ -202,9 +205,8 @@ _INITIALIZER_len:: equ $-0
 #code 	_GSINIT
 		call	_main		; execute main()
 _exit::	di					; system shut down
-0$:		halt				; may resume after NMI
+		halt				; may resume after NMI
 		rst		0			; then reboot
-		jp		0$
 
 
 

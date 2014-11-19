@@ -1,10 +1,12 @@
 
 
 
+const int const_int_e = 123;
 int global_int_a;
 int global_int_b = 99;
 static int static_int_c;
 static int static_int_d = 66;
+
 
 #include <stdlib.h>
 

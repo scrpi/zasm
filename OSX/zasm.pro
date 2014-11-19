@@ -68,7 +68,7 @@ HEADERS += \
 	Libraries/kio/peekpoke.h \
     Libraries/Templates/Array.h \
     Libraries/Templates/HashMap.h \
-    Source/helpers.h
+    Source/helpers.h \
 
 OTHER_FILES += \
     ../Examples/Jupiter Ace Character Ram.bin \
@@ -235,7 +235,9 @@ OTHER_FILES += \
     ../Examples/sdcc/device/lib/_toupper.c \
     ../Examples/sdcc/device/lib/_vprintf.c \
     ../Examples/sdcc/device/lib/_vsprintf.c \
-    ../Examples/sdcc/device/lib/_log_table.h
+    ../Examples/sdcc/device/lib/_log_table.h \
+    ../Test/test-tap.asm \
+    ../Test/test-tap.lst \
 
 
 
