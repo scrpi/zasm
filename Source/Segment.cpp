@@ -64,7 +64,7 @@ Segment* Segments::find(cstr name)
 	address, size and flag should be set immediately after this call
 	or at the end of an assembler pass.
 */
-Segment::Segment(cstr name, bool is_data, uint8 fillbyte , bool relocatable, bool resizable)
+Segment::Segment(cstr name, bool is_data, uint8 fillbyte , bool relocatable, bool resizable, bool has_flag)
 :
 	core(0x10000),
 	name(name),
@@ -72,6 +72,7 @@ Segment::Segment(cstr name, bool is_data, uint8 fillbyte , bool relocatable, boo
 	fillbyte(fillbyte),
 	relocatable(relocatable),
 	resizable(resizable),
+	has_flag(has_flag),
 
 	address(0),
 	size(0),

@@ -37,30 +37,6 @@ min_heap_size	= $1000		; for malloc
 
 
 
-; ---------------------------------------------------
-;		ram-based variables
-;		note: 0x5B00 is the printer buffer
-;		note: the printer buffer is 256 bytes long
-;		note: system variables at 0x5C00 were initialized by Basic
-; ---------------------------------------------------
-
-#data 	_DATA, printer_buffer							; uninitialized data
-#data 	_INITIALIZED, *, 0x100 - (_INITIALIZED-_DATA)	; data initialized from _INITIALIZER
-
-
-
-; ---------------------------------------------------
-; Segments which are referenced by sdcc but never (?) actually used:
-; if these contain data/code then we'll have to put them somewhere.
-; ---------------------------------------------------
-
-#data	_DABS,*,0				; used by sdcc: .area _DABS (ABS): absolute external ram data?
-#code 	_CABS,*,0				; used by sdcc: .area _CABS (ABS): ?
-#code 	_GSFINAL,*,0			; used by sdcc: .area _GSFINAL: ?
-#data	_RSEG,*,0				; used by kcc:  .area _RSEG (ABS)
-
-
-
 
 ; ---------------------------------------------------
 ;		a Basic Loader:
@@ -134,22 +110,39 @@ variables_end:
 ; these segments produce code in the output file!
 ; since these segments are defined without start address and flag,
 ; they are appended to the previous tape segment by the assembler
-;
+; ---------------------------------------------------
+
 #code 	_GSINIT				; init code: the compiler adds some code here and there as required
 #code 	_HOME				; code that must not be put in a bank switched part of memory.
 #code 	_CODE				; most code and const data go here
-;#code	_CONST
+#code 	_CABS,*,0			; referenced but never (?) actually used by sdcc
+#code 	_GSFINAL,*,0		; referenced but never (?) actually used by sdcc
 #code 	_INITIALIZER		; initializer for initialized data in ram
 							; if the code is started only once then you can overlay this with _INITIALIZED
 							; instead of putting in the printer_buffer and skip the copy loop in _GSINIT
 
 
-#data 	_HEAP, code_end		; heap: data segment does not produce actual code!
+; ---------------------------------------------------
+; Define variables in ram:
+; note: 0x5B00 is the printer buffer
+; note: the printer buffer is 256 bytes long
+; note: system variables at 0x5C00 were initialized by Basic
+; note: data segments do not produce actual code
+; ---------------------------------------------------
+
+#data 	_DATA, printer_buffer							; uninitialized data
+#data 	_INITIALIZED, *, 0x100 - (_INITIALIZED-_DATA)	; data initialized from _INITIALIZER
+#data	_DABS,*,0			; referenced but never (?) actually used by sdcc
+#data	_RSEG,*,0			; referenced but never (?) actually used by kcc
+
+#data 	_HEAP, code_end		; heap:
 __sdcc_heap_start:	 		; --> sdcc _malloc.c
 		ds	min_heap_size	; minimum required size
 		ds	ram_end-$-1		; add all unused memory to the heap
 __sdcc_heap_end: 			; --> sdcc _malloc.c
 		ds 	1
+
+
 
 
 
@@ -163,17 +156,16 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 
 ; print "Hello World"
 
-		ld		hl,_hello_world
+		ld		hl,3$		;_hello_world
 1$		ld		a,(hl)
 		and		a
 		jr		z,2$
 		inc		hl
 		rst		2
 		jr		1$
-2$:
 
-;#code _CONST
-_hello_world:	dm	13, "Hello World!", 13, 0
+3$		dm		13, "Hello World!", 13, 0
+2$:
 
 
 #code _GSINIT
@@ -252,10 +244,13 @@ _getchar::
 ;		ret
 
 _putchar::
-		pop	  hl
-		pop	  af
-		push  af
-		push  hl
+		ld	hl,2
+		add	hl,sp
+		ld	a,(hl)
+;		pop	  hl
+;		pop	  af
+;		push  af
+;		push  hl
 		rst	  2
 		ret
 

@@ -20,3 +20,4 @@ Test/lib/
 Test/rem.c
 Test/sdcc-2014-10
 Test/sdcpp
+Test/*.tap

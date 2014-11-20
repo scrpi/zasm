@@ -128,31 +128,61 @@ void Z80Assembler::writeTapFile(FD& fd) throw(any_error)	// no error checking!
 	// tape data blocks are written like this:
 	//		dw	len				; number of bytes that follow
 	//		db	blocktype		; not for Jupiter ACE!
-	//		ds	data			; from segment
+	//		ds	data			; from segment(s)
 	//		db	checksum		; simple xor of blocktype + data bytes
 
-	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	XXASSERT(segments[0].size==0);		// default code segment is not used
+	uint i0=1; while(i0<segments.count() && segments[i0].size==0 && !segments[i0].has_flag) { i0++; }
+	XXXASSERT(segments[i0].has_flag);
+	uint i,j;
 
 	// include block type byte in tap block?
-	// ZX Spectrum: yes; Jupiter ACE: no
-	bool writetypebyte = segments[i0].size != 25;	// 25 => Jupiter ACE
+	// ZX Spectrum: yes;
+	// Jupiter ACE: no, except:
+	//		first header block (and segment!) must be 25 bytes long (Jupiter ACE header block size)
+	//		block type bytes must alternate  $ff - $00 - $ff - $00 etc.
+	bool jupiterace = segments[i0].size==25;
+	int h = 0xff;
+	for(i=i0; jupiterace && i<segments.count() && segments[i].isCode(); i++)
+	{ if(segments[i].has_flag) { jupiterace = segments[i].flag == h; h ^= 0xff; } }
+	bool writetypebyte = !jupiterace;
 
-	// Jupiter ACE: write block type bytes if they do not alternate as expected:
-	for(uint i=i0; !writetypebyte && i<segments.count() && segments[i].isCode(); i++)
-	{ writetypebyte = segments[i].flag != (i&1 ? 0xff : 0x00); }
-
-	for(uint i=i0; i<segments.count() && segments[i].isCode(); i++)
+	// write tape blocks
+	// each block may consist of multiple segmentes
+	// where the first segment has the flag byte defined and
+	// following segments without flag byte are appended to this block.
+	//
+	for( i=i0; i<segments.count() && segments[i].isCode(); )
 	{
-		Segment& s = segments[i];
-		uint checksum = s.flag;
-		uint8* qa = s.getData();
-		for(uint8* q = qa+s.size; q>qa; ) checksum ^= *--q;
+		Segment* s = &segments[i];
+		uint flag = s->flag;
+		uint size = s->size;
 
-		fd.write_uint16_z(writetypebyte+s.size+1);	// length of following data
-		if(writetypebyte) fd.write_uint8(s.flag);	// block type
-		fd.write_bytes(qa,s.size);					// data
-		fd.write_uint8(checksum);					// checksum
+		// calc block size:
+		for(j=i+1; j<segments.count(); j++)
+		{
+			s = &segments[j];
+			if(s->isData()) break;		// end of code
+			if(s->has_flag) break;		// next tape block
+			size += s->size;			// accumulate size
+		}
+
+		// write block size and block type:
+		fd.write_uint16_z(writetypebyte+size+1);	// length of following data
+		if(writetypebyte) fd.write_uint8(flag);		// block type
+
+		// write data and calc checksum
+		uint checksum = flag;
+		while(i<j)
+		{
+			s = &segments[i++];
+			uint8* qa = s->getData();
+			fd.write_bytes(qa,s->size);	// write data
+			for(uint8* q = qa+s->size; q>qa; ) checksum ^= *--q;
+		};
+
+		//write checksum
+		fd.write_uint8(checksum);		// checksum
 	}
 }
 
@@ -240,19 +270,38 @@ void Z80Assembler::checkTargetfile() throw(any_error)
 
 
 /*	check segments[] for target "TAP":
-	verify that all tape blocks have a flag
+	segments are either a tape block on their own and have their tape block flag defined
+	or they are a sequence of multiple segments which are to be joined into a single tape block.
+	Then only the first segment has a flag defined and the following segments must fit with their
+	segment ('physical') address exactly to their predecessor. (prev.addr+prev.len == next.addr)
 */
 void Z80Assembler::checkTapFile() throw(any_error)
 {
 	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	uint i0=1; while(i0<segments.count() && segments[i0].size==0 && !segments[i0].has_flag) { i0++; }
 
-	for(uint i=i0; i<segments.count() && segments[i].isCode(); i++)
+	for(uint i=i0; i<segments.count() && segments[i].isCode(); )
 	{
-		Segment& s = segments[i];
-		if(!s.flag_valid) throw syntax_error(usingstr("segment %s: flag missing", s.name));
-		if(s.size==0)     throw syntax_error(usingstr("segment %s: size = 0", s.name));
-		if(s.size>0xfeff) throw syntax_error(usingstr("segment %s: size = %u (max = 0xfeff)", s.name, s.size));
+		Segment* s = &segments[i];
+		if(!s->has_flag) throw syntax_error(usingstr("tape block %s: flag missing", s->name));
+		if((s->flag>255||s->flag<-128))
+			throw syntax_error(usingstr("tape block %s: flag value out of range", s->name));
+
+		uint32 size = s->size;
+		uint32 addr = s->address;
+		cstr   name = s->name;
+
+		while( ++i<segments.count() )
+		{
+			s = &segments[i];
+			if(s->isData()) break;
+			if(s->has_flag) break;
+			if(s->address!=addr+size) throw syntax_error(usingstr("tape block %s: flag missing", s->name));
+			size += s->size;
+		}
+
+		if(size==0)     throw syntax_error(usingstr("tape block %s: size = 0", name));
+		if(size>0xfeff) throw syntax_error(usingstr("tape block %s: size = %u (max = 0xfeff)", name, size));
 	}
 }
 

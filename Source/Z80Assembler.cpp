@@ -367,7 +367,7 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 
 	// setup segments:
 	segments.purge();
-	segments.append(new Segment(DEFAULT_CODE_SEGMENT,no,0xff,no,yes));	// current_segment must exist
+	segments.append(new Segment(DEFAULT_CODE_SEGMENT,no,0xff,no,yes,no));	// current_segment must exist
 	segments[0].address_valid = yes;		// "physical" address = $0000 is valid
 	segments[0].org_valid = yes;			// "logical"  address = $0000 is valid too
 	global_labels().add(new Label(DEFAULT_CODE_SEGMENT,&segments[0],0,0,yes,yes,yes,no));
@@ -532,7 +532,8 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 		asmInstr(q);			// opcode or pseudo opcode
 		q.expectEol();			// expect end of line
 
-		if(q.segment==current_segment_ptr) q.bytecount = currentPosition() - q.byteptr;
+		if(q.segment==current_segment_ptr)
+			q.bytecount = currentPosition() - q.byteptr;
 		else
 		{
 			q.segment = current_segment_ptr;	// .area instruction
@@ -610,7 +611,8 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 			if(w[0]=='0')
 			{
 				if(tolower(w[1])=='x' && w[2]) { w+=2; goto hex_number; }	// 0xABCD
-				if(tolower(w[1])=='b' && w[2]) { w+=2; goto bin_number; }	// 0b0101
+				if(tolower(w[1])=='b' && w[2] && is_bin_digit(lastchar(w))) // caveat e.g.: 0B0h
+												{ w+=2; goto bin_number; }	// 0b0101
 			}
 			c = tolower(lastchar(w));
 			if( c=='h' ) goto hex_number;	// hex number    indicated by suffix
@@ -1168,8 +1170,11 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	XXXASSERT(!segment || eq(segment->name,name));
 
 	if(segment && segment->is_data != is_data) throw fatal_error("#code/#data mismatch");
-	if(pass==1 ? segment!=NULL : q.peekChar()!=',') { current_segment_ptr = segment; return; }	// --> expect eol
 
+//	if(pass==1 ? segment!=NULL : q.peekChar()!=',')
+//	{}		// --> expect eol
+//	else	// --> parse arguments
+//	{
 	int32 address	= 0;
 	int32 size		= 0;
 	int32 flags		= 0;
@@ -1178,6 +1183,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	bool  flags_is_valid	= no;
 	bool  relocatable		= yes;
 	bool  resizable			= yes;
+	bool  has_flag			= no;
 
 	if(q.testComma())
 	{
@@ -1193,6 +1199,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 
 	if(q.testComma())
 	{
+		has_flag = yes;
 		flags = value(q, pAny, flags_is_valid=yes);
 		if(flags_is_valid && flags!=(uint8)flags) throw syntax_error("value out of range");
 	}
@@ -1202,16 +1209,21 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 		XXXASSERT(pass==1);
 
 		uint8 fillbyte = is_data || ne(target,"ROM") ? 0x00 : 0xFF;
-		segment = new Segment(name,is_data,fillbyte,relocatable,resizable);
+		segment = new Segment(name,is_data,fillbyte,relocatable,resizable,has_flag);
 		segments.append(segment);
 		global_labels().add(new Label(name,segment,q.sourcelinenumber,address,address_is_valid,yes,yes,no));
 		reusable_label_basename = name;
 	}
-	current_segment_ptr = segment;
 
 	if(address_is_valid) { segment->setAddress(address); segment->setOrigin(address,yes); }	// throws
 	if(size_is_valid)    { segment->setSize(size); }			// throws
 	if(flags_is_valid)   { segment->setFlag(flags); }			// throws
+//	}
+
+	current_segment_ptr = segment;
+	q.segment = current_segment_ptr;	// Für Temp Label Resolver
+	q.byteptr = currentPosition();		// Für Temp Label Resolver & Logfile
+	XXXASSERT(q.bytecount==0);
 }
 
 
@@ -1297,7 +1309,11 @@ wlen1:
 			if(!is_letter(*name) && *name!='_') throw fatal_error("segment name expected");
 			Segment* segment = segments.find(name);
 			if(!segment) throw fatal_error("segment not found");
+
 			current_segment_ptr = segment;
+			q.segment = current_segment_ptr;
+			q.byteptr = currentPosition();
+			XXXASSERT(q.bytecount==0);
 
 			if((eq(name,"_CABS")||eq(name,"_DABS")||eq(name,"_RSEG"))	// SDCC generates: " .area _CABS (ABS)"
 				&& q.testChar('('))										// KCC  generates: " .area _RSEG (ABS)"
@@ -1331,30 +1347,12 @@ wlen1:
 			}
 			return;
 		}
-		if(eq(w,"ds"))
-		{
-			goto ds;
-		}
-		if(eq(w,"dw"))
-		{
-			goto dw;
-		}
-		if(eq(w,"db"))		// SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
-		{
-			goto db;
-		}
-		if(eq(w,"byte"))	// SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
-		{
-			goto db;
-		}
-		if(eq(w,"org"))
-		{
-			n = value(q,pAny,v=1);
-			current_segment().setOrigin(n,v);
-			return;
-		}
-//		if(eq(w,"ascii"))
-//			throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
+		if(eq(w,"ds"))	 goto ds;
+		if(eq(w,"dw"))	 goto dw;
+		if(eq(w,"db"))	 goto db; // SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
+		if(eq(w,"byte")) goto db; // SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
+		if(eq(w,"org"))	 goto org;
+		if(eq(w,"ascii"))goto dm;
 
 /*		if(eq(opcode,"title"))			{ q.skip_to_eol(); return; }	// for listing
 		if(eq(opcode,"sbttl"))			{ q.skip_to_eol(); return; }	// for listing
@@ -1966,7 +1964,7 @@ wlen3:
 	case ' dec':	i = 8; goto inc;
 	case ' org':
 	{
-		// org <value>	; set "logical" code address
+org:	// org <value>	; set "logical" code address
 		// org $$		; $$ = "physical" code address = segment.address + dpos
 		n = value(q, pAny, v=1);
 		current_segment().setOrigin(n,v);

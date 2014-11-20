@@ -9,6 +9,7 @@ static int static_int_d = 66;
 
 
 #include <stdlib.h>
+#include <stdio.h>
 
 int mult(int a, int b)
 {
@@ -26,6 +27,9 @@ void main()
 {
 	int a;
 	char b;
+
+	puts("Hello C World!\r");
+
 	global_int_a = 33;
 	static_int_c = mult(global_int_a,static_int_d);
 	static_int_d = rem(global_int_a,static_int_c);

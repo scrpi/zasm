@@ -50,6 +50,7 @@ public:
 	uint8		fillbyte;			// $FF for ROM else $00
 	bool		relocatable;		// address has not been explicitely set => append to prev. segment
 	bool		resizable;			// size has not been explicitely set    => shrink to fit
+	bool		has_flag;
 
 	uint32		address;			// "physical" segment start address (as set in segment header
 									// or calculated when appended to prev. segment)
@@ -65,7 +66,7 @@ public:
 	bool		flag_valid;
 
 
-public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, bool resizable);
+public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, bool resizable, bool has_flag);
 
 // store object code
 	void		store			(int byte)						throw(fatal_error);
