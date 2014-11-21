@@ -71,30 +71,7 @@ HEADERS += \
     Source/helpers.h \
 
 OTHER_FILES += \
-    ../Examples/Jupiter Ace Character Ram.bin \
-    ../Examples/Jupiter Ace Character Ram.asm \
-    ../Examples/template_ace_sysvars.asm \
-    ../Examples/template_ace.asm \
-    ../Examples/template_bin.asm \
-    ../Examples/template_minimal_rom.asm \
-    ../Examples/template_o.asm \
-    ../Examples/template_p.asm \
-    ../Examples/template_rom.asm \
-    ../Examples/template_sna.asm \
-    ../Examples/template_tap.asm \
-    ../Examples/template_z80.asm \
-    ../Examples/template_zx80_sysvars.asm \
-    ../Examples/template_zx81_sysvars.asm \
-    ../Examples/template_zx82_sysvars.asm \
-    ../Examples/zx82_rom.asm \
     ../.gitignore \
-    ../Test/main.c \
-    ../Test/main.s \
-    ../Test/test-cc.asm \
-    ../Test/test-cc.lst \
-    ../Test/test.asm \
-    ../Test/test.lst \
-    ../Test/test-opcodes.asm \
     ../Examples/sdcc/device/lib/___setjmp.s \
     ../Examples/sdcc/device/lib/__divsint.s \
     ../Examples/sdcc/device/lib/__divsuchar.s \
@@ -236,8 +213,61 @@ OTHER_FILES += \
     ../Examples/sdcc/device/lib/_vprintf.c \
     ../Examples/sdcc/device/lib/_vsprintf.c \
     ../Examples/sdcc/device/lib/_log_table.h \
+    \
+    ../Examples/sdcc/device/include/asm/default/features.h \
+    ../Examples/sdcc/device/include/asm/z80/features.h \
+    ../Examples/sdcc/device/include/assert.h \
+    ../Examples/sdcc/device/include/ctype.h \
+    ../Examples/sdcc/device/include/errno.h \
+    ../Examples/sdcc/device/include/float.h \
+    ../Examples/sdcc/device/include/iso646.h \
+    ../Examples/sdcc/device/include/limits.h \
+    ../Examples/sdcc/device/include/malloc.h \
+    ../Examples/sdcc/device/include/math.h \
+    ../Examples/sdcc/device/include/sdcc-lib.h \
+    ../Examples/sdcc/device/include/setjmp.h \
+    ../Examples/sdcc/device/include/stdalign.h \
+    ../Examples/sdcc/device/include/stdarg.h \
+    ../Examples/sdcc/device/include/stdbool.h \
+    ../Examples/sdcc/device/include/stddef.h \
+    ../Examples/sdcc/device/include/stdint.h \
+    ../Examples/sdcc/device/include/stdio.h \
+    ../Examples/sdcc/device/include/stdlib.h \
+    ../Examples/sdcc/device/include/stdnoreturn.h \
+    ../Examples/sdcc/device/include/string.h \
+    ../Examples/sdcc/device/include/time.h \
+    ../Examples/sdcc/device/include/tinibios.h \
+    ../Examples/sdcc/device/include/typeof.h \
+	\
+    ../Examples/Jupiter Ace Character Ram.bin \
+    ../Examples/Jupiter Ace Character Ram.asm \
+    ../Examples/template_ace_sysvars.asm \
+    ../Examples/template_ace.asm \
+    ../Examples/template_bin.asm \
+    ../Examples/template_minimal_rom.asm \
+    ../Examples/template_o.asm \
+    ../Examples/template_p.asm \
+    ../Examples/template_rom.asm \
+    ../Examples/template_sna.asm \
+    ../Examples/template_tap.asm \
+    ../Examples/template_z80.asm \
+    ../Examples/template_zx80_sysvars.asm \
+    ../Examples/template_zx81_sysvars.asm \
+    ../Examples/template_zx82_sysvars.asm \
+    ../Examples/template_zx82_basic_tokens.asm \
+    ../Examples/template_zx82_control_codes.asm \
+    \
+    ../Test/main.c \
+    ../Test/main.s \
+    ../Test/test-cc.asm \
+    ../Test/test-cc.lst \
+    ../Test/test.asm \
+    ../Test/test.lst \
+    ../Test/test-opcodes.asm \
     ../Test/test-tap.asm \
     ../Test/test-tap.lst \
+    ../Test/zx82_rom.asm \
+    ../Test/zx82_rom.lst \
 
 
 

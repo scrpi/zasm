@@ -567,10 +567,18 @@ w:	cstr w = q.nextWord();				// get next word
 		case '-':	n = -value(q,pUna,valid); goto op;		// minus sign
 		case '~':	n = ~value(q,pUna,valid); goto op;		// complement
 		case '!':	n = !value(q,pUna,valid); goto op;		// negation
-		case '(':	n =  value(q,pAny,valid); q.expect(')'); goto op;	// brackets
+		case '(':	n =  value(q,pAny,valid); q.expectClose(); goto op;	// brackets
 		case '$':	n = currentAddress();					// $ = "logical" address at current code position
 					valid = valid && currentAddressValid();
 					if(!valid) final = false; goto op;
+		case '<':	// SDASZ80: low byte of word
+					q.expectOpen();	// until i see SDCC omits it
+					n = uint8(value(q,pAny,valid));
+					q.expectClose(); goto op;
+		case '>':	// SDASZ80: high byte of word
+					q.expectOpen();	// until i see SDCC omits it
+					n = uint8(value(q,pAny,valid)>>8);
+					q.expectClose(); goto op;
 		}
 	}
 	else							// multi-char word:
@@ -1605,7 +1613,7 @@ cp:		s=q.p;
 				r = getRegister(q);
 				if(r!=IX&&r!=IY) goto ix_iy_expected;
 				q.expectClose();
-				store_XY_byte_op(r==IX?PFX_IX:PFX_IY,i+r,n,v);
+				store_XY_byte_op(r==IX?PFX_IX:PFX_IY,i+OPEN,n,v);
 			}
 			else
 			{
@@ -2035,7 +2043,7 @@ bit:	n = value(q,pAny,v=1); if (v && (n<0 || n>7)) throw syntax_error("illegal b
 			int r = getRegister(q);
 			if(r!=IX&&r!=IY) goto ix_iy_expected;
 			q.expectClose();
-			store_XYCB_op(r==IX?PFX_IX:PFX_IY,i+n, m, v);
+			store_XYCB_op(r==IX?PFX_IX:PFX_IY,i+OPEN, m, v);
 			return;
 		}
 
@@ -2063,7 +2071,9 @@ bit:	n = value(q,pAny,v=1); if (v && (n<0 || n>7)) throw syntax_error("illegal b
 	case ' inc':
 	{
 		i = 0;
-inc:	n=getRegister(q);
+inc:	s=q.p;
+		n=getRegister(q);
+
 		if (n>=BC)
 		{	if (i) i=DEC_BC-INC_BC;
 			switch(n)
@@ -2074,10 +2084,11 @@ inc:	n=getRegister(q);
 			case SP:	storeOpcode(INC_SP+i); return;
 			case IX:	store_IX_opcode(INC_HL+i); return;
 			case IY:	store_IY_opcode(INC_HL+i); return;
-			default:	goto ill_reg;	// added: zasm failed to detect some ill. condidions	2006-09-17 kio
+			default:	goto ill_reg;
 			}
 		}
-		if (n>=XH)						// inc/dec XH..YL added		2006-09-17 kio
+
+		if (n>=XH)					// XH XL YH YL
 		{
 			if (i) i=DEC_H-INC_H;	// 1
 			switch(n)
@@ -2089,29 +2100,47 @@ inc:	n=getRegister(q);
 			default:	goto ill_reg;
 			}
 		}
+
 		if (i) i=DEC_B-INC_B;	// 1
-		if (n!=OPEN)
+
+		if (n==OPEN)			// (HL) (IX+dis) (IY+dis)
+		{
+			switch(getRegister(q))
+			{
+			case HL:
+				storeOpcode(INC_xHL+i);
+				q.expectClose(); return;
+			case IX: 				// (IX) or (IX±dis)
+				n=0; v=1; if(q.peekChar()!=')') n = value(q,pAny,v);
+				store_IX_byte_opcode(INC_xHL+i,n,v);
+				q.expectClose(); return;
+			case IY: 				// (IY) or (IY±dis)
+				n=0; v=1; if(q.peekChar()!=')') n = value(q,pAny,v);
+				store_IY_byte_opcode(INC_xHL+i,n,v);
+				q.expectClose(); return;
+			default:
+				goto ill_reg;
+			}
+		}
+
+		if(n>=RB)				// B C D E H L A
 		{
 			storeOpcode(INC_B+i+n*8); return;
 		}
-		switch(getRegister(q))
+
+		else					// dis(IX)  dis(IY)
 		{
-		case HL:
-			storeOpcode(INC_xHL+i);
-			break;
-		case IX: 				// 2007-09-25 kio: (IX) w/o offset
-			n=0; v=1; if(q.peekChar()!=')') n = value(q,pAny,v);
-			store_IX_byte_opcode(INC_xHL+i,n,v);
-			break;
-		case IY: 				// 2007-09-25 kio: (IX) w/o offset
-			n=0; v=1; if(q.peekChar()!=')') n = value(q,pAny,v);
-			store_IY_byte_opcode(INC_xHL+i,n,v);
-			break;
-		default:
-			goto ill_reg;
+			XXXASSERT(n==-1);
+			q.p=s;	// unGetWord
+			n=value(q,pAny,v=1);
+			q.expect('(');
+			int r=getRegister(q);
+			if(r!=IX&&r!=IY) goto ix_iy_expected;
+			q.expectClose();
+			store_XY_byte_op(r==IX?PFX_IX:PFX_IY,INC_xHL+i,n,v);
+			return;
 		}
-		q.expectClose();
-		return;
+
 	}
 	case ' out':
 	{

@@ -90,6 +90,7 @@ public:
 
 	void	expect		(char)		throw(syntax_error);
 	void	expectComma	()			throw(syntax_error)		{ expect(','); }
+	void	expectOpen	()			throw(syntax_error)		{ expect('('); }
 	void	expectClose	()			throw(syntax_error)		{ expect(')'); }
 	void	expectEol	()			throw(syntax_error);
 

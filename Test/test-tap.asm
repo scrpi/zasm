@@ -154,6 +154,12 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 
 #code _GSINIT
 
+; set print channel to Screen:
+
+		ld		a,2
+		call	$1601
+
+
 ; print "Hello World"
 
 		ld		hl,3$		;_hello_world
@@ -244,14 +250,13 @@ _getchar::
 ;		ret
 
 _putchar::
-		ld	hl,2
-		add	hl,sp
-		ld	a,(hl)
-;		pop	  hl
-;		pop	  af
-;		push  af
-;		push  hl
-		rst	  2
+		ld	  hl,2
+		add	  hl,sp
+		ld	  a,(hl)			; a = char
+		cp	  a,10				; '\n' ?
+		jr	  nz,1$
+		ld	  a,13				; replace 10 with 13
+1$		rst	  2
 		ret
 
 
@@ -280,26 +285,28 @@ _putchar::
 	.globl	__rrslong
 	.globl	__rlulong
 	.globl	__rlslong
-
+	.globl	__sdcc_call_hl
 
 ; the test environment of sdcc is at a non-standard location.
 ; also IY must not be used else we can't call most rom routines
 ; --codeseg NAME
-; --constseg NAME  wird nicht für const data benutzt... ?
+; --constseg NAME	wird nicht für const data benutzt... ?
+; --std-c99			for bool
+; --reserve-regs-iy	for ZX Spectrum system variables
 ;
-#cflags $CFLAGS --nostdinc -Iinclude --reserve-regs-iy
+#cflags $CFLAGS --nostdinc -Iinclude --reserve-regs-iy --std-c99
 
 
 ; include c files:
 ;
 #local
 #include "main.c"
-#include "rem.c"
 #endlocal
 
 
 ; resolved missing labels:
 ;
+#include library "library"
 #include library "library"
 #include library "library"
 

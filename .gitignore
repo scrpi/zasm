@@ -21,3 +21,5 @@ Test/rem.c
 Test/sdcc-2014-10
 Test/sdcpp
 Test/*.tap
+Test/zx82_rom.asm
+Test/kcc
