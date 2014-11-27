@@ -103,13 +103,8 @@ Z80Assembler::Z80Assembler()
 //	c_flags.append("--nostdinc");
 //	c_flags.append("-Iinclude");		// <-- sollte cmd line option sein
 
-//	c_flags.append("--no-overlay");			// don't overlay args&vars of non-reentrant functions
-//	c_flags.append("--no-stdinc");			// don't search the std include path for header files
 //	c_flags.append("-fomit-frame-pointer");	//
-//	c_flags.append("--stack-auto");			// all reentrand (default)
 //	c_flags.append("--all-callee-saves");	// all called functions save all registers
-//	c_flags.append("--int-long-reent");		// int and long math lib functions are compiled as reentrant
-//	c_flags.append("--float-reent");		// float math lib functions are compiled as reentrant
 }
 
 
@@ -571,14 +566,8 @@ w:	cstr w = q.nextWord();				// get next word
 		case '$':	n = currentAddress();					// $ = "logical" address at current code position
 					valid = valid && currentAddressValid();
 					if(!valid) final = false; goto op;
-		case '<':	// SDASZ80: low byte of word
-					q.expectOpen();	// until i see SDCC omits it
-					n = uint8(value(q,pAny,valid));
-					q.expectClose(); goto op;
-		case '>':	// SDASZ80: high byte of word
-					q.expectOpen();	// until i see SDCC omits it
-					n = uint8(value(q,pAny,valid)>>8);
-					q.expectClose(); goto op;
+		case '<':	q.expect('('); goto lo;		// SDASZ80: low byte of word
+		case '>':	q.expect('('); goto hi;		// SDASZ80: high byte of word
 		}
 	}
 	else							// multi-char word:
@@ -636,11 +625,43 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 			goto label;
 		}
 		else						// decimal number
-	{
-		while(is_dec_digit(*w)) { n = n*10 + *w-'0'; w++; }
-		if(*w!=0) goto syntax_error;
-		goto op;
+		{
+			while(is_dec_digit(*w)) { n = n*10 + *w-'0'; w++; }
+			if(*w!=0) goto syntax_error;
+			goto op;
+		}
 	}
+
+	if(w[0]=='_' && w[1]=='_' && q.testChar('('))	// built-in function?
+	{
+		if(eq(w,"__isdefined"))	// __isdefined(NAME)  or  __isdefined(NAME::)
+		{						// note: label value is not neccessarily valid
+			w = q.nextWord();
+			if(!is_letter(*w) && *w!='_') throw fatal_error("label name expected");
+			bool global = q.testChar(':')&&q.testChar(':');
+
+			for(uint i=global?0:local_labels_index;;i=labels[i].outer_index)
+			{
+				Labels& labels = this->labels[i];
+				Label& label = labels.find(w);
+				if(&label!=NULL && label.is_defined &&			// found && defined?
+					label.sourceline<=current_sourceline_index)	// if pass>1: check line of definition. TODO: to be tested
+						 { n=1; break; }
+				if(i==0) { n=0; break; }						// not found / not defined
+			}
+		}
+		else if(eq(w,"__lowbyte"))
+		{
+lo:			n = uint8(value(q,pAny,valid));
+		}
+		else if(eq(w,"__highbyte"))
+		{
+hi:			n = uint8(value(q,pAny,valid)>>8);
+		}
+		else throw syntax_error("unrecognized built-in function");
+
+		q.expect(')');
+		goto op;
 	}
 
 	if(is_letter(w[0]) || w[0]=='_')			// name
@@ -815,10 +836,20 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 		if(eq(w,"cflags"))	  asmCFlags(q);		else
 		if(eq(w,"local"))	  asmLocal(q);		else
 		if(eq(w,"endlocal"))  asmEndLocal(q);	else
+		if(eq(w,"assert"))	  asmAssert(q);		else
 		if(eq(w,"end"))		  asmEnd(q);		else throw fatal_error("unknown assembler directive");
 	}
 	catch(fatal_error& e) { throw e; }
 	catch(any_error& e)   { throw fatal_error(e.what()); }
+}
+
+void Z80Assembler::asmAssert( SourceLine& q ) throw(any_error)
+{
+	bool v;
+	int n = value(q,pAny,v=1);
+
+	if(!v) throw fatal_error("the expression was not evaluatable in pass 1");
+	if(!n) throw fatal_error("assertion failed");
 }
 
 
@@ -980,6 +1011,13 @@ void Z80Assembler::asmTarget( SourceLine& q ) throw(any_error)
 }
 
 
+static int find(Array<cstr> a, cstr s)
+{
+	for(int i=a.count();i--;) if(eq(s,a[i])) return i;
+	return -1;
+}
+
+
 /*	#INCLUDE "sourcefile"
 	the file is included in pass 1
 	filenames ending on ".c" are compiled with sdcc (or the compiler set on the cmd line) into the temp directory
@@ -1008,21 +1046,15 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 	if(is_library)
 	{
 		if(lastchar(fqn)!='/') fqn = catstr(fqn,"/");
-		bool resolve_all = yes;
-		Labels rlabels(0);				// local => d'tor will not delete contained labels!
-		Label* l;
+
+		Array<cstr> names;
 		if(q.testWord("resolve") && !q.testChar('*')) do
 		{
-			resolve_all = no;
 			cstr w = q.nextWord();
 			if(w[0]!='_' && !is_letter(w[0])) throw syntax_error("label name expected");
-			l = &global_labels().find(w);
-			if(!l) continue;			// must have been declared with .globl
-			if(l->is_defined) continue;	// already defined
-			if(!l->is_used) continue;	// must have been used before position of #include library!
-			rlabels.add(l);
+			names.append(w);
 		}
-		while(q.testComma());
+		while(q.testChar(','));
 		q.expectEol();
 
 		MyFileInfoArray files;
@@ -1033,34 +1065,55 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 			cstr fname = files[i].fname();
 			cstr name  = basename_from_path(fname);
 
-			l = resolve_all ? &global_labels().find(name) : &rlabels.find(name);
-			if(!l) continue;			// not in list / not used
-			if(l->is_defined) continue;	// already defined
-			if(!l->is_used) continue;	// must have been used before position of #include library!
+			if(names.count() && !find(names,name)) continue;	// not in explicit list
 
-			if(endswith(fname,".c"))
+			Label* l = &global_labels().find(name);
+			if(!l) continue;			// never used, defined or declared
+			if(l->is_defined) continue;	// already defined
+			if(!l->is_used) continue;	// not used: must have been used before position of #include library!
+
+			if(endswith(fname,".c") || endswith(fname,".s") || endswith(fname,".ass") || endswith(fname,".asm"))
 			{
-				create_dir(catstr(temp_directory,"lib"));
-				cstr zfile = compileFile(catstr(fqn,fname),catstr(temp_directory,"lib/"));
-				source.includeFile(zfile, current_sourceline_index+1);
-			}
-			else if(endswith(fname,".s") || endswith(fname,".ass") || endswith(fname,".asm"))
-			{
-				source.includeFile(catstr(fqn,fname), current_sourceline_index+1);
+				//	#include library "path"			; <-- current_sourceline
+				//	#include "path/fname"			; <-- generated
+				//	; contents of file will go here	; <-- inserted when #include "path/fname" is assembled
+				//	#assert __isdefined(fname::)	; <-- generated: prevent infinite recursion in case of error
+				//	#include library "path"			; <-- copy of current_sourceline: include more files from library
+
+				cstr s1 = usingstr("#include \"%s%s\"",fqn,fname);
+				cstr s2 = usingstr("#assert __isdefined(%s::)",name);
+				cstr s3 = q.text;
+				source.insertat(current_sourceline_index+1, new SourceLine(q.sourcefile,q.sourcelinenumber,s1));
+				source.insertat(current_sourceline_index+2, new SourceLine(q.sourcefile,q.sourcelinenumber,s2));
+				source.insertat(current_sourceline_index+3, new SourceLine(q.sourcefile,q.sourcelinenumber,s3));
+				return;
 			}
 			else continue;			// skip any unknown files: e.g. list files etc.
-			l->is_defined = true;	// note: don't remove from rlabels[]: multiple reference!
 		}
 
-		Label** _labels = rlabels.getItems().getData();
-		for(uint i=0;i<rlabels.getItems().count();i++)
-			if(!_labels[i]->is_defined)
-				throw fatal_error(usingstr("source for %s not found",_labels[i]->name));
+		// if we come here, not a single label was resolved
+		if(names.count()) throw fatal_error(usingstr("source file for label %s not found",names[0]));
+		// else we are done.
 	}
 	else
 	{
-		if(endswith(fqn,".c")) fqn = compileFile(fqn,temp_directory);
-		source.includeFile(fqn, current_sourceline_index+1);
+		if(endswith(fqn,".c"))
+		{
+			//	#include "path/fname"			; <-- current_sourceline
+			//	#local							; <-- generated
+			//	; contents of file will go here	; <-- inserted by includeFile()
+			//	#endlocal						; <-- generated
+
+			create_dir(catstr(temp_directory,"s/"));
+			fqn = compileFile(fqn,catstr(temp_directory,"s/"));
+			source.insertat(current_sourceline_index+1, new SourceLine(q.sourcefile,q.sourcelinenumber,"#local"));
+			source.insertat(current_sourceline_index+2, new SourceLine(q.sourcefile,q.sourcelinenumber,"#endlocal"));
+			source.includeFile(fqn, current_sourceline_index+2);
+		}
+		else
+		{
+			source.includeFile(fqn, current_sourceline_index+1);
+		}
 	}
 }
 

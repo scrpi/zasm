@@ -113,6 +113,7 @@ private:
 	void	asmEndLocal		(SourceLine&)				TAE;
 	void	asmEnd			(SourceLine&)				TAE;
 	void	asmInstr		(SourceLine&)				TAE;
+	void	asmAssert		(SourceLine&)				TAE;
 	cstr	compileFile		(cstr, cstr tempdir)		TAE;
 
 	void	storeOpcode     (int n)						TAE	{ current_segment().store(n); }

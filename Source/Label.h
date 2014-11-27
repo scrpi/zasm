@@ -42,7 +42,7 @@ class Label
 public:
 	cstr		name;
 	Segment*	segment;
-	uint		sourceline;
+	uint		sourceline;			// of DEFINITION
 	int32		value;
 	bool		is_valid;			// value is valid
 	bool		is_global;			// global label: item in Z80Assembler.labels[0]
