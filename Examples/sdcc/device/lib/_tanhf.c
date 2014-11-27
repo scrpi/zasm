@@ -24,12 +24,16 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/* [1] William James Cody and W.  M.  Waite.  _Software manual for the
-   elementary functions_, Englewood Cliffs, N.J.:Prentice-Hall, 1980. */
 
-/* Version 1.0 - Initial release */
+   [1] William James Cody and W.  M.  Waite.  _Software manual for the
+   elementary functions_, Englewood Cliffs, N.J.:Prentice-Hall, 1980. 
+
+   Version 1.0 - Initial release 
+
+   kio 2014-11-26	removed keyword FLOAT_FUNC_REENTRANT because functions on the z80 are always rentrant
+*/
+
 
 #include <math.h>
 #include <errno.h>
@@ -47,7 +51,7 @@
 #define P(g) ((P1*g+P0)*g)
 #define Q(g) (Q1*g+Q0)
 
-float tanhf(float x) _FLOAT_FUNC_REENTRANT
+float tanhf(float x) 
 {
     float f, g, r;
 

@@ -26,8 +26,8 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef TIME_H
-#define TIME_H
+#ifndef _TIME_H
+#define _TIME_H
 
 #ifndef __TIME_UNSIGNED
 #define __TIME_UNSIGNED 1
@@ -87,4 +87,4 @@ time_t mktime(struct tm *timeptr);
 char *asctime(struct tm *timeptr);
 char *ctime(time_t *timep);
 
-#endif /* TIME_H */
+#endif 

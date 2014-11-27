@@ -24,16 +24,19 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-16	split file into individual files for each symbol:
-//					_time.c
-//					_check_struct_tm.c	(was static)
-//					_asctime.c
-//					_ctime.c
-//					_localtime.s
-//					_gmtime.c
-//					_mktime.c
+
+   kio 2014-11-16	split file into individual files for each symbol:
+  					_time.c
+  					_check_struct_tm.c	(was static)
+  					_asctime.c
+  					_ctime.c
+  					_localtime.s
+  					_gmtime.c
+  					_mktime.c
+   kio 2014-11-27	removed _CODE because this is defined as nothing in z80 port
+					TODO: nevertheless put it somehow into the _CODE segment
+*/
 
 
 #include <stdio.h>
@@ -42,17 +45,19 @@
 void check_struct_tm(struct tm *timeptr);
 
 
-// please note that the tm structure has the years since 1900,
-// but time returns the seconds since 1970
+/* please note that the tm structure has the years since 1900,	*/
+/* but time returns the seconds since 1970						*/
 
 
-_CODE const char * _CODE __month[] = 
+//was: _CODE const char * _CODE
+const char * __month[] = 
 {
 	"Jan","Feb","Mar","Apr","May","Jun",
 	"Jul","Aug","Sep","Oct","Nov","Dec"
 };
 
-_CODE const char * _CODE __day[] = 
+//was: _CODE const char * _CODE
+const char * __day[] = 
 {
 	"Sun","Mon","Tue","Wed","Thu","Fri","Sat"
 };

@@ -24,11 +24,15 @@
 ;  be covered by the GNU General Public License. This exception does
 ;  not however invalidate any other reasons why the executable file
 ;   might be covered by the GNU General Public License.
-;--------------------------------------------------------------------------
+;
+;
+;  kio 2014-11-26	added .area _CODE
+
 
 
 .globl	__divuschar
 
+.area   _CODE
 
 __divuschar:
 	ld  	hl, 2+1

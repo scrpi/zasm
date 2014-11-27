@@ -24,11 +24,16 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
+
+
+   kio 2014-11-26	added #pragma std_sdcc99 for bool
 -------------------------------------------------------------------------*/
 
+#pragma std_sdcc99	
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
 
 float atof(const char * s)
 {

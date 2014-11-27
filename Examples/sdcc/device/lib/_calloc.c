@@ -24,21 +24,16 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
+
+
+   kio 2014-11-26	removed test for SDCC_MALLOC_TYPE_MLH
+   kio 2014-11-26	removed __xdata
+*/
+
 
 #include <sdcc-lib.h>
 #include <malloc.h>
 #include <string.h>
-
-//--------------------------------------------------------------------
-//calloc function implementation for embedded system
-//Non-ANSI keywords are C51 specific.
-// __xdata - variable in external memory (just RAM)
-//--------------------------------------------------------------------
-
-#if _SDCC_MALLOC_TYPE_MLH
-
-#define __xdata
 
 typedef struct _MEMHEADER MEMHEADER;
 
@@ -52,24 +47,9 @@ struct _MEMHEADER
 
 #define HEADER_SIZE (sizeof(MEMHEADER)-sizeof(char))
 
-#else
-
-#define MEMHEADER   struct MAH// Memory Allocation Header
-
-MEMHEADER
+void * calloc (size_t nmemb, size_t size)
 {
-  MEMHEADER __xdata *  next;
-  unsigned int         len;
-  unsigned char        mem[];
-};
-
-#define HEADER_SIZE sizeof(MEMHEADER)
-
-#endif
-
-void __xdata * calloc (size_t nmemb, size_t size)
-{
-  register void __xdata * ptr;
+  register void * ptr;
 
   ptr = malloc(nmemb * size);
   if (ptr)
@@ -78,4 +58,6 @@ void __xdata * calloc (size_t nmemb, size_t size)
   }
   return ptr;
 }
-//END OF MODULE
+
+
+

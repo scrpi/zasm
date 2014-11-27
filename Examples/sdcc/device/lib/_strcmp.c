@@ -24,19 +24,18 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-16	commented out #if and #undef ... to be tested
+
+   kio 2014-11-16	commented out #if and #undef ... to be tested
+   kio 2014-11-26	removed test for SDCC_Z80_STYLE_LIB_OPT
+*/
 
 
 #include <string.h>
 #include <sdcc-lib.h>
 
-//#if !_SDCC_PORT_PROVIDES_STRCMP
-
 int strcmp ( const char * asrc, const char * adst )
 {
-#if _SDCC_Z80_STYLE_LIB_OPT
 #pragma noinduction
 
 	char ret = 0;
@@ -47,20 +46,10 @@ int strcmp ( const char * asrc, const char * adst )
 		++src, ++dst;
 
 	return *src - *dst;
-
-#else
-	register int ret = 0;
-
-	while( ! (ret = *(unsigned char *)asrc - *(unsigned char *)adst) && *adst)
-	{
-		++asrc, ++adst;
-	}
-	
-	return ret;
-#endif
 }
 
-//#endif
+
+
 
 
 

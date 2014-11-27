@@ -25,9 +25,12 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-16	removed MCS51 asm code
+
+   kio 2014-11-16	removed MCS51 asm code
+   kio 2014-11-26	removed AUTOMEM because this is not used by the z80 port
+   kio 2014-11-26	removed version for SDCC_USE_XSTACK because this is for 8051 only
+*/
 
 
 struct some_struct 
@@ -59,12 +62,10 @@ union bil
 #endif
 
 
-#if defined(__SDCC)
- #include <sdcc-lib.h>
-#endif
+#include <sdcc-lib.h>
 
 
-#define bcast(x) ((union bil _AUTOMEM *)&(x))
+#define bcast(x) ((union bil *)&(x))
 
 /*
                      3   2   1   0
@@ -86,42 +87,11 @@ union bil
 */
 
 
-#if defined(__SDCC_USE_XSTACK)
-	// currently the original code without u fails with --xstack
-	// it runs out of pointer registers
 
-long _mullong (long a, long b)
-{
-	union bil t, u;
-
-	t.i.hi   = bcast(a)->b.b0 * bcast(b)->b.b2;          // A
-	t.i.lo   = bcast(a)->b.b0 * bcast(b)->b.b0;          // A
-	u.bi.b3  = bcast(a)->b.b0 * bcast(b)->b.b3;          // B
-	u.bi.i12 = bcast(a)->b.b0 * bcast(b)->b.b1;          // B
-	u.bi.b0  = 0;                                        // B
-	t.l += u.l;
-
-	t.b.b3  += bcast(a)->b.b3 * bcast(b)->b.b0;          // G
-	t.b.b3  += bcast(a)->b.b2 * bcast(b)->b.b1;          // F
-	t.i.hi  += bcast(a)->b.b2 * bcast(b)->b.b0;          // E
-	t.i.hi  += bcast(a)->b.b1 * bcast(b)->b.b1;          // D
-
-	u.bi.b3  = bcast(a)->b.b1 * bcast(b)->b.b2;          // C
-	u.bi.i12 = bcast(a)->b.b1 * bcast(b)->b.b0;          // C
-	u.bi.b0  = 0;                                        // C
-	t.l += u.l;
-
-	return t.l;
-}
-
-
-#elif defined(__SDCC_z80) || defined(__SDCC_gbz80) || defined(__SDCC_r2k) || defined(__SDCC_r3k)
+#if defined(__SDCC_z80) || defined(__SDCC_gbz80) || defined(__SDCC_r2k) || defined(__SDCC_r3k)
 	// 32x32->32 multiplication to be used
 	// if 16x16->16 is faster than three 8x8->16.
 	// 2009, by M.Bodrato ( http://bodrato.it/ )
-	//
-	// z80 and gbz80 don't have any hardware multiplication.
-	// r2k and r3k have 16x16 hardware multiplication.
 
 long _mullong (long a, long b)
 {

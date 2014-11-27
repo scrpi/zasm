@@ -24,23 +24,25 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-16	split file into individual files for each symbol:
-//					_time.c
-//					_check_struct_tm.c	(was static)
-//					_asctime.c
-//					_ctime.c
-//					_localtime.s
-//					_gmtime.c
-//					_mktime.c
+
+   kio 2014-11-16	split file into individual files for each symbol:
+  					_time.c
+  					_check_struct_tm.c	(was static)
+  					_asctime.c
+  					_ctime.c
+  					_localtime.s
+  					_gmtime.c
+  					_mktime.c
+
+*/
 
 
 #include <stdio.h>
 #include <time.h>
 
-// please note that the tm structure has the years since 1900,
-// but time returns the seconds since 1970
+/* please note that the tm structure has the years since 1900,	*/
+/* but time returns the seconds since 1970						*/
 
 
 // validate the tm structure

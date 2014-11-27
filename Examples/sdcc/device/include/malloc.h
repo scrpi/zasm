@@ -24,27 +24,21 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-#ifndef __SDCC51_MALLOC_H
-#define __SDCC51_MALLOC_H
+
+   kio 2014-11-26	removed test for MLH, because the Z80 port always uses MLH
+*/
+
+
+#ifndef _MALLOC_H
+#define _MALLOC_H
+
 #include <sdcc-lib.h>
 #include <stddef.h>
-
-#if _SDCC_MALLOC_TYPE_MLH
 
 void * calloc (size_t nmemb, size_t size);
 void * malloc (size_t size);
 void * realloc (void * ptr, size_t size);
 void free (void * ptr);
-
-#else
-
-extern void __xdata * calloc (size_t nmemb, size_t size);
-extern void __xdata * malloc (size_t size);
-extern void __xdata * realloc (void * ptr, size_t size);
-extern void free (void * ptr);
-
-#endif
 
 #endif

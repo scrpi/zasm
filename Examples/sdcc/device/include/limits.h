@@ -26,13 +26,14 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef __SDC51_LIMITS_H
-#define __SDC51_LIMITS_H 1
+#ifndef _LIMITS_H
+#define _LIMITS_H 1
 
 #define CHAR_BIT      8    /* bits in a char */
 #define SCHAR_MAX   127
 #define SCHAR_MIN  -128
 #define UCHAR_MAX   0xff
+
 #ifdef __SDCC_CHAR_UNSIGNED
 #define CHAR_MAX    UCHAR_MAX
 #define CHAR_MIN    0
@@ -40,6 +41,7 @@
 #define CHAR_MAX    SCHAR_MAX
 #define CHAR_MIN    SCHAR_MIN
 #endif
+
 #define MB_LEN_MAX  1
 #define INT_MIN    -32768
 #define INT_MAX     32767

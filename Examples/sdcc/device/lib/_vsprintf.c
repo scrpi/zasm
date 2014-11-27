@@ -25,12 +25,13 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-16	split original file into 3 separate files, one for each defined symbol:
-//					_put_char_to_string.c
-//					_vsprintf.c
-// and				_sprintf.c
+
+   kio 2014-11-16	split original file into 3 separate files, one for each defined symbol:
+					_put_char_to_string.c
+ 					_vsprintf.c
+   and				_sprintf.c
+*/
 
 
 #include <stdarg.h>

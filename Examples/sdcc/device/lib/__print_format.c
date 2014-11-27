@@ -26,12 +26,16 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-#if defined (__SDCC_ds390) || defined (__SDCC_USE_XSTACK) || defined (__SDCC_MODEL_HUGE)
+
+   kio 2014-11-26	added #pragma std_sdcc99 for bool
+   kio 2014-11-26	removed AUTOMEM because this is not used by the z80 port
+   kio 2014-11-26	removed test for other targets than z80
+*/
+
+
+#pragma std_sdcc99	
 #define USE_FLOATS 1
-#endif
-
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
@@ -41,20 +45,9 @@
 
 #define PTR value.ptr
 
-#ifdef __SDCC_ds390
-#define NULL_STRING "<NULL>"
-#define NULL_STRING_LENGTH 6
-#endif
-
-#if defined (__SDCC_mcs51) && defined (__SDCC_MODEL_SMALL) && !defined (__SDCC_STACK_AUTO)
-# define MEM_SPACE_BUF __idata
-# define MEM_SPACE_BUF_PP __idata
-#else
 # define MEM_SPACE_BUF
-# define MEM_SPACE_BUF_PP _AUTOMEM
-#endif
+# define MEM_SPACE_BUF_PP 
 
-/****************************************************************************/
 
 //typedef const char * ptr_t;
 #define ptr_t const char *
@@ -165,10 +158,10 @@ typedef union
 
 #if defined __SDCC_STACK_AUTO
 static void
-calculate_digit (value_t _AUTOMEM * value, unsigned char radix)
+calculate_digit (value_t * value, unsigned char radix)
 {
   unsigned long ul = value->ul;
-  unsigned char _AUTOMEM * pb4 = &value->byte[4];
+  unsigned char * pb4 = &value->byte[4];
   unsigned char i = 32;
 
   do

@@ -24,12 +24,17 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/* [1] William James Cody and W.  M.  Waite.  _Software manual for the
-   elementary functions_, Englewood Cliffs, N.J.:Prentice-Hall, 1980. */
+   [1] William James Cody and W.  M.  Waite.  _Software manual for the
+   elementary functions_, Englewood Cliffs, N.J.:Prentice-Hall, 1980. 
 
-/* Version 1.0 - Initial release */
+   Version 1.0 - Initial release 
+
+   kio 2014-11-26	added #pragma std_sdcc99 for bool
+*/
+
+
+#pragma std_sdcc99
 
 #include <math.h>
 #include <errno.h>

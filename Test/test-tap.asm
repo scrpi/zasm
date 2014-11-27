@@ -286,26 +286,46 @@ _putchar::
 	.globl	__rlulong
 	.globl	__rlslong
 	.globl	__sdcc_call_hl
+	.globl	___fsmul
+	.globl	___fsdiv
+	.globl	___fslt
+	.globl	___fsgt
+	.globl	___fsadd
+	.globl	___fssub
+	.globl	___fs2ulong
+	.globl	___ulong2fs
+	.globl	__modulong
+	.globl	__divuschar
+	.globl	__moduschar
+	.globl	__div16
+	.globl	__get_remainder
+	.globl	__div_signexte
+
 
 ; the test environment of sdcc is at a non-standard location.
 ; also IY must not be used else we can't call most rom routines
-; --codeseg NAME
-; --constseg NAME	wird nicht für const data benutzt... ?
+; --codeseg NAME	e.g. CODE for segment _CODE
 ; --std-c99			for bool
+; --std-sdcc99		for bool (default)
 ; --reserve-regs-iy	for ZX Spectrum system variables
 ;
-#cflags $CFLAGS --nostdinc -Iinclude --reserve-regs-iy --std-c99
+#cflags $CFLAGS --nostdinc -Iinclude --reserve-regs-iy --std-sdcc99
 
 
 ; include c files:
 ;
 #local
 #include "main.c"
+#include "../Examples/sdcc/device/lib/_days_per_month.c"
+#endlocal
+#local
+#include "../Examples/sdcc/device/lib/_asctime.c"
 #endlocal
 
 
 ; resolved missing labels:
 ;
+#include library "library"
 #include library "library"
 #include library "library"
 #include library "library"

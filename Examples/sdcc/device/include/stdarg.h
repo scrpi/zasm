@@ -25,36 +25,18 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
+
+
+   kio 2014-11-26	removed test for other than Z80 
 -------------------------------------------------------------------------*/
 
-#ifndef __SDC51_STDARG_H
-#define __SDC51_STDARG_H 1
 
-#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_r2k) || defined(__SDCC_r3ka) || defined(__SDCC_tlcs90) || defined(__SDCC_gbz80) || defined(__SDCC_hc08) || defined(__SDCC_s08) || defined(__SDCC_stm8)
+#ifndef _STDARG_H
+#define _STDARG_H 1
 
 typedef unsigned char * va_list;
 #define va_start(marker, last)  { marker = (va_list)&last + sizeof(last); }
 #define va_arg(marker, type)    *((type *)((marker += sizeof(type)) - sizeof(type)))
-
-#elif defined(__SDCC_ds390) || defined(__SDCC_ds400)
-
-typedef unsigned char * va_list;
-#define va_start(marker, first) { marker = (va_list)&first; }
-#define va_arg(marker, type)    *((type *)(marker -= sizeof(type)))
-
-#elif defined(__SDCC_USE_XSTACK)
-
-typedef unsigned char __pdata * va_list;
-#define va_start(marker, first) { marker = (va_list)&first; }
-#define va_arg(marker, type)    *((type __pdata *)(marker -= sizeof(type)))
-
-#else
-
-typedef unsigned char __data * va_list;
-#define va_start(marker, first) { marker = (va_list)&first; }
-#define va_arg(marker, type)    *((type __data * )(marker -= sizeof(type)))
-
-#endif
 
 #define va_copy(dest, src)      { dest = src; }
 #define va_end(marker)          { marker = (va_list) 0; };

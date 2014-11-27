@@ -27,8 +27,11 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef __SDCC_STRING_H
-#define __SDCC_STRING_H 1
+// kio 2014-11-26	removed test for other targets than z80
+
+
+#ifndef _STRING_H
+#define _STRING_H 1
 
 #ifndef NULL
 # define NULL (void *)0
@@ -52,10 +55,6 @@ typedef size_t rsize_t;
 typedef int errno_t;
 #endif
 
-#endif
-
-#if defined(__SDCC_mcs51) || defined(__SDCC_hc08) || defined(__SDCC_ds390) || defined(__SDCC_pic14) || defined(__SDCC_pic16)
-#define __SDCC_BROKEN_STRING_FUNCTIONS
 #endif
 
 /* The function prototypes are ordered as in the ISO C99 standard. */
@@ -82,42 +81,25 @@ extern size_t strxfrm(char *dest, const char *src, size_t n);
 
 /* Search functions: */
 extern void *memchr (const void *s, int c, size_t n);
-#ifdef __SDCC_BROKEN_STRING_FUNCTIONS
-extern char *strchr (const char *s, char c); /* c should be int according to standard. */
-#else
 extern char *strchr (const char *s, int c);
-#endif
 extern size_t strcspn(const char *s, const char *reject);
 extern char *strpbrk(const char *s, const char *accept);
-#ifdef __SDCC_BROKEN_STRING_FUNCTIONS
-extern char *strrchr(const char *s, char c); /* c should be int according to standard. */
-#else
 extern char *strrchr(const char *s, int c);
-#endif
 extern size_t strspn (const char *s, const char *accept);
 extern char *strstr (const char *haystack, const char *needle);
 extern char *strtok (char * /* restrict*/ str, const char * /*restrict*/ delim);
 
 /* Miscanelleous functions: */
-#ifdef __SDCC_BROKEN_STRING_FUNCTIONS
-extern void *memset (void *s, unsigned char c, size_t n); /* c should be int according to standard. */
-#else
 extern void *memset (void *s, int c, size_t n);
-#endif
 
 /* extern char *strerror(int errnum); */
 extern size_t strlen (const char *s);
 
-#ifdef __SDCC_ds390
-extern void __xdata * memcpyx(void __xdata *, void __xdata *, int) __naked;
-#endif
+#define memcpy(dst, src, n) 	__builtin_memcpy(dst, src, n)
+#define strcpy(dst, src) 		__builtin_strcpy(dst, src)
+#define strncpy(dst, src, n) 	__builtin_strncpy(dst, src, n)
+#define strchr(s, c) 			__builtin_strchr(s, c)
+#define memset(dst, c, n) 		__builtin_memset(dst, c, n)
 
-#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_r2k) || defined(__SDCC_r3ka)
-#define memcpy(dst, src, n) __builtin_memcpy(dst, src, n)
-#define strcpy(dst, src) __builtin_strcpy(dst, src)
-#define strncpy(dst, src, n) __builtin_strncpy(dst, src, n)
-#define strchr(s, c) __builtin_strchr(s, c)
-#define memset(dst, c, n) __builtin_memset(dst, c, n)
-#endif
 
 #endif

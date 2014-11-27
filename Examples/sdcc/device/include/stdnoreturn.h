@@ -1,5 +1,5 @@
-#ifndef __SDCC_STDNORETURN_H
-#define __SDCC_STDNORETURN_H 1
+#ifndef _STDNORETURN_H
+#define _STDNORETURN_H 1
 
 #define noreturn _Noreturn
 

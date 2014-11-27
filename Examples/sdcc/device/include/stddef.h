@@ -25,10 +25,14 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
+
+
+   kio 2014-11-26	removed test for other targets than z80
 -------------------------------------------------------------------------*/
 
-#ifndef __SDCC_STDDEF_H
-#define __SDCC_STDDEF_H 1
+
+#ifndef _STDDEF_H
+#define _STDDEF_H 1
 
 #ifndef NULL
   #define NULL (void *)0
@@ -36,11 +40,7 @@
 
 #ifndef __PTRDIFF_T_DEFINED
 #define __PTRDIFF_T_DEFINED
-#if defined (__SDCC_mcs51) || defined (__SDCC_ds390)
-  typedef long int ptrdiff_t;
-#else
   typedef int ptrdiff_t;
-#endif
 #endif
 
 #ifndef __SIZE_T_DEFINED

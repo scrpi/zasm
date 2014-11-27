@@ -24,17 +24,17 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-#ifndef __SDC51_STDIO_H
-#define __SDC51_STDIO_H 1
+
+   kio 2014-11-26	removed test for other targets than z80
+   kio 2014-11-26	removed keyword REENTRANT because functions in the z80 port are always reentrant
+*/
+
+
+#ifndef _STDIO_H
+#define _STDIO_H 1
 
 #include <stdarg.h>
-
-#ifdef __ds390
-#include <tinibios.h>
-#endif
-
 #include <sdcc-lib.h>
 
 #ifndef EOF
@@ -65,13 +65,13 @@ typedef int errno_t;
 
 #endif
 
-typedef void (*pfn_outputchar)(char c, void* p) _REENTRANT;
+typedef void (*pfn_outputchar)(char c, void* p);
 
 extern int _print_format (pfn_outputchar pfn, void* pvoid, const char *format, va_list ap);
 
 /*-----------------------------------------------------------------------*/
 
-extern void printf_small (char *,...) _REENTRANT;
+extern void printf_small (char *,...);
 extern int printf (const char *,...);
 extern int vprintf (const char *, va_list);
 extern int sprintf (char *, const char *, ...);
@@ -85,10 +85,4 @@ extern char *gets(char *);
 extern char getchar(void);
 extern void putchar(char);
 
-#if defined(SDCC_mcs51) && !defined(SDCC_USE_XSTACK)
-extern void printf_fast(__code const char *fmt, ...) _REENTRANT;
-extern void printf_fast_f(__code const char *fmt, ...) _REENTRANT;
-extern void printf_tiny(__code const char *fmt, ...) _REENTRANT;
 #endif
-
-#endif /* __SDC51_STDIO_H */

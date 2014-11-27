@@ -24,27 +24,18 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
+
+
+   kio 2014-11-26	removed #define CRITICAL __critical
+   kio 2014-11-26	removed __xdata
+   kio 2014-11-26	removed the MAH version, because z80 uses MLH version
+*/
+
 
 #include <sdcc-lib.h>
 #include <malloc.h>
 #include <string.h>
 
-#if defined(__SDCC_STACK_AUTO) || defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_gbz80)
-  #define CRITICAL __critical
-#else
-  #define CRITICAL
-#endif
-
-//--------------------------------------------------------------------
-//realloc function implementation for embedded system
-//Non-ANSI keywords are C51 specific.
-// __xdata - variable in external memory (just RAM)
-//--------------------------------------------------------------------
-
-#if _SDCC_MALLOC_TYPE_MLH
-
-#define __xdata
 
 typedef struct _MEMHEADER MEMHEADER;
 
@@ -59,42 +50,27 @@ struct _MEMHEADER
 #define HEADER_SIZE (sizeof(MEMHEADER)-sizeof(char))
 #define MEM(x)      (&x->mem)
 
-#else
 
-#define MEMHEADER   struct MAH// Memory Allocation Header
-
-MEMHEADER
-{
-  MEMHEADER __xdata *  next;
-  unsigned int         len;
-  unsigned char        mem[];
-};
-
-#define HEADER_SIZE sizeof(MEMHEADER)
-#define MEM(x)      (x->mem)
-
-#endif
-
-extern MEMHEADER __xdata * _sdcc_prev_memheader;
+extern MEMHEADER * _sdcc_prev_memheader;
 
 // apart from finding the header
 // this function also finds it's predecessor
-extern MEMHEADER __xdata * _sdcc_find_memheader(void __xdata * p);
+extern MEMHEADER * _sdcc_find_memheader(void * p);
 
-void __xdata * realloc (void * p, size_t size)
+void * realloc (void * p, size_t size)
 {
-  register MEMHEADER __xdata * pthis;
-  register MEMHEADER __xdata * pnew;
-  register void __xdata * ret;
+  register MEMHEADER * pthis;
+  register MEMHEADER * pnew;
+  register void * ret;
 
-  CRITICAL
+  __critical
   {
     pthis = _sdcc_find_memheader(p);
     if (pthis)
     {
       if (size > (0xFFFF-HEADER_SIZE))
       {
-        ret = (void __xdata *) NULL; //To prevent overflow in next line
+        ret = (void *) NULL; //To prevent overflow in next line
       }
       else
       {
@@ -112,12 +88,10 @@ void __xdata * realloc (void * p, size_t size)
                 ((unsigned int)_sdcc_prev_memheader) -
                 _sdcc_prev_memheader->len) >= size))
           {
-            pnew = (MEMHEADER __xdata * )((char __xdata *)_sdcc_prev_memheader + _sdcc_prev_memheader->len);
+            pnew = (MEMHEADER * )((char *)_sdcc_prev_memheader + _sdcc_prev_memheader->len);
             _sdcc_prev_memheader->next = pnew;
 
-#if _SDCC_MALLOC_TYPE_MLH
             pthis->next->prev = pnew;
-#endif
 
             memmove(pnew, pthis, pthis->len);
             pnew->len = size;
@@ -142,4 +116,4 @@ void __xdata * realloc (void * p, size_t size)
   }
   return ret;
 }
-//END OF MODULE
+

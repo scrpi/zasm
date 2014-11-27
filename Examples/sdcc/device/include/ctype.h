@@ -28,8 +28,8 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef __SDCC_CTYPE_H
-#define __SDCC_CTYPE_H 1
+#ifndef _CTYPE_H
+#define _CTYPE_H 1
 
 extern int isalnum (int c);
 extern int isalpha (int c);

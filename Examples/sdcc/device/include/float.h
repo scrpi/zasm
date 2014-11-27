@@ -26,8 +26,8 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef __SDC51_FLOAT_H
-#define __SDC51_FLOAT_H 1
+#ifndef _FLOAT_H
+#define _FLOAT_H 1
 
 #include <limits.h>
 

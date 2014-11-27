@@ -26,8 +26,8 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef __SDC51_STDLIB_H
-#define __SDC51_STDLIB_H 1
+#ifndef _STDLIB_H
+#define _STDLIB_H 1
 
 #ifndef NULL
 # define NULL (void *)0

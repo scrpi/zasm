@@ -24,7 +24,15 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
+
+
+   kio 2014-11-26	added #pragma std_sdcc99 for bool
+   kio 2014-11-26	removed keyword FLOAT_FUNC_REENTRANT because functions on the z80 are always rentrant
+*/
+
+
+#pragma std_sdcc99	
+
 
 /* Version 1.0 - Initial release */
 
@@ -33,7 +41,7 @@
 
 float asincosf(float x, bool isacos);
 
-float acosf(float x) _FLOAT_FUNC_REENTRANT
+float acosf(float x) 
 {
          if (x == 1.0) return 0.0;
     else if (x ==-1.0) return PI;

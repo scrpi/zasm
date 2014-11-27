@@ -25,18 +25,19 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-16	split original file into 3 separate files, one for each defined symbol:
-//					_put_char_to_string.c
-//					_vsprintf.c
-// and				_sprintf.c
 
+   kio 2014-11-16	split original file into 3 separate files, one for each defined symbol:
+  					_put_char_to_string.c
+  					_vsprintf.c
+   				 	_sprintf.c
+   kio 2014-11-26	removed keyword REENTRANT because functions in the z80 port are always reentrant
+*/
 
 
 /*	helper for sprintf() and vsprintf()
 */
-void put_char_to_string (char c, void* p) _REENTRANT
+void put_char_to_string (char c, void* p) 
 {
   char **buf = (char **)p;
   *(*buf)++ = c;

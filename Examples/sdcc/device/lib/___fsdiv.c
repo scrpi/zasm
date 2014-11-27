@@ -24,9 +24,8 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/*
+
 ** libgcc support for software floating point.
 ** Copyright (C) 1991 by Pipeline Associates, Inc.  All rights reserved.
 ** Permission is granted to do *anything* you want with this file,
@@ -40,12 +39,12 @@
 ** pipeline!phw@motown.com or
 ** sun!pipeline!phw or
 ** uunet!motown!pipeline!phw
+
+
+   (c)2000/2001: 	hacked a little by johan.knol@iduna.nl for sdcc 
+   kio 2014-11-16	removed MCS51 asm code
 */
 
-/* (c)2000/2001: hacked a little by johan.knol@iduna.nl for sdcc */
-
-
-// kio 2014-11-16	removed MCS51 asm code
 
 
 #include <float.h>

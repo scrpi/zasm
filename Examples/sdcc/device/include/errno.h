@@ -28,8 +28,8 @@
 
 /* Version 1.0 - Initial release */
 
-#ifndef _INC_ERRNO
-#define _INC_ERRNO
+#ifndef _ERRNO_H
+#define _ERRNO_H
 
 extern int errno;
 

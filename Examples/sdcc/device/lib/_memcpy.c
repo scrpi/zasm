@@ -24,17 +24,19 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
 
-// kio 2014-11-16	commented out #if and #undef ... to be tested
+   kio 2014-11-16	removed test for SDCC_PORT_PROVIDES_MEMCPY and #undef 
+   kio 2014-11-26	this file is not used because lib/string.h defines memcpy() as __builtin_memcpy()
+*/
+
+
 
 
 #include <string.h>
 #include <sdcc-lib.h>
 
 
-//#if !_SDCC_PORT_PROVIDES_MEMCPY
 //#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
 
 
@@ -44,7 +46,7 @@ void * memcpy (void * dst, const void * src, size_t acount)
 	char * d = dst;
 	const char * s = src;
 
-	// copy from lower addresses to higher addresses
+	/* copy from lower addresses to higher addresses */
 	while (acount--) 
 	{
 		*d++ = *s++;
@@ -53,7 +55,7 @@ void * memcpy (void * dst, const void * src, size_t acount)
 	return ret;
 }
 
-//#endif
+
 
 
 

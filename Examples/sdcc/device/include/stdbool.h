@@ -24,25 +24,26 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
+
+
+   kio 2014-11-26	removed test for targets other than z80
+  					this file defines bool as _Bool but _Bool itself is only defined since std-c99. :-/
+  					=> either don't give a --std-cxx option => --std-sdcc99 is default
+  					   or     use --std-c99 or --std-sdcc99 or better
+  					   or     use #pragma std_sdcc99 or better in source file
+  					bool is used in the lib/ files mostly for float and div[s|u]longlong.c
 -------------------------------------------------------------------------*/
 
-#ifndef __SDC51_STDBOOL_H
-#define __SDC51_STDBOOL_H 1
+
+#ifndef _STDBOOL_H
+#define _STDBOOL_H 1
 
 #define true 1
 #define false 0
 
-#if defined (__SDCC_ds390) || defined (__SDCC_mcs51) || defined (__SDCC_xa51)
- /* The ports that have __bit and use it as an imperfect substitute for bool */
- #define _Bool __bit
- #define bool  _Bool
- #define __bool_true_false_are_defined 1
- #define __SDCC_WEIRD_BOOL 1
-#else
- /* The ports that have bool */
- #define bool _Bool
- #define __bool_true_false_are_defined 1
-#endif
+#define	bool _Bool
+#define	__bool_true_false_are_defined 1
+
 
 #endif
 

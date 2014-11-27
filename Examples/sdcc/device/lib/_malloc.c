@@ -24,23 +24,17 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-17	removed the MAH version, because z80/features.h says: z80 uses MLH version
-//					commented out #if tests
+
+   kio 2014-11-17	removed the MAH version, because z80 uses MLH version
+  					commented out #if tests
+   kio 2014-11-26	removed #define CRITICAL __critical
+*/
 
 
 #include <sdcc-lib.h>
 #include <malloc.h>
 
-//#if defined(__SDCC_STACK_AUTO) || defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_gbz80)
-#define CRITICAL __critical
-//#else
-//  #define CRITICAL
-//#endif
-
-
-//#if _SDCC_MALLOC_TYPE_MLH	
 
 typedef struct _MEMHEADER MEMHEADER;
 
@@ -85,7 +79,7 @@ void * malloc (unsigned int size)
   size += HEADER_SIZE; //We need a memory for header too
   current_header = &_sdcc_heap_start;
 
-  CRITICAL
+  __critical
     {
       while (1)
         {
@@ -137,5 +131,4 @@ void * malloc (unsigned int size)
 }
 
 
-// #endif
 

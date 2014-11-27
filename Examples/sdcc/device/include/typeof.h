@@ -26,8 +26,8 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#ifndef __SDC51_TYPEOF_H
-#define __SDC51_TYPEOF_H 1
+#ifndef _TYPEOF_H
+#define _TYPEOF_H 1
 
 #define TYPEOF_INT        1
 #define TYPEOF_SHORT      2

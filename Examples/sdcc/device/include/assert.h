@@ -26,6 +26,9 @@
    might be covered by the GNU General Public License.
 -------------------------------------------------------------------------*/
 
+#ifndef _ASSERT_H
+#define _ASSERT_H
+
 #undef assert
 
 #ifdef NDEBUG
@@ -41,6 +44,8 @@ void _assert(char *, const char *, unsigned int);
 
 #if __STDC_VERSION__ >= 201112L
 #define static_assert _Static_assert
+#endif
+
 #endif
 
 #endif

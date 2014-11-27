@@ -24,15 +24,20 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/* [1] William James Cody and W.  M.  Waite.  _Software manual for the
-   elementary functions_, Englewood Cliffs, N.J.:Prentice-Hall, 1980. */
 
-/* Version 1.0 - Initial release */
+   [1] William James Cody and W.  M.  Waite.  _Software manual for the
+   elementary functions_, Englewood Cliffs, N.J.:Prentice-Hall, 1980. 
 
-// kio 2014-11-16	removed MCS51 asm code
+   Version 1.0 - Initial release 
 
+   kio 2014-11-16	removed MCS51 asm code
+   kio 2014-11-26	added #pragma std_sdcc99 for bool
+   kio 2014-11-26	removed keyword FLOAT_FUNC_REENTRANT because functions on the z80 are always rentrant
+*/
+
+
+#pragma std_sdcc99	
 
 #include <math.h>
 #include <errno.h>
@@ -55,7 +60,7 @@
 #define K1      1.4426950409 /* 1/ln(2) */
 
 
-float expf(float x) _FLOAT_FUNC_REENTRANT
+float expf(float x) 
 {
     int n;
     float xn, g, r, z, y;

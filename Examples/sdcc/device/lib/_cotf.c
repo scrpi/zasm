@@ -24,9 +24,16 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/* Version 1.0 - Initial release */
+
+   Version 1.0 - Initial release 
+   
+   kio 2014-11-26	added #pragma std_sdcc99 for bool
+   kio 2014-11-26	removed keyword FLOAT_FUNC_REENTRANT because functions on the z80 are always rentrant
+*/
+
+
+#pragma std_sdcc99	
 
 #include <math.h>
 #include <errno.h>
@@ -34,7 +41,7 @@
 
 float tancotf(float x, bool iscotan);
 
-float cotf(float x) _FLOAT_FUNC_REENTRANT
+float cotf(float x) 
 {
     float y;
 

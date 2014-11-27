@@ -24,10 +24,15 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-#ifndef __SDCC_SETJMP_H
-#define __SDCC_SETJMP_H
+
+   kio 2014-11-26	removed test for __SDCC_z80 etc.
+  					removed SDCC_HIDE_LONGJMP because this seems to be for the 8051 version only
+*/
+
+
+#ifndef _SETJMP_H
+#define _SETJMP_H
 
 #define SP_SIZE		1
 
@@ -51,13 +56,7 @@
 #define RET_SIZE	2
 #endif
 
-#if defined (__SDCC_z80) || defined (__SDCC_z180) || defined (__SDCC_r2k) || defined (__SDCC_r3ka)
 typedef unsigned char jmp_buf[6]; // 2 for the stack pointer, 2 for the return address, 2 for the frame pointer.
-#elif defined (__SDCC_stm8)
-typedef unsigned char jmp_buf[4]; // 2 for the stack pointer, 2 for the return address.
-#else
-typedef unsigned char jmp_buf[RET_SIZE + SP_SIZE + BP_SIZE + SPX_SIZE + BPX_SIZE];
-#endif
 
 int __setjmp (jmp_buf);
 
@@ -65,9 +64,7 @@ int __setjmp (jmp_buf);
 // However, it is clear that the standards allow setjmp to be a macro.
 #define setjmp(jump_buf) __setjmp(jump_buf)
 
-#ifndef __SDCC_HIDE_LONGJMP
 _Noreturn void longjmp(jmp_buf, int);
-#endif
 
 #undef RET_SIZE
 #undef SP_SIZE

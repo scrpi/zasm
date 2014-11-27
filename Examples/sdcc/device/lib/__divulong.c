@@ -24,22 +24,25 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
 
-// kio 2014-11-16	remove 8051 assembler implementation
+   kio 2014-11-16	remove 8051 assembler implementation
+   kio 2014-11-26	removed dependency on c99 for bool
+  					TODO: MSB_SET is slighly over complicated
+*/
+
+
 
 
 #include <stdbool.h>
 
 #define MSB_SET(x) ((x >> (8*sizeof(x)-1)) & 1)
 
-unsigned long
-_divulong (unsigned long x, unsigned long y)
+unsigned long _divulong (unsigned long x, unsigned long y)
 {
   unsigned long reste = 0L;
   unsigned char count = 32;
-  bool c;
+  char c; /*bool c;*/
 
   do
   {

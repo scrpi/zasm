@@ -24,12 +24,17 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/* Version 1.0 - Initial release */
 
-#ifndef _INC_MATH
-#define _INC_MATH
+   Version 1.0 - Initial release 
+
+   kio 2014-11-26	removed test for MATH_ASM_MCS51
+   kio 2014-11-26	removed keyword FLOAT_FUNC_REENTRANT because functions on the z80 are always rentrant
+*/
+
+
+#ifndef _MATH_H
+#define _MATH_H
 
 #define HUGE_VALF   3.402823466e+38
 
@@ -53,54 +58,43 @@ union float_long
     long l;
 };
 
-#if defined(__SDCC_MATH_LIB) && defined(__SDCC_mcs51) && !defined(__SDCC_USE_XSTACK) && !defined(__SDCC_STACK_AUTO) && !defined(_SDCC_NO_ASM_LIB_FUNCS)
-/* Compile the mcs51 assembly version only when all these
-   conditions are met.  Since not all the functions are
-   reentrant, do not compile with --stack-auto is used. */
-#define MATH_ASM_MCS51
-#endif
 
-
-/* Functions on the z80 & gbz80 are always reentrant and so the "reentrant" */
-/* keyword is not defined. */
-#if defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_r2k) || defined(__SDCC_r3ka) || defined(__SDCC_tlcs90) || defined(__SDCC_gbz80) || defined(__SDCC_stm8)
-#define _FLOAT_FUNC_REENTRANT
-#else
-#define _FLOAT_FUNC_REENTRANT __reentrant
-#endif
 
 /**********************************************
  * Prototypes for float ANSI C math functions *
  **********************************************/
 
 /* Trigonometric functions */
-float sinf(float x) _FLOAT_FUNC_REENTRANT;
-float cosf(float x) _FLOAT_FUNC_REENTRANT;
-float tanf(float x) _FLOAT_FUNC_REENTRANT;
-float cotf(float x) _FLOAT_FUNC_REENTRANT;
-float asinf(float x) _FLOAT_FUNC_REENTRANT;
-float acosf(float x) _FLOAT_FUNC_REENTRANT;
-float atanf(float x) _FLOAT_FUNC_REENTRANT;
+float sinf(float x);
+float cosf(float x);
+float tanf(float x);
+float cotf(float x);
+float asinf(float x);
+float acosf(float x);
+float atanf(float x);
 float atan2f(float x, float y);
 
 /* Hyperbolic functions */
-float sinhf(float x) _FLOAT_FUNC_REENTRANT;
-float coshf(float x) _FLOAT_FUNC_REENTRANT;
-float tanhf(float x) _FLOAT_FUNC_REENTRANT;
+float sinhf(float x);
+float coshf(float x);
+float tanhf(float x);
 
 /* Exponential, logarithmic and power functions */
-float expf(float x) _FLOAT_FUNC_REENTRANT;
-float logf(float x) _FLOAT_FUNC_REENTRANT;
-float log10f(float x) _FLOAT_FUNC_REENTRANT;
+float expf(float x);
+float logf(float x);
+float log10f(float x);
 float powf(float x, float y);
-float sqrtf(float a) _FLOAT_FUNC_REENTRANT;
+float sqrtf(float a);
 
 /* Nearest integer, absolute value, and remainder functions */
-float fabsf(float x) _FLOAT_FUNC_REENTRANT;
+float fabsf(float x);
 float frexpf(float x, int *pw2);
 float ldexpf(float x, int pw2);
-float ceilf(float x) _FLOAT_FUNC_REENTRANT;
-float floorf(float x) _FLOAT_FUNC_REENTRANT;
+float ceilf(float x);
+float floorf(float x);
 float modff(float x, float * y);
 
-#endif  /* _INC_MATH */
+#endif
+
+
+

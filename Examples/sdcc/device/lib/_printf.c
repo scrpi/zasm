@@ -25,18 +25,20 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-16	split file into separate files for each defined symbol
-//					_printf.c
-//					_vprintf.c
-//					_put_char_to_stdout.c	(was static)
+
+   kio 2014-11-16	split file into separate files for each defined symbol
+ 					_printf.c
+  					_vprintf.c
+  					_put_char_to_stdout.c	(was static)
+   kio 2014-11-26	removed keyword REENTRANT because functions in the z80 port are always reentrant
+*/
 
 
 #include <stdarg.h>
 #include <stdio.h>
 
-void put_char_to_stdout (char c, void* p) _REENTRANT;
+void put_char_to_stdout (char c, void* p);
 
 int printf (const char *format, ...)
 {

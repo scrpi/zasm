@@ -24,22 +24,16 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-// kio 2014-11-17	removed the MAH version, because z80/features.h says: z80 uses MLH version
-//					commented out #if tests
+
+   kio 2014-11-17	removed the MAH version, because z80/features.h says: z80 uses MLH version
+  					commented out #if tests
+   kio 2014-11-26	removed #define CRITICAL __critical
+-------------------------------------------------------------------------*/
 
 
 #include <sdcc-lib.h>
 #include <malloc.h>
-
-//#if defined(__SDCC_STACK_AUTO) || defined(__SDCC_z80) || defined(__SDCC_z180) || defined(__SDCC_gbz80)
-#define CRITICAL __critical
-//#else
-//  #define CRITICAL
-//#endif
-
-//#if _SDCC_MALLOC_TYPE_MLH
 
 typedef struct _MEMHEADER MEMHEADER;
 
@@ -60,10 +54,10 @@ extern MEMHEADER _sdcc_heap_start;
 extern char _sdcc_heap_end;
 
 MEMHEADER * _sdcc_prev_memheader;
+
 // apart from finding the header
 // this function also finds it's predecessor
-MEMHEADER *
-_sdcc_find_memheader(void * p)
+MEMHEADER * _sdcc_find_memheader(void * p)
 {
   register MEMHEADER * pthis;
   if (!p)
@@ -74,13 +68,12 @@ _sdcc_find_memheader(void * p)
   return (pthis);
 }
 
-void
-free (void *p)
+void free (void *p)
 {
   MEMHEADER *prev_header, *pthis;
 
   if ( p ) //For allocated pointers only!
-    CRITICAL
+    __critical
     {
       pthis = (MEMHEADER * )((char *)  p - HEADER_SIZE); //to start of header
       if ( pthis->prev ) // For the regular header
@@ -100,4 +93,4 @@ free (void *p)
 }
 
 
-//#endif
+

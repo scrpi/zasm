@@ -25,17 +25,19 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
+
+
+   kio 2014-11-26	removed test for other targets than z80
+*/
+
 
 #ifndef _STDINT_H
 #define _STDINT_H       1
 
 /* Exact integral types.  */
 
-#if !defined(__SDCC_mcs51) && !defined(__SDCC_ds390) && !defined(__SDCC_ds400) && !defined(__SDCC_pic14) && !defined(__SDCC_pic16)
 #if __STDC_VERSION__ >= 199901L
 #define __SDCC_LONGLONG
-#endif
 #endif
 
 /* Signed.  */
@@ -92,13 +94,8 @@ typedef unsigned long long int  uint_fast64_t;
 #endif
 
 /* Types for `void *' pointers.  */
-#if defined (__SDCC_mcs51) || defined (__SDCC_ds390)
-  typedef long int              intptr_t;
-  typedef unsigned long int     uintptr_t;
-#else
-  typedef int                   intptr_t;
-  typedef unsigned int          uintptr_t;
-#endif
+typedef int                   	intptr_t;
+typedef unsigned int          	uintptr_t;
 
 
 /* Largest integral types.  */
@@ -185,15 +182,9 @@ typedef unsigned long long int  uintmax_t;
 #endif
 
 /* Values to test for integral types holding `void *' pointer.  */
-#if defined (__SDCC_mcs51) || defined (__SDCC_ds390)
-#define INTPTR_MIN             (-2147483647L-1)
-#define INTPTR_MAX             (2147483647L)
-#define UINTPTR_MAX            (4294967295UL)
-#else
 #define INTPTR_MIN             (-32767-1)
 #define INTPTR_MAX             (32767)
 #define UINTPTR_MAX            (65535)
-#endif
 
 /* Minimum for largest signed integral type.  */
 #define INTMAX_MIN             (-__INT32_C(-2147483647L)-1)
@@ -207,13 +198,8 @@ typedef unsigned long long int  uintmax_t;
 /* Limits of other integer types.  */
 
 /* Limits of `ptrdiff_t' type.  */
-#if defined (__SDCC_mcs51) || defined (__SDCC_ds390)
-#define PTRDIFF_MIN           (-2147483647L-1)
-#define PTRDIFF_MAX           (2147483647L)
-#else
 #define PTRDIFF_MIN           (-32767-1)
 #define PTRDIFF_MAX           (32767)
-#endif
 
 /* Limit of `size_t' type.  */
 #define SIZE_MAX               (65535u)
@@ -254,5 +240,7 @@ typedef unsigned long long int  uintmax_t;
 #define RSIZE_MAX SIZE_MAX
 #endif
 
-#endif /* stdint.h */
+#endif 
+
+
 

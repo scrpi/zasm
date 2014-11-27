@@ -24,9 +24,8 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/*
+
 ** libgcc support for software floating point.
 ** Copyright (C) 1991 by Pipeline Associates, Inc.  All rights reserved.
 ** Permission is granted to do *anything* you want with this file,
@@ -40,11 +39,15 @@
 ** pipeline!phw@motown.com or
 ** sun!pipeline!phw or
 ** uunet!motown!pipeline!phw
+
+
+   kio 2014-11-16	removed MCS51 asm code
+   kio 2014-11-26	added #pragma std_sdcc99 for bool
+   kio 2014-11-26	removed AUTOMEM because this is not used by the z80 port
 */
 
-// kio 2014-11-16	removed MCS51 asm code
 
-
+#pragma std_sdcc99
 #include <float.h>
 #include <stdbool.h>
 #include <sdcc-lib.h>
@@ -62,12 +65,12 @@ union float_long
 float __fsadd (float a1, float a2)
 {
   long mant1, mant2;
-  long _AUTOMEM *pfl1;
-  long _AUTOMEM *pfl2;
+  long *pfl1;
+  long *pfl2;
   int exp1, exp2, expd;
   bool sign = false;
 
-  pfl2 = (long _AUTOMEM *)&a2;
+  pfl2 = (long *)&a2;
   exp2 = EXP (*pfl2);
   mant2 = MANT (*pfl2) << 4;
   if (SIGN (*pfl2))
@@ -76,7 +79,7 @@ float __fsadd (float a1, float a2)
   if (!*pfl2)
     return (a1);
 
-  pfl1 = (long _AUTOMEM *)&a1;
+  pfl1 = (long *)&a1;
   exp1 = EXP (*pfl1);
   mant1 = MANT (*pfl1) << 4;
   if (SIGN(*pfl1))

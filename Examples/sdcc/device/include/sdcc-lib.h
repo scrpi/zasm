@@ -1,67 +1,30 @@
-/*-------------------------------------------------------------------------
-   sdcc-lib.h - Top level header file for the sdcc libraries that enables
-                target specific features.
+// kio 2014-11-26
 
-   Copyright (C) 2004, Maarten Brock, sourceforge.brock@dse.nl
+#ifndef _SDCC_LIB_H
+#define _SDCC_LIB_H	1
 
-   This library is free software; you can redistribute it and/or modify it
-   under the terms of the GNU General Public License as published by the
-   Free Software Foundation; either version 2, or (at your option) any
-   later version.
-
-   This library is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License 
-   along with this library; see the file COPYING. If not, write to the
-   Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
-   MA 02110-1301, USA.
-
-   As a special exception, if you link this library with other files,
-   some of which are compiled with SDCC, to produce an executable,
-   this library does not by itself cause the resulting executable to
-   be covered by the GNU General Public License. This exception does
-   not however invalidate any other reasons why the executable file
-   might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
-
-#ifndef __SDC51_SDCC_LIB_H
-#define __SDC51_SDCC_LIB_H	1
-
-#if defined(__SDCC_z80)
-#include <asm/z80/features.h>
-
-#elif defined(__SDCC_z180)
-#include <asm/z180/features.h>
-
-#elif defined(__SDCC_r2k)
-#include <asm/r2k/features.h>
-
-#elif defined(__SDCC_r3ka)
-#include <asm/r3ka/features.h>
-
-#elif defined(__SDCC_tlcs90)
-#include <asm/tlcs90/features.h>
-
-#elif defined(__SDCC_gbz80)
-#include <asm/gbz80/features.h>
-
-#elif defined(__SDCC_mcs51)
-#include <asm/mcs51/features.h>
-
-#elif defined(__SDCC_ds390)
-#include <asm/ds390/features.h>
-
-#elif defined(__SDCC_stm8)
-#include <asm/stm8/features.h>
-
-#else
-/* PENDING */
-#include <asm/default/features.h>
-
+#ifndef __SDCC_z80
+#error
 #endif
+
+/* the following #defines have been removed because they no longer have any effect:
+
+#define _REENTRANT	functions on the z80 are ALWAYS reentrant 
+#define _CODE		was only used in _days_per_month.c for char days_per_month[] and in asctime.c
+					-> could better be a .s file 
+#define _AUTOMEM 
+#define _STATMEM 
+
+#define _SDCC_MANGLES_SUPPORT_FUNS	1	__divsint.c and __modsint.c: but __divsint.s and __modsint.s are used
+#define _SDCC_Z80_STYLE_LIB_OPT		1	removed test in lib/_strcmp.c
+#define _SDCC_PORT_PROVIDES_MEMCPY	0	sdcc always generates inline assembler code; _memcpy.c not used; 
+										-> see lib/string.h
+#define _SDCC_PORT_PROVIDES_STRCMP	0	must always be provided by "the linker"; --> _strcmp.c
+#define _SDCC_PORT_PROVIDES_STRCPY	0	sdcc always generates inline assembler code; _strcpy.s not used; 
+										-> see lib/string.h
+#define _SDCC_MALLOC_TYPE_MLH		1	removed MAH code from _malloc.c, _free.c and _realloc.c
+
+*/
 
 #endif
 
