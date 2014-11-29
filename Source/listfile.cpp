@@ -31,6 +31,8 @@
 #include "Z80Assembler.h"
 #include "unix/files.h"
 #include "unix/tempmem.h"
+#include "helpers.h"
+
 
 
 /*	Helper: write one line with address, code and text to log file
@@ -94,9 +96,73 @@ static
 bool gt_by_name(Label*& a, Label*& b)
 {
 	return gt(a->name,b->name);
-//	return gt(lowerstr(a->name),lowerstr(b->name));
+//	return gt_tolower(a->name,b->name);
 }
 
+
+/*	calculate a padding string for names
+	padding string is used to make all names align properly
+	if some labels are excessively long, then these may extend beyond the common length
+	the returned string can be used like this:
+
+	printf("%s%s",name,padding+strlen(name))
+*/
+static
+cstr calc_padding(Array<uint32>& lens)
+{
+	if(lens.count()==0) return "";
+
+	lens.sort();
+	uint32 maxlen = max(7u,lens.last());
+	str padding = spacestr(maxlen);
+	if(maxlen<=19) return padding;
+
+	uint32 bestlen = lens[lens.count()*95/100];
+	memset(padding+bestlen,0,sizeof(char)*(maxlen-bestlen));
+	return padding;
+}
+
+// convenience:
+static
+cstr calc_padding(Segments& segments)
+{
+	Array<uint32> lens(segments.count());
+	for(uint i=0; i<segments.count(); i++) { lens[i] = (uint32) strlen(segments[i].name); }
+	return calc_padding(lens);
+}
+
+// convenience:
+static
+cstr calc_padding(Array<Label*>& labels)
+{
+	Array<uint32> lens(labels.count());
+	for(uint j=0; j<labels.count(); j++) { lens[j] = (uint)strlen(labels[j]->name); }
+	return calc_padding(lens);
+}
+
+// convenience:
+inline
+cstr calc_padding(Labels& labels)
+{
+	return calc_padding(labels.getItems());
+}
+
+// convenience:
+inline
+cstr calc_padding(ObjArray<Labels>& labelsAE)
+{
+	Array<Label*> labels;
+	for(uint i=0;i<labelsAE.count();i++) { labels.append(labelsAE[i].getItems()); }
+	return calc_padding(labels);
+}
+
+cstr u5str(uint n, bool valid)
+{
+	if(!valid) return "***invalid***";
+	str s = spacestr(5);
+	sprintf(s,"%u",n&0xffff); if(n<10000) *strchr(s,0)=' ';
+	return s;
+}
 
 
 /* ==============================================================
@@ -113,6 +179,14 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	TempMemPool tempmempool;	// be nice in case zasm is included in another project
 	uint si=0,ei=0;	// source[] index, errors[] index
 
+	if(style&6)
+	{
+		cstr pfx = style&2 ? "              \t" : "";
+		fd.write_fmt("%s; --------------------------------------\n",pfx);
+		fd.write_fmt("%s; zasm: assemble \"%s\"\n",pfx,source_filename);
+		fd.write_fmt("%s; date: %s\n",pfx,datetimestr(timestamp));
+		fd.write_fmt("%s; --------------------------------------\n\n\n",pfx);
+	}
 
 	// Listing with object code:
 	// lines after #end are not included in the list file!
@@ -133,7 +207,22 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			uint offset  = sourceline.byteptr;				// offset from segment start
 			uint8* bytes = segment.core.getData() + offset;	// ptr -> opcode
 			uint address = segment.address + offset;		// "physical" address of opcode
-			// offset = 0;									// offset in opcode
+
+			// if line contains a label which is defined with 'equ' then print label value instead of address
+			if(count==0 && sourceline[0]>='A')				// no space, '#' or '.' => label
+			{
+				sourceline.rewind();
+				cstr lname = sourceline.nextWord();
+				sourceline.testChar(':'); sourceline.testChar(':');
+				if(sourceline.testWord("equ") || sourceline.testWord("defl") || sourceline.testChar('='))
+				{
+					for(uint i=0;i<labels.count();i++)
+					{
+						Label& label = labels[i].find(lname);
+						if(&label!=NULL && label.sourceline==si-1) { address=label.value; break; }
+					}
+				}
+			}
 
 			// print line with address, up to 4 opcode bytes and source line:
 			// note: real z80 opcodes have max. 4 bytes
@@ -194,106 +283,106 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	//
 	if(style&4)
 	{
-		uint maxsnamelen = 0;
-		for(uint j=0; j<segments.count(); j++)
-			maxsnamelen = max(maxsnamelen,(uint)strlen(segments[j].name));
-		limit(7u,maxsnamelen,19u);
-		str snamefiller = spacestr(maxsnamelen);
-		Label* l;
+		cstr spadding = calc_padding(segments);
 
-		{	fd.write_str("\n; +++ global symbols +++\n\n");
+		// list segments
+		// "#CODE|#DATA name: start=n, len=n, flag=n"
 
-			Array<Label*> globals = this->labels[0].getItems();
-			Array<Label*> labels(globals.copy());
-			labels.sort(&gt_by_name);		// sort by name
-			XXASSERT(labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(none)" should be first => exclude from listing
+		fd.write_str("\n\n; +++ segments +++\n\n");
+		for(uint i=0; i<segments.count(); i++)
+		{
+			Segment& s = segments[i];
+			if(s.has_flag)
+				fd.write_fmt("#%s %s:%s start=%s len=%s flag=%i\n",
+					s.isCode()?"CODE":"DATA",
+					s.name,spadding+strlen(s.name),
+					u5str(s.address,s.address_valid), u5str(s.size,s.size_valid), s.flag);
+			else
+				fd.write_fmt("#%s %s:%s start=%s len=%s\n",
+					s.isCode()?"CODE":"DATA",
+					s.name,spadding+strlen(s.name),
+					u5str(s.address,s.address_valid), u5str(s.size,s.size_valid));
+		}
 
-			uint maxlnamelen = 0;
-			for(uint j=0; j<labels.count(); j++)
-				maxlnamelen = max(maxlnamelen,(uint)strlen(labels[j]->name));
-			limit(7u,maxlnamelen,19u);
-			str lnamefiller = spacestr(maxlnamelen);
+		// list labels:
+		// "name = $1234 = -12345  segment  sourcefile:linenumber (unused)"
 
-			for(uint j=0+1; j<labels.count(); j++)
+		for(uint i=0; i<labels.count(); i++)
+		{
+			fd.write_str(i?"\n; +++ local symbols +++\n\n":"\n; +++ global symbols +++\n\n");
+
+			Array<Label*> labels = this->labels[i].getItems().copy();
+			labels.sort(&gt_by_name);							// sort by name
+			XXASSERT(i||labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(DEFAULT)" should be first => exclude from listing
+			cstr lpadding = calc_padding(labels);
+
+			for(uint j=i?0:1; j<labels.count(); j++)
 			{
-				l = labels[j];
-			//	cstr		name = l->name;
-			//	Segment*	segment = l->segment;
-				int			value = l->value;
+				Label* l = labels[j];
+				if(i&&l->is_global) continue;		// don't list .globl labels in locals[]
 				bool		is_valid = l->is_valid;
 				bool		is_used = l->is_used;
 				if(!is_valid&&!is_used) continue;
+				cstr		name = l->name;
+				Segment*	segment = l->segment; if(!segment) segment = &segments[0];
+				int			value = l->value;
 			//	uint		sourcelinenumber = l->sourceline;
 				SourceLine&	sourceline = source[l->sourceline];
 			//	cstr		text = sourceline.text;
 				cstr		sourcefile = filename_from_path(sourceline.sourcefile);
 				uint		linenumber = sourceline.sourcelinenumber;
 
-				// name  equ $1234 ; -12345 segment sourcefile:linenumber
+				fd.write_fmt("%s%s = ", name, lpadding+strlen(name));
 
-				uint lnamelen = strlen(l->name);
-				fd.write_str(l->name);
-				if(lnamelen<maxlnamelen) fd.write_str(lnamefiller+lnamelen);
+				if(!l->is_defined)
+					fd.write_str("***undefined***");
+				else if(!l->is_valid)
+					fd.write_fmt("***invalid***   %s%s %s:%u",
+						segment->name, spadding+strlen(segment->name), sourcefile, linenumber+1);
+				else
+					fd.write_fmt("$%04X = %6i  %s%s %s:%u",
+						value&0xffff, value,
+						segment->name, spadding+strlen(segment->name), sourcefile, linenumber+1);
 
-				if(l->segment==NULL) l->segment = &segments[0];
-				if(l->is_valid) fd.write_fmt(" = $%04X ;%8i  %s", value&0xffff, value, l->segment->name);
-				else fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
-
-				uint snamelen = strlen(l->segment->name);
-				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);
-
-				fd.write_fmt(" %s:%u", sourcefile, linenumber);
-
-				if(is_valid && !is_used) fd.write_str(" (unused)");
-				fd.write_uint8('\n');
+				fd.write_str(l->is_used?"\n":" (unused)\n");
 			}
 		}
 
-		for(uint i=1; i<labels.count(); i++)
+		// list unresolved labels:
+		if(errors.count())
 		{
-			fd.write_str("\n; +++ local symbols +++\n\n");
+			Array<Label*> unresolved_labels;
 
-			Array<Label*> labels = this->labels[i].getItems();
-
-			uint maxlnamelen = 0;
-			for(uint j=0; j<labels.count(); j++)
-				maxlnamelen = max(maxlnamelen,(uint)strlen(labels[j]->name));
-			limit(7u,maxlnamelen,19u);
-			str lnamefiller = spacestr(maxlnamelen);
-
-			for(uint j=0; j<labels.count(); j++)
+			for(uint i=0;i<labels.count();i++)
 			{
-				l = labels[j];
-				int			value = l->value;
-				bool		is_valid = l->is_valid;
-				bool		is_used = l->is_used;
-				if(!is_valid&&!is_used) continue;
-				SourceLine&	sourceline = source[l->sourceline];
-				cstr		sourcefile = filename_from_path(sourceline.sourcefile);
-				uint		linenumber = sourceline.sourcelinenumber;
+				Array<Label*>& labels = this->labels[i].getItems();
+				for(uint j=0;j<labels.count();j++)
+				{
+					Label* l = labels[j];
+					if(!l->is_valid && l->is_used) unresolved_labels.append(l);
+				}
+			}
 
-				// name  equ $1234 ; -12345 segment sourcefile:linenumber
+			if(unresolved_labels.count())
+			{
+				fd.write_str("\n\n; +++ used but undefined or unresolved labels +++\n\n");
 
-				uint lnamelen = strlen(l->name);
-				fd.write_str(l->name);
-				if(lnamelen<maxlnamelen) fd.write_str(lnamefiller+lnamelen);
+				cstr lpadding = calc_padding(unresolved_labels);
 
-				if(l->segment==NULL) l->segment = &segments[0];
-				if(l->is_valid) fd.write_fmt(" = $%04X ;%8i  %s", value&0xffff, value, l->segment->name);
-				else fd.write_fmt(" = $0000 ; invalid  %s", l->segment->name);
-
-				uint snamelen = strlen(l->segment->name);
-				if(snamelen<maxsnamelen) fd.write_str(snamefiller+snamelen);
-
-				fd.write_fmt(" %s:%u", sourcefile, linenumber);
-
-				if(is_valid && !is_used) fd.write_str(" (unused)");
-				fd.write_uint8('\n');
+				for(uint i=0;i<unresolved_labels.count(); i++)
+				{
+					Label* l = unresolved_labels[i];
+					fd.write_fmt("%s%s = %s\n",
+						l->name,lpadding+strlen(l->name),
+						l->is_defined?"***unresolved***":"***undefined***");
+				}
 			}
 		}
 	}
 
-	fd.write_fmt("\n%s error%s\n", errors.count()?numstr(errors.count()):"no", errors.count()==1?"":"s");
+	// list elapsed time and errors:
+	fd.write_fmt("\n\ntotal time: %3.4f sec.\n",now()-timestamp);
+	fd.write_fmt("%s error%s\n", errors.count()?numstr(errors.count()):"no", errors.count()==1?"":"s");
 	fd.close_file();
 }
 

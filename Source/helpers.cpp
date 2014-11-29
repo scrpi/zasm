@@ -29,6 +29,15 @@
 #define LOG 1
 #include "helpers.h"
 #include "Segment.h"
+#include <sys/time.h>
+
+
+double now()
+{
+	struct timeval tv;
+	gettimeofday ( &tv, NULL );
+	return tv.tv_sec + tv.tv_usec/1000000.0;
+}
 
 
 /*	calculate size of compressed data in .z80 format

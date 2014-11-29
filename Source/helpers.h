@@ -38,7 +38,7 @@ EXT uint32 compressed_page_size_z80( uint8 const* q, uint qsize );
 EXT void write_compressed_page_z80	( FD&, int page_id, uint8 const* q, uint32 qsize ) throw(file_error);
 EXT void write_intel_hex			( FD&, uint32 addr, uint8 const* q, uint32 sz ) throw(file_error);
 EXT void write_compressed_page_ace	( FD&, uint8 const* q, uint qsize ) throw(file_error);
-
+EXT double now();
 
 
 

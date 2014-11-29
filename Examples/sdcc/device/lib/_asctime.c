@@ -35,7 +35,10 @@
   					_gmtime.c
   					_mktime.c
    kio 2014-11-27	removed _CODE because this is defined as nothing in z80 port
-					TODO: nevertheless put it somehow into the _CODE segment
+					and sdcc always puts const data inti the current code segment
+   kio 2014-11-27	corrected const declaration for __month and __day 
+					so that also the pointer array is put into the code segment
+					TODO: char[][] might be shorter
 */
 
 
@@ -49,15 +52,13 @@ void check_struct_tm(struct tm *timeptr);
 /* but time returns the seconds since 1970						*/
 
 
-//was: _CODE const char * _CODE
-const char * __month[] = 
+char const * const __month[] = 
 {
 	"Jan","Feb","Mar","Apr","May","Jun",
 	"Jul","Aug","Sep","Oct","Nov","Dec"
 };
 
-//was: _CODE const char * _CODE
-const char * __day[] = 
+char const * const __day[] = 
 {
 	"Sun","Mon","Tue","Wed","Thu","Fri","Sat"
 };
@@ -66,13 +67,18 @@ static char ascTimeBuffer[32];
 
 
 
-// format the time into "Sat Feb 17 17:45:23 2001\n"
+/* format the time into "Sat Feb 17 17:45:23 2001\n"
+*/
 char *asctime(struct tm *timeptr) 
 {
   check_struct_tm(timeptr);
   sprintf (ascTimeBuffer, "%s %s %2d %02d:%02d:%02d %04d\n",
-	   __day[timeptr->tm_wday], __month[timeptr->tm_mon], timeptr->tm_mday,
-	   timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec, 
+	   __day[timeptr->tm_wday], 
+	   __month[timeptr->tm_mon], 
+	   timeptr->tm_mday,
+	   timeptr->tm_hour, 
+	   timeptr->tm_min, 
+	   timeptr->tm_sec, 
 	   timeptr->tm_year+1900);
   return ascTimeBuffer;
 }

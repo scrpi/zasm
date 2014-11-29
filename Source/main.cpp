@@ -41,6 +41,7 @@
 #include	"unix/files.h"
 #include	"kio/kio.h"
 #include	"Z80Assembler.h"
+#include	"helpers.h"
 
 
 
@@ -60,7 +61,6 @@ static cstr compiledatestr()
 	cptr y = ansidate+7;
 	return usingstr("%s-%02u-%02u",y,m,d);
 }
-
 
 
 /* ---- Hilfstext -----------------------------------
@@ -105,6 +105,8 @@ static cstr help =
 */
 int main( int argc, cstr argv[] )
 {
+	double start = now();
+
 // options:
 	uint verbose     = 1;	// 0=off, 1=default, 2=verbose
 	uint outputstyle = 'b';	// 0=none, 'b'=binary, 'x'=intel hex, 's'=motorola s-records
@@ -252,6 +254,7 @@ int main( int argc, cstr argv[] )
 
 	if(ass.errors.count()==0)
 	{
+		fprintf(stderr,"time: %3.4f sec.\n",now()-start);
 		fprintf(stderr,"zasm: no errors\n");
 		return 0; 	// 0 = ok
 	}

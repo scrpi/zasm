@@ -27,7 +27,6 @@
 
 #define SAFE 3
 #define LOG 2
-#include <sys/time.h>
 #include "unix/FD.h"
 #include "unix/files.h"
 #include "unix/MyFileInfo.h"
@@ -35,6 +34,7 @@
 #include "Segment.h"
 #include "Z80/Z80opcodes.h"
 #include "Templates/HashMap.h"
+#include "helpers.h"
 extern char** environ;
 
 
@@ -51,17 +51,9 @@ enum
 };
 
 
-static double now()
-{
-	struct timeval tv;
-	gettimeofday ( &tv, NULL );
-	return tv.tv_sec + tv.tv_usec/1000000.0;
-}
-
-
 // name for default code segment, if no #target is given:
 //
-const char DEFAULT_CODE_SEGMENT[] = "(none)";
+const char DEFAULT_CODE_SEGMENT[] = "(DEFAULT)";
 
 
 // for character set translation:
@@ -291,6 +283,8 @@ void Z80Assembler::addError( cstr text )
 void Z80Assembler::assembleFile( cstr sourcefile, cstr destpath, cstr listpath, cstr temppath,
 								 int liststyle, int deststyle ) throw()
 {
+	timestamp = now();
+
 	sourcefile = fullpath(sourcefile);			XXASSERT(errno==ok && is_file(sourcefile));
 	if(destpath) destpath = fullpath(destpath); XXASSERT(errno==ok || errno==ENOENT);
 	if(listpath) listpath = fullpath(listpath); XXASSERT(errno==ok || errno==ENOENT);
@@ -562,7 +556,7 @@ w:	cstr w = q.nextWord();				// get next word
 		case '-':	n = -value(q,pUna,valid); goto op;		// minus sign
 		case '~':	n = ~value(q,pUna,valid); goto op;		// complement
 		case '!':	n = !value(q,pUna,valid); goto op;		// negation
-		case '(':	n =  value(q,pAny,valid); q.expectClose(); goto op;	// brackets
+		case '(':	n =  value(q,pAny,valid); q.expect(')'); goto op;	// brackets
 		case '$':	n = currentAddress();					// $ = "logical" address at current code position
 					valid = valid && currentAddressValid();
 					if(!valid) final = false; goto op;
@@ -632,13 +626,14 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 		}
 	}
 
-	if(w[0]=='_' && w[1]=='_' && q.testChar('('))	// built-in function?
+	if(q.testChar('('))			// test for built-in function
 	{
-		if(eq(w,"__isdefined"))	// __isdefined(NAME)  or  __isdefined(NAME::)
+		if(eq(w,"isdefined"))	// isdefined(NAME)  or  isdefined(NAME::)
 		{						// note: label value is not neccessarily valid
 			w = q.nextWord();
 			if(!is_letter(*w) && *w!='_') throw fatal_error("label name expected");
 			bool global = q.testChar(':')&&q.testChar(':');
+			q.expect(')');
 
 			for(uint i=global?0:local_labels_index;;i=labels[i].outer_index)
 			{
@@ -649,19 +644,21 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 						 { n=1; break; }
 				if(i==0) { n=0; break; }						// not found / not defined
 			}
+			goto op;
 		}
-		else if(eq(w,"__lowbyte"))
+		else if(eq(w,"lo"))
 		{
 lo:			n = uint8(value(q,pAny,valid));
+			q.expect(')');
+			goto op;
 		}
-		else if(eq(w,"__highbyte"))
+		else if(eq(w,"hi"))
 		{
 hi:			n = uint8(value(q,pAny,valid)>>8);
+			q.expect(')');
+			goto op;
 		}
-		else throw syntax_error("unrecognized built-in function");
-
-		q.expect(')');
-		goto op;
+		else --q;	// put back '('
 	}
 
 	if(is_letter(w[0]) || w[0]=='_')			// name
@@ -684,7 +681,11 @@ label:	Label* l = &local_labels().find(w);
 		}
 		else	// Label nicht gefunden
 		{
-			if(pass>1) throw syntax_error(usingstr("label \"%s\" not found",w));
+			if(pass>1)
+			{
+				labels[0].add(new Label(w,NULL,0,0,no,yes,no,yes));				// for listing
+				throw syntax_error(usingstr("label \"%s\" not found",w));
+			}
 			valid = no;
 			final = false;
 		}
@@ -1077,11 +1078,11 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 				//	#include library "path"			; <-- current_sourceline
 				//	#include "path/fname"			; <-- generated
 				//	; contents of file will go here	; <-- inserted when #include "path/fname" is assembled
-				//	#assert __isdefined(fname::)	; <-- generated: prevent infinite recursion in case of error
+				//	#assert isdefined(fname::)		; <-- generated: prevent infinite recursion in case of error
 				//	#include library "path"			; <-- copy of current_sourceline: include more files from library
 
 				cstr s1 = usingstr("#include \"%s%s\"",fqn,fname);
-				cstr s2 = usingstr("#assert __isdefined(%s::)",name);
+				cstr s2 = usingstr("#assert isdefined(%s::)",name);
 				cstr s3 = q.text;
 				source.insertat(current_sourceline_index+1, new SourceLine(q.sourcefile,q.sourcelinenumber,s1));
 				source.insertat(current_sourceline_index+2, new SourceLine(q.sourcefile,q.sourcelinenumber,s2));

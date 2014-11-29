@@ -71,7 +71,7 @@ public:
 	void		add(Label* l)				{ ObjHashMap::add(l->name,l); }
 	Label&		find(cstr name)				{ return ObjHashMap::get(name); }
 	Label const& find(cstr name) const		{ return ObjHashMap::get(name); }
-	Array<Label*> getItems()				{ return ObjHashMap::getItems(); }
+	Array<Label*>& getItems()				{ return ObjHashMap::getItems(); }
 };
 
 
