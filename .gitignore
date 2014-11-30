@@ -5,8 +5,7 @@ Distributions/old versions/
 Distributions/*.bz2
 Distributions/*.zip
 Info/
-Examples/sdcc/device/examples/
-Examples/sdcc/device/lib/OTHER
+Examples/sdcc/lib/OTHER
 Test/Zeug*
 Test/include
 Test/library
@@ -17,6 +16,6 @@ Test/*.lst
 Test/*.s
 Test/*.tap
 Test/rem.c
-Test/sdcc-2014-10
+Test/crc.c
 Test/sdcpp
 Test/zx82_rom.asm

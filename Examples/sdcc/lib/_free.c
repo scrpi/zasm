@@ -29,7 +29,8 @@
    kio 2014-11-17	removed the MAH version, because z80/features.h says: z80 uses MLH version
   					commented out #if tests
    kio 2014-11-26	removed #define CRITICAL __critical
--------------------------------------------------------------------------*/
+   kio 2014-11-30	moved sdcc_find_memheader() to _realloc.c where it is used
+*/
 
 
 #include <sdcc-lib.h>
@@ -50,23 +51,10 @@ struct _MEMHEADER
 /* These variables are defined through the crt0 functions. */
 /* Base of this variable is the first byte of the heap. */
 extern MEMHEADER _sdcc_heap_start;
+
 /* Address of this variable is the last byte of the heap. */
 extern char _sdcc_heap_end;
 
-MEMHEADER * _sdcc_prev_memheader;
-
-// apart from finding the header
-// this function also finds it's predecessor
-MEMHEADER * _sdcc_find_memheader(void * p)
-{
-  register MEMHEADER * pthis;
-  if (!p)
-    return NULL;
-  pthis = (MEMHEADER * )((char *)  p - HEADER_SIZE); //to start of header
-  _sdcc_prev_memheader = pthis->prev;
-
-  return (pthis);
-}
 
 void free (void *p)
 {

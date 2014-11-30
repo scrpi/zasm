@@ -1,5 +1,15 @@
 
+; control codes:
 
+tTAB		= 6		; Basic: ','
+tLEFT		= 8
+tRIGHT		= 9
+tNEWLINE	= 13
+
+; non-ascii characters:
+
+tGBP		= $60
+tCOPYRIGHT	= $7F
 
 ; ZX Spectrum Basic Tokens
 
@@ -96,7 +106,6 @@ tCLEAR		= $FD
 tRETURN		= $FE
 tCOPY		= $FF
 
-tGBP		= $60
 
 
 

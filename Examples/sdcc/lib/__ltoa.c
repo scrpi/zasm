@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _heap.c - memory heap for malloc and friends
+   _ltoa.c - integer to string conversion
 
-   Copyright (C) 2006, Maarten Brock, sourceforge.brock@dse.nl
+   Copyright (c) 1999, Bela Torok, bela.torok@kssg.ch
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -24,17 +24,37 @@
    be covered by the GNU General Public License. This exception does
    not however invalidate any other reasons why the executable file
    might be covered by the GNU General Public License.
--------------------------------------------------------------------------*/
 
-/*
-   This is the default heap. If you need a different size (make a copy and)
-   recompile it with -D HEAP_SIZE=<size> where <size> is whatever you need.
-   Link the resulting object explicitly with your project.
+
+ 	usage:
+
+	_ultoa(unsigned long value, char* string, int radix)
+	_ltoa(long value, char* string, int radix)
+
+	value  ->  Number to be converted
+	string ->  Result
+	radix  ->  Base of value (e.g.: 2 for binary, 10 for decimal, 16 for hex)
+
+
+	2014-11-30 kio	moved _ultoa() and _ltoa() into separate files
+					removed non-z80 code
+					always use 32 char buffer
 */
 
-#ifndef HEAP_SIZE
-#define HEAP_SIZE 1024
-#endif
 
-__xdata char _sdcc_heap[HEAP_SIZE];
-const unsigned int _sdcc_heap_size = HEAP_SIZE;
+void _ultoa(unsigned long value, char* string, unsigned char radix);
+
+
+void _ltoa(long value, char* string, unsigned char radix)
+{
+	if (value < 0 && radix == 10) 
+	{
+		*string++ = '-';
+    	value = -value;
+	}
+	_ultoa(value, string, radix);
+}
+
+
+
+

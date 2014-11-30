@@ -33,6 +33,7 @@ SOURCES += \
     Source/Source.cpp \
     Source/Z80Assembler.cpp \
 	Source/Z80Head.cpp \
+	Source/CharMap.cpp \
     Source/helpers.cpp \
     Source/outputfile.cpp \
     Source/listfile.cpp \
@@ -54,6 +55,7 @@ HEADERS += \
     Source/Z80Assembler.h \
     Source/settings.h \
 	Source/Z80Head.h \
+	Source/CharMap.h \
     config.h \
     Libraries/cstrings/base85.h \
     Libraries/cstrings/cstrings.h \

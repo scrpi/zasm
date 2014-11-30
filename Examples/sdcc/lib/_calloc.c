@@ -28,6 +28,7 @@
 
    kio 2014-11-26	removed test for SDCC_MALLOC_TYPE_MLH
    kio 2014-11-26	removed __xdata
+   kio 2014-11-30	removed struct _MEMHEADER definition from this file: not used
 */
 
 
@@ -35,28 +36,17 @@
 #include <malloc.h>
 #include <string.h>
 
-typedef struct _MEMHEADER MEMHEADER;
-
-struct _MEMHEADER
-{
-  MEMHEADER *   next;
-  MEMHEADER *   prev;
-  unsigned int  len;
-  unsigned char mem;
-};
-
-#define HEADER_SIZE (sizeof(MEMHEADER)-sizeof(char))
 
 void * calloc (size_t nmemb, size_t size)
 {
-  register void * ptr;
+	register void * ptr;
 
-  ptr = malloc(nmemb * size);
-  if (ptr)
-  {
-    memset(ptr, 0, nmemb * size);
-  }
-  return ptr;
+	ptr = malloc(nmemb * size);
+	if (ptr)
+	{
+		memset(ptr, 0, nmemb * size);
+  	}
+	return ptr;
 }
 
 

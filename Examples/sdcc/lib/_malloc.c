@@ -27,8 +27,8 @@
 
 
    kio 2014-11-17	removed the MAH version, because z80 uses MLH version
-  					commented out #if tests
    kio 2014-11-26	removed #define CRITICAL __critical
+   kio 2014-11-30	Put the heap initialization code automatically into the _GSINIT segment.
 */
 
 
@@ -51,19 +51,11 @@ struct _MEMHEADER
 /* These variables are defined through the crt0 functions. */
 /* Base of this variable is the first byte of the heap. */
 extern MEMHEADER _sdcc_heap_start;
+
 /* Address of this variable is the last byte of the heap. */
 extern char _sdcc_heap_end;
 
-void _sdcc_heap_init(void)
-{
-  MEMHEADER *pbase = &_sdcc_heap_start;
-  unsigned int size = &_sdcc_heap_end - (char *)pbase;
 
-  pbase->next = (MEMHEADER *)((char *)pbase + size - HEADER_SIZE);
-  pbase->next->next = NULL; //And mark it as last
-  pbase->prev       = NULL; //and mark first as first
-  pbase->len        = 0;    //Empty and ready.
-}
 
 void * malloc (unsigned int size)
 {
@@ -129,6 +121,44 @@ void * malloc (unsigned int size)
     }
   return ret;
 }
+
+
+/*	kio 2014-11-30:
+	Put the heap initialization code automatically into the _GSINIT segment.
+
+  •	By using __naked sdcc does not include a final ret, so we can run 'through' this code in _GSINIT 
+
+  •	#pragma GSINIT should have been used to put sdcc_heap_init() into the _GSINIT segment,
+	but can't be used because sdcc applies this setting to the whole file :-(
+
+  •	Then __asm__(".area _GSINIT\n") should have gone directly into sdcc_heap_init(),
+	but then sdcc fails to compile this function.
+
+  •	So __asm__(".area _GSINIT\n") is put in a separate __naked otherwise completely empty function.
+	sdcc generates .area _CODE only once for all functions, so it is not reset before sdcc_heap_init() is compiled.
+	Probably this will fail some day when someone changes this behaviour in sdcc…
+*/
+
+#ifndef __SDCC
+#error tricks highly specific to sdcc!
+#endif
+
+static void z(void) __naked
+{
+	__asm__(".area _GSINIT\n");		/* #pragma GSINIT can't be used because it works on the whole file :-( */
+}
+
+static void sdcc_heap_init(void) __naked
+{
+	MEMHEADER * pbase = &_sdcc_heap_start;
+	unsigned int size = &_sdcc_heap_end - (char*)pbase;
+
+	pbase->next = (MEMHEADER*) ((char*)pbase + size - HEADER_SIZE);
+	pbase->next->next = NULL; 	/* And mark it as last		*/
+	pbase->prev       = NULL; 	/* and mark first as first	*/
+	pbase->len        = 0;    	/* Empty and ready.			*/
+}
+
 
 
 

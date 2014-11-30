@@ -269,56 +269,12 @@ _putchar::
 ; they must be declared before they are used,
 ; else they are not marked 'used' and "#include library" won't load them
 ;
-	.globl	___fsmul
-	.globl	___fsdiv
-	.globl	___fslt
-	.globl	___fsgt
-	.globl	___fsadd
-	.globl	___fssub
-	.globl	___fs2ulong
-	.globl	___ulong2fs
-
-	.globl	__rrulong
-	.globl	__rrslong
-	.globl	__rlulong
-	.globl	__rlslong
-	.globl	__sdcc_call_hl
-
-	.globl	__mullonglong
-	.globl	__mullong
-	.globl	__mulint
-	.globl	__muluchar
-	.globl	__mulschar
-	.globl	__mulsuchar
-	.globl	__muluschar
-
-	.globl	__modulong
-	.globl	__modslong
-	.globl	__modsint
-	.globl	__moduint
-	.globl	__modschar
-	.globl	__moduchar
-	.globl	__moduschar
-	.globl	__modsuchar
-
-	.globl	__divulong
-	.globl	__divslong
-	.globl	__divsint
-	.globl	__divuint
-	.globl	__div16
-	.globl	__divu16
-	.globl	__divuchar
-	.globl	__divschar
-	.globl	__divuschar
-	.globl	__div8
-	.globl	__divu8
-
-	.globl	__get_remainder
-	.globl	__div_signexte
+#include "globls.s"
 
 
 ; the test environment of sdcc is at a non-standard location.
 ; also IY must not be used else we can't call most rom routines
+;
 ; --codeseg NAME		e.g. CODE for segment _CODE
 ; --std-sdcc89			default
 ; --std-c99				for bool
@@ -326,6 +282,12 @@ _putchar::
 ; --reserve-regs-iy		for ZX Spectrum system variables
 ; -fomit-frame-pointer
 ; --all-callee-saves
+; -Iheaderpath
+; -Dname
+; -Dname=value
+; --auto-stack			not for Z80?
+; --callee-saves-bc
+; --nostdinc
 ;
 #cflags $CFLAGS --nostdinc -Iinclude --reserve-regs-iy
 
@@ -333,8 +295,8 @@ _putchar::
 ; include c files:
 ;
 #include "main.c"
-#include "../Examples/sdcc/device/lib/_days_per_month.c"
-#include "../Examples/sdcc/device/lib/_asctime.c"
+#include "../Examples/sdcc/lib/_days_per_month.c"
+#include "../Examples/sdcc/lib/_asctime.c"
 
 ; resolved missing labels:
 ;

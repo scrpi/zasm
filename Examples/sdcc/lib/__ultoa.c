@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   _memcpy.c - part of string library functions
+   _ltoa.c - integer to string conversion
 
-   Copyright (C) 1999, Sandeep Dutta . sandeep.dutta@usa.net
+   Copyright (c) 1999, Bela Torok, bela.torok@kssg.ch
 
    This library is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -13,7 +13,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License 
    along with this library; see the file COPYING. If not, write to the
    Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
    MA 02110-1301, USA.
@@ -26,36 +26,48 @@
    might be covered by the GNU General Public License.
 
 
-   kio 2014-11-16	removed test for SDCC_PORT_PROVIDES_MEMCPY and #undef 
-   kio 2014-11-26	this file is not used because lib/string.h defines memcpy() as __builtin_memcpy()
+ 	usage:
+
+	_ultoa(unsigned long value, char* string, int radix)
+	_ltoa(long value, char* string, int radix)
+
+	value  ->  Number to be converted
+	string ->  Result
+	radix  ->  Base of value (e.g.: 2 for binary, 10 for decimal, 16 for hex)
+
+
+	2014-11-30 kio	moved _ultoa() and _ltoa() into separate files
+					removed non-z80 code
+					always use 32 char buffer
 */
 
 
+#define	NUMBER_OF_DIGITS 	32			/* for base 2 */
 
 
-#include <string.h>
-#include <sdcc-lib.h>
-
-
-//#undef memcpy /* Avoid conflict with builtin memcpy() in Z80 and some related ports */
-
-
-void * memcpy (void * dst, const void * src, size_t acount)
+void _ultoa(unsigned long value, char* string, unsigned char radix)
 {
-	void * ret = dst;
-	char * d = dst;
-	const char * s = src;
+	char buffer[NUMBER_OF_DIGITS];  	/* no space for '\0' needed here */
+	unsigned char index = NUMBER_OF_DIGITS;
 
-	/* copy from lower addresses to higher addresses */
-	while (acount--) 
+	do 
 	{
-		*d++ = *s++;
-	}
+    	unsigned char c = '0' + (value % radix);
+    	if (c > (unsigned char)'9')
+    		c += 'A' - '9' - 1;
+		buffer[--index] = c;
+		value /= radix;
+	} 
+	while (value);
 
-	return ret;
+	do 
+	{
+    	*string++ = buffer[index];
+	} 
+	while ( ++index != NUMBER_OF_DIGITS );
+
+	*string = 0;  /* string terminator */
 }
-
-
 
 
 
