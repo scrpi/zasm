@@ -44,7 +44,7 @@ min_heap_size	= $1000		; for malloc
 
 #code PROG_HEADER,0,17,headerflag
 		defb    0						; Indicates a Basic program
-		defb    "mloader   "			; the block name, 10 bytes long
+		defm    "mloader   "			; the block name, 10 bytes long
 		defw    variables_end-0			; length of block = length of basic program plus variables
 		defw    10		    			; line number for auto-start, 0x8000 if none
 		defw    program_end-0			; length of the basic program without variables
@@ -92,7 +92,7 @@ variables_end:
 
 #code CODE_HEADER,0,17,headerflag
 		defb    3						; Indicates binary data
-		defb    "mcode     "	  		; the block name, 10 bytes long
+		defm    "mcode     "	  		; the block name, 10 bytes long
 		defw    code_end-code_start		; length of data block which follows
 		defw    code_start				; default location for the data
 		defw    0       				; unused

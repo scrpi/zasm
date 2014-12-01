@@ -349,7 +349,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 		}
 
 		// list unresolved labels:
-		if(errors.count())
+		if(pass>1 && errors.count())
 		{
 			Array<Label*> unresolved_labels;
 

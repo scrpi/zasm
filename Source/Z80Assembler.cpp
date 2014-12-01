@@ -35,6 +35,7 @@
 #include "Z80/Z80opcodes.h"
 #include "Templates/HashMap.h"
 #include "helpers.h"
+#include "CharMap.h"
 extern char** environ;
 
 
@@ -54,12 +55,6 @@ enum
 // name for default code segment, if no #target is given:
 //
 const char DEFAULT_CODE_SEGMENT[] = "(DEFAULT)";
-
-
-// for character set translation:
-//
-char const zx80_chars[] = " \"###########$:?()-+*/=><;,.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";	// char(12)='£'
-char const zx81_chars[] = " ##########\"#$:?()><=+-*/;,.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";	// char(12)='£'
 
 
 
@@ -86,7 +81,8 @@ Z80Assembler::Z80Assembler()
 	verbose(1),
 	c_compiler(NULL),
 	c_qi(0),
-	c_zi(0)
+	c_zi(0),
+	charset(NULL)
 {
 	cond[0] = no_cond;					// memset(cond,no_cond,sizeof(cond));
 
@@ -104,6 +100,7 @@ Z80Assembler::~Z80Assembler()
 {
 	// wg. Doppelreferenzierung auf .globl-Label müssen erst die lokalen Labels[] gelöscht werden:
 	while(labels.count()>1) labels.drop();
+	delete charset;
 }
 
 
@@ -371,6 +368,10 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 	// DOIT:
 	for(pass=1,final=no; pass<9 && !final && errors.count()==0; pass++)
 	{
+		// reset charset conversion:
+		delete charset;
+		charset = NULL;
+
 		// final: true = this may be the last pass.
 		// wird gelöscht, wenn:
 		//	 label nicht in den locals gefunden wurde (wohl aber evtl. in den globals)
@@ -592,10 +593,12 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 			if(w[c!=0]==0) goto op; else goto syntax_error;
 		}
 		else if(w[0]=='\'')			// ascii number
-		{
-			if(w[2]==0) goto syntax_error;
-			while (w[2]) { w++; n = (n<<8) + *w; }
-			if(w[1]=='\'') goto op; else goto syntax_error;
+		{							// uses utf-8 or charset translation
+			n=strlen(w); if(n<3||w[n-1]!='\'') goto syntax_error; else n=0;
+			w = unquotedstr(w);		// unquote & unescape
+			if(charset) w = charset->translate(w); else w = fromutf8str(w);
+			while(*w) n = (n<<8) + (uint8)*w++;
+			goto op;
 		}
 		else if(is_dec_digit(w[0]))	// decimal number
 		{
@@ -838,10 +841,53 @@ void Z80Assembler::asmDirect( SourceLine& q ) throw(fatal_error)
 		if(eq(w,"local"))	  asmLocal(q);		else
 		if(eq(w,"endlocal"))  asmEndLocal(q);	else
 		if(eq(w,"assert"))	  asmAssert(q);		else
+		if(eq(w,"charset"))	  asmCharset(q);	else
 		if(eq(w,"end"))		  asmEnd(q);		else throw fatal_error("unknown assembler directive");
 	}
 	catch(fatal_error& e) { throw e; }
 	catch(any_error& e)   { throw fatal_error(e.what()); }
+}
+
+/*	#charset zxspectrum			; zx80, zx81, zxspectrum, jupiterace, ascii
+	#charset none				;			 reset to no mapping
+	#charset map "ABC" = 65		; or add:	 add mapping(s)
+	#charset unmap "£"			; or remove: remove mapping(s)
+*/
+void Z80Assembler::asmCharset( SourceLine& q ) throw(any_error)
+{
+	cstr w = lowerstr(q.nextWord());
+	bool v;
+	int n;
+
+	if(eq(w,"map") || eq(w,"add"))					// add mapping
+	{
+		w = q.nextWord();
+		if(w[0]!='"') throw syntax_error("string with source character(s) expected");
+		if(!q.testChar('=') && !q.testChar(',') && !q.testWord("to")) throw syntax_error("keyword 'to' expected");
+		n = value(q,pAny,v=1);
+		if(n!=(uint8)n&&n!=(int8)n) throw syntax_error("destination char code out of range");
+		if(!charset) charset = new CharMap();
+		charset->addMappings(unquotedstr(w),n);		// throws on illegal utf-8 chars
+	}
+	else if(eq(w,"unmap") || eq(w,"remove"))		// remove mapping
+	{
+		if(!charset) throw syntax_error("no charset in place");
+		w = q.nextWord();
+		if(w[0]!='"') throw syntax_error("string with source character(s) for removal expected");
+		charset->removeMappings(unquotedstr(w));	// throws on illegal utf-8 chars
+	}
+	else if(eq(w,"none"))							// reset mapping to no mapping at all
+	{
+		delete charset;
+		charset = NULL;
+	}
+	else											// select charset
+	{
+		CharMap::CharSet cs = CharMap::charsetFromName(w);
+		if(cs==CharMap::NONE) throw syntax_error("map, unmap, none or charset name expected");
+		delete charset;
+		charset = new CharMap(cs);
+	}
 }
 
 void Z80Assembler::asmAssert( SourceLine& q ) throw(any_error)
@@ -1740,6 +1786,7 @@ cp:		s=q.p;
 		{
 			s=q.p;
 			i = getRegister(q);
+			if(i==OPEN) i=-1;		// sdcc:  ld ((nnnn)),hl
 			if (i>=0)	// (reg)
 			{
 				if(i==IX||i==IY) n = q.peekChar()==')' ? 0 : value(q,pAny,v);
@@ -1770,6 +1817,7 @@ cp:		s=q.p;
 		{
 			s=q.p;
 			j = getRegister(q);
+			if(j==OPEN) j=-1;
 			if(j>=0)	// (reg)
 			{
 				if(j==IX||j==IY) m = q.peekChar()==')' ? 0 : value(q,pAny,u);
@@ -2261,18 +2309,19 @@ dw:		do { storeWord(value(q,pAny,v=1)); } while(q.testComma());
 		return;
 	}
 	case 'defb':	// defb und defm synonym behandeln.
-	case 'defm':	// erlaube jede Mixtur von literal, label, "text", 'Text', 'c' Char, $abcdef stuffed hex, usw.
+	case 'defm':	// erlaube jede Mixtur von literal, label, "text", 'c' Char, $abcdef stuffed hex, usw.
 	{
 dm:db:	w = q.nextWord();
 		if(*w==0) throw syntax_error("value expected");
 
-	// Text string or character literal:
-		if(w[0]=='\'' || w[0]=='"')
+	// Text string:
+		if(w[0]=='"')
 		{
 			n = strlen(w);
 			if(n<2 || w[n-1]!=w[0]) throw syntax_error("closing quotes expected");
 			w = unquotedstr(w);
-cb:			storeBlock(w, strlen(w));
+cb:			if(charset) w = charset->translate(w); else w = fromutf8str(w);
+			storeBlock(w, strlen(w));
 			q.skip_spaces();
 			if(q.test_char('+'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() + n,v); } else
 			if(q.test_char('-'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() - n,v); } else
@@ -2287,6 +2336,7 @@ cb:			storeBlock(w, strlen(w));
 		}
 
 	// Stuffed Hex:
+	// bytes are stored in order of occurance: in $ABCD byte $AB is stored first!
 		n = strlen(w);
 		if(n>3 && w[0]=='$')
 		{

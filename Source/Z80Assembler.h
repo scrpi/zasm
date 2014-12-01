@@ -41,6 +41,7 @@
 extern const char DEFAULT_CODE_SEGMENT[];
 
 #define TAE	throw(any_error)
+class CharMap;
 
 
 
@@ -96,6 +97,9 @@ public:
 	uint		c_qi;			// index of source file in cc_argv[]
 	uint		c_zi;			// index of output file in cc_argv[]
 
+// more:
+	CharMap*	charset;
+
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) TAE;
 	void	asmLabel		(SourceLine&)				TAE;
@@ -114,6 +118,7 @@ private:
 	void	asmEnd			(SourceLine&)				TAE;
 	void	asmInstr		(SourceLine&)				TAE;
 	void	asmAssert		(SourceLine&)				TAE;
+	void	asmCharset		(SourceLine&)				TAE;
 	cstr	compileFile		(cstr, cstr tempdir)		TAE;
 
 	void	storeOpcode     (int n)						TAE	{ current_segment().store(n); }
