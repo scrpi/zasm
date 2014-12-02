@@ -34,6 +34,7 @@ typedef uint16		UCS2Char;
 typedef uint32		UCS4Char;
 typedef	char*		UTF8Str;	// c-style string
 typedef char const* cUTF8Str;	// c-style string literals in utf-8 encoded source files
+typedef uchar*		pstr;		// length prefixed string
 
 
 class CharMap : private HashMap<UCS2Char,uchar>
@@ -54,7 +55,7 @@ public:
 	void	removeMappings (cUTF8Str) throw(data_error);
 	uchar	get			(UCS2Char, uchar dflt) const;
 	uchar	operator[]	(UCS2Char) const throw(index_error);
-	cstr	translate	(cUTF8Str) throw(data_error);
+	pstr	translate	(cUTF8Str) throw(data_error);
 };
 
 #endif // CHARMAP_H

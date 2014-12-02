@@ -73,26 +73,29 @@ static cstr help =
 "  send bug reports to: kio@little-bat.de\n\n"
 
 "syntax:\n"
-"  zasm [-uwbxs] [-i] inputfile [[-l] listfile_or_dir] [[-o] outfile_or_dir]\n\n"
+"  zasm [options] [-i] inputfile [[-l] listfile|dir] [[-o] outfile|dir]\n\n"
 
 "  default output dir = source dir\n"
 "  default list dir = output dir\n\n"
 
 "examples:\n"
 "  zasm speccirom.asm\n"
-"  zasm -uw speccirom.src rom_v2.0.1.rom\n\n"
+"  zasm -uwy speccirom.src rom_v2.0.1.rom\n\n"
 
 "options:\n"
-"  -u   include object code in list file\n"
-"  -w   include label list in list file\n"
-"  -b   write output to binary file (default)\n"
-"  -x   write output in intel hex format\n"
-"  -s   write output in motorola s-record format\n"
-"  -o0  don't write output file"
-"  -l0  don't write list file"
-"  -v[0,1,2]       tweak messages to stderr (0=off,1=dflt,2=more)\n"
-"  -c path/to/cc   set path to c compiler   (default: sdcc in $PATH)\n"
-"  -t path/to/dir  set path to temp dir     (default: output dir)\n\n"
+"  -u  --opcodes   include object code in list file\n"
+"  -w  --labels    append label listing to list file\n"
+"  -y  --cycles    include cpu clock cycles in list file\n"
+"  -b  --bin       write output to binary file (default)\n"
+"  -x  --hex       write output in intel hex format\n"
+"  -s  --s19       write output in motorola s-record format\n"
+"  -z  --clean     clear intermediate files, e.g. compiled c files\n"
+"  -o0             don't write output file\n"
+"  -l0             don't write list file\n"
+"  -v[0,1,2]       verbosity of messages to stderr (0=off,1=default,2=more)\n"
+"  -c path/to/cc   set path to c compiler (default: sdcc in $PATH)\n"
+"  -t path/to/dir  set path to temp dir for c compiler (default: output dir)"
+"  -I path/to/dir  set path to c system header dir (default: sdcc default)\n\n"
 
 "–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\n"
 "";
@@ -110,26 +113,39 @@ int main( int argc, cstr argv[] )
 // options:
 	uint verbose     = 1;	// 0=off, 1=default, 2=verbose
 	uint outputstyle = 'b';	// 0=none, 'b'=binary, 'x'=intel hex, 's'=motorola s-records
-	uint liststyle   = 1;	// 0=none, 1=plain, 2=with objcode, 4=with label listing, 6=both
+	uint liststyle   = 1;	// 0=none, 1=plain, 2=with objcode, 4=with label listing, 6=both, 8=clock cycles
+	bool clean		 = no;
 // filepaths:
 	cstr inputfile  = NULL;
 	cstr outputfile = NULL;	// or dir
 	cstr listfile   = NULL;	// or dir
 	cstr tempdir    = NULL;
 	cstr c_compiler = NULL;
+	cstr c_includes	= NULL;
 
 //	eval arguments:
-	int i=1;
-	while(i<argc)
+	for(int i=1; i<argc; )
 	{
 		cptr s = argv[i++];
 
-		if(*s != '-')
+		if(s[0] != '-')
 		{
 			if(!inputfile)  { inputfile = s; continue; }
 			// if outfile is not prefixed with -o then it must be the last argument:
 			if(!outputfile && i==argc) { outputfile = s; continue; }
 			if(!listfile)   { listfile = s; continue; }
+			goto h;
+		}
+
+		if(s[1]=='-')
+		{
+			if(eq(s,"--clean"))   { clean=yes; continue; }
+			if(eq(s,"--bin"))	  { outputstyle='b'; continue; }
+			if(eq(s,"--hex"))	  { outputstyle='x'; continue; }
+			if(eq(s,"--s19"))	  { outputstyle='s'; continue; }
+			if(eq(s,"--opcodes")) { liststyle |= 2; continue; }
+			if(eq(s,"--labels"))  { liststyle |= 4; continue; }
+			if(eq(s,"--cycles"))  { liststyle |= 8; continue; }
 			goto h;
 		}
 
@@ -139,11 +155,13 @@ int main( int argc, cstr argv[] )
 			{
 			case 'u': liststyle |= 2; continue;
 			case 'w': liststyle |= 4; continue;
+			case 'y': liststyle |= 8; continue;
 			case 's': outputstyle=c; continue;
 			case 'x': outputstyle=c; continue;
 			case 'b': outputstyle=c; continue;
+			case 'z': clean=yes; continue;
 
-			case 'v': if(*(s+1)>='0' && *(s+1)<='3') verbose = *++s - '0'; else ++verbose; break;
+			case 'v': if(*(s+1)>='0' && *(s+1)<='3') verbose = *++s - '0'; else ++verbose; continue;
 
 			case 'i': if(inputfile  || i==argc) goto h; else inputfile  = argv[i++]; continue;
 			case 'o': if(*(s+1)=='0') { outputstyle = 0; ++s; continue; }
@@ -151,9 +169,9 @@ int main( int argc, cstr argv[] )
 			case 'l': if(*(s+1)=='0') { liststyle = 0; ++s; continue; }
 					  if(listfile   || i==argc) goto h; else listfile   = argv[i++]; continue;
 
+			case 'I': if(c_includes || i==argc) goto h; else c_includes = argv[i++]; continue;
 			case 'c': if(c_compiler || i==argc) goto h; else c_compiler = argv[i++]; continue;
-			case 't': if(tempdir || i==argc) goto h; else tempdir = argv[i++]; continue;
-
+			case 't': if(tempdir    || i==argc) goto h; else tempdir    = argv[i++]; continue;
 			default:  goto h;
 			}
 		}
@@ -205,6 +223,18 @@ int main( int argc, cstr argv[] )
 		return 1;
 	}
 
+// check c_includes path:
+	if(c_includes)
+	{
+		c_includes = fullpath(c_includes);
+		if(errno==ok && lastchar(c_includes)!='/') errno = ENOTDIR;
+		if(errno)
+		{
+			if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", c_includes, strerror(errno));
+			return 1;
+		}
+	}
+
 // check cc_path:
 	if(c_compiler)
 	{
@@ -246,8 +276,9 @@ int main( int argc, cstr argv[] )
 // DO IT!
 	Z80Assembler ass;
 	ass.verbose = verbose;
+	if(c_includes) ass.c_includes = c_includes;
 	if(c_compiler) ass.c_compiler = c_compiler;
-	ass.assembleFile( inputfile, outputfile, listfile, listfile, liststyle, outputstyle);
+	ass.assembleFile( inputfile, outputfile, listfile, listfile, liststyle, outputstyle, clean );
 
 	if(!verbose)
 		return ass.errors.count()>0;		// 0=ok, 1=error(s)

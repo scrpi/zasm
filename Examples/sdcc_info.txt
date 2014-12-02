@@ -49,8 +49,8 @@ Code generation options:
 
 	--callee-saves func[,func,...]  Cause the called function to save registers instead of the caller
 	--profile             On supported ports, generate extra profiling information	TODO: z80?
-	--fomit-frame-pointer  Leave out the frame pointer.
-	--all-callee-saves    callee will always save all registers used
+	--fomit-frame-pointer Leave out the frame pointer.
+	--all-callee-saves    all functions save and restore all registers
 	--stack-probe         insert call to function __stack_probe at each function prologue
 	--no-c-code-in-asm    don't include c-code as comments in the asm file
 	--no-peep-comments    don't include peephole optimizer comments

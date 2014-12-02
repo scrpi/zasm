@@ -88,11 +88,11 @@ Z80Assembler::Z80Assembler()
 
 	c_flags.append("-mz80");			// machine = Z80
 	c_flags.append("-S");				// Preprocess & compile only
-//	c_flags.append("--nostdinc");
-//	c_flags.append("-Iinclude");		// <-- sollte cmd line option sein
-
-//	c_flags.append("-fomit-frame-pointer");	//
-//	c_flags.append("--all-callee-saves");	// all called functions save all registers
+	if(c_includes)
+	{
+		c_flags.append("--nostdinc");
+		c_flags.append(catstr("-I",c_includes));	// -Iincludepath
+	}
 }
 
 
@@ -277,8 +277,8 @@ void Z80Assembler::addError( cstr text )
 		segments[];		// code and data segments
 		errors[];
 */
-void Z80Assembler::assembleFile( cstr sourcefile, cstr destpath, cstr listpath, cstr temppath,
-								 int liststyle, int deststyle ) throw()
+void Z80Assembler::assembleFile(cstr sourcefile, cstr destpath, cstr listpath, cstr temppath,
+								 int liststyle, int deststyle , bool clean) throw()
 {
 	timestamp = now();
 
@@ -303,6 +303,7 @@ void Z80Assembler::assembleFile( cstr sourcefile, cstr destpath, cstr listpath, 
 
 	temp_directory = temppath ? temppath : dest_directory;
 	XXXASSERT(is_dir(temp_directory));
+	if(clean) delete_dir(catstr(temp_directory,"s/"),yes);
 
 	StrArray source;
 	source.append( catstr("#include ", quotedstr(sourcefile)) );
@@ -594,10 +595,11 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 		}
 		else if(w[0]=='\'')			// ascii number
 		{							// uses utf-8 or charset translation
-			n=strlen(w); if(n<3||w[n-1]!='\'') goto syntax_error; else n=0;
+			uint slen = strlen(w); if(slen<3||w[slen-1]!='\'') goto syntax_error;
 			w = unquotedstr(w);		// unquote & unescape
-			if(charset) w = charset->translate(w); else w = fromutf8str(w);
-			while(*w) n = (n<<8) + (uint8)*w++;
+			if(charset) { w = (cstr) charset->translate(w); slen = (uint8) *w++; }
+			else		{ w = fromutf8str(w); slen = strlen(w); }
+			while(slen--) n = (n<<8) + (uint8) *w++;
 			goto op;
 		}
 		else if(is_dec_digit(w[0]))	// decimal number
@@ -658,6 +660,22 @@ lo:			n = uint8(value(q,pAny,valid));
 		else if(eq(w,"hi"))
 		{
 hi:			n = uint8(value(q,pAny,valid)>>8);
+			q.expect(')');
+			goto op;
+		}
+		else if(eq(w,"min"))
+		{
+			n = value(q,pAny,valid);
+			q.expectComma();
+			n = min(n,value(q,pAny,valid));
+			q.expect(')');
+			goto op;
+		}
+		else if(eq(w,"max"))
+		{
+			n = value(q,pAny,valid);
+			q.expectComma();
+			n = max(n,value(q,pAny,valid));
 			q.expect(')');
 			goto op;
 		}
@@ -1187,6 +1205,11 @@ cstr Z80Assembler::compileFile(cstr fqn, cstr tempdir) throw(any_error)
 	{
 		c_flags.append("-mz80");
 		c_flags.append("-S");
+		if(c_includes)
+		{
+			c_flags.append("--nostdinc");
+			c_flags.append(catstr("-I",c_includes));	// -Iincludepath
+		}
 	}
 
 	cstr fqn_q = fqn;
@@ -2318,10 +2341,11 @@ dm:db:	w = q.nextWord();
 		if(w[0]=='"')
 		{
 			n = strlen(w);
-			if(n<2 || w[n-1]!=w[0]) throw syntax_error("closing quotes expected");
+			if(n<3 || w[n-1]!='"') throw syntax_error("closing quotes expected");
 			w = unquotedstr(w);
-cb:			if(charset) w = charset->translate(w); else w = fromutf8str(w);
-			storeBlock(w, strlen(w));
+cb:			if(charset) { w = (cstr) charset->translate(w); n = (uint8) *w++; }
+			else		{ w = fromutf8str(w); n = strlen(w); }
+			storeBlock(w,n);
 			q.skip_spaces();
 			if(q.test_char('+'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() + n,v); } else
 			if(q.test_char('-'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() - n,v); } else

@@ -198,9 +198,10 @@ uchar CharMap::operator[](UCS2Char key) const throw(index_error)
 	return HashMap::operator[](key);
 }
 
-cstr CharMap::translate( cptr q ) throw(data_error)
+pstr CharMap::translate( cptr q ) throw(data_error)
 {
-	str z = tempstr(strlen(q));
+	pstr zstr = (pstr) tempstr(strlen(q));
+	uptr z = zstr;
 
 	while(*q)
 	{
@@ -208,14 +209,29 @@ cstr CharMap::translate( cptr q ) throw(data_error)
 		UCS2Char key = ucs2_from_utf8(q);
 		while(utf8_is_fup(*++q)) {}
 
-		int idx = indexof(key);
-		if(idx==-1) throw data_error(usingstr("target character set does not contain '%s'",substr(q0,q)));
-
-		*z++ = items[idx];
+		if(key<128 && charmap[key]!=NC)
+		{
+			*z++ = charmap[key];
+		}
+		else
+		{
+			int idx = indexof(key);
+			if(idx<0) throw data_error(usingstr("target character set does not contain '%s'",substr(q0,q)));
+			*z++ = items[idx];
+		}
 	}
-	*z = 0;
-	return z;
+
+	*zstr = z-zstr+1;
+	return zstr;
 }
+
+
+
+
+
+
+
+
 
 
 

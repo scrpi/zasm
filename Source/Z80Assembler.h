@@ -93,6 +93,7 @@ public:
 
 // c compiler:
 	cstr		c_compiler;		// fqn to sdcc or similar
+	cstr		c_includes;		// custom include dir or NULL
 	Array<cstr>	c_flags;
 	uint		c_qi;			// index of source file in cc_argv[]
 	uint		c_zi;			// index of output file in cc_argv[]
@@ -154,8 +155,9 @@ public:
 							 cstr destpath=NULL,		// dflt = source directory, may be dir or filename
 							 cstr listpath=NULL,		// dflt = dest direcory, may be dir or filename
 							 cstr temppath=NULL,		// dflt = dest dir, must be dir
-							 int liststyle='1',			// '0'=none, '1'=plain, '2'=w/ocode, '4'=w/labels
-							 int deststyle='b')		throw();// '0'=none, 'b'=bin, 'x'=intel hex, 's'=moto s19
+							 int  liststyle=1,			// 0=none, 1=plain, 2=w/ocode, 4=w/labels, 8=w/clkcycles
+							 int  deststyle='b',		// 0=none, 'b'=bin, 'x'=intel hex, 's'=moto s19
+							 bool clean=no)			throw();
 	void	assemble		(StrArray& sourcelines)	throw();
 	void	assembleLine	(SourceLine&)			TAE;
 
