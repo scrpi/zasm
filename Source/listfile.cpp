@@ -32,7 +32,7 @@
 #include "unix/files.h"
 #include "unix/tempmem.h"
 #include "helpers.h"
-
+#include "Libraries/Z80/Z80_clock_cycles.h"
 
 
 /*	Helper: write one line with address, code and text to log file
@@ -42,7 +42,7 @@
 	offset	= offset in bytes[]
 	text	= source line etc.
 
-	returns:  bytes printed. (may be faked to 'oll' for longish fillers)
+	returns:  bytes printed. (may be faked to 'all' for longish fillers)
 
 	if multiple lines must be printed for an opcode (a 'defs' or similar)
 	then address, bytes and count must not be incremented by the caller
@@ -84,6 +84,107 @@ uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uin
 		}
 
 		fd.write_fmt("%04X: %08X\t%s\n", address, peek4X(bytes), text);
+		return 4;
+	}
+}
+
+
+/*	calculate string with accumulated cpu clock cycles for z80 instruction
+	the returned string has in most cases 9 characters.
+	for very long code threads without any labels this string may be longer.
+
+	the cycle couter cc is accumulated.
+	cc should be reset at every label. this must be done by the caller.
+
+	format:
+		"[123|123]" for branching opcodes
+		"[123]    " for all other opcodes
+*/
+static cstr cc_str(uint8* bytes, uint count, uint32& cc, bool is_data)
+{
+	if(is_data) return "         ";		// spacestr(9)
+
+	XXXASSERT(count>=1 && count<=4);
+
+	// TODO: verify opcode length
+
+	uint8 op1 = bytes[0];
+	uint8 op2 = count>=2 ? bytes[1] : 0;
+
+	bool can_branch = z80_opcode_can_branch(op1,op2);
+	if(can_branch)
+	{
+		uint a = cc + z80_clock_cycles(op1,op2,0);			// print accumulated time after instruction
+		uint b = op1==0xed ? 21 :							// for ldir etc. print loop time (always 21)
+				 cc + z80_clock_cycles_on_branch(op1,op2);	// for other instructions print accum. time as for a
+		cc = a;
+
+		str s = usingstr("[%2u|%2u]  ", a, b);
+		if(strlen(s)>9) s[9] = 0;
+		return s;
+	}
+	else
+	{
+		uint8 op4 = count>=4 ? bytes[3] : 0;
+		cc += z80_clock_cycles(op1,op2,op4);
+
+		str s = usingstr("[%2u]     ", cc);
+		s[9] = 0;
+		return s;
+	}
+}
+
+/*
+	format:
+	1234: 12345678 [234|235]sourceline
+*/
+static
+uint write_line_with_objcode_and_cycles( FD& fd, uint address, uint8* bytes, uint count, uint offset,
+										 uint32& cc, bool is_data, cstr text )
+{
+	XXXASSERT(offset==0 || is_data);
+
+	address += offset;
+	bytes   += offset;
+	count   -= offset;
+
+	switch(count)
+	{
+	case 0:
+		fd.write_fmt("%04X:                   %s\n",  address&0xffff, text);
+		return 0;
+	case 1:
+		fd.write_fmt("%04X: %02X       %s%s\n", address, peek1X(bytes), cc_str(bytes,count,cc,is_data), text);
+		return 1;
+	case 2:
+		fd.write_fmt("%04X: %04X     %s%s\n",  address, peek2X(bytes), cc_str(bytes,count,cc,is_data), text);
+		return 2;
+	case 3:
+		fd.write_fmt("%04X: %06X   %s%s\n",    address, peek3X(bytes), cc_str(bytes,count,cc,is_data), text);
+		return 3;
+	case 4:
+		fd.write_fmt("%04X: %08X %s%s\n",    address, peek4X(bytes), cc_str(bytes,count,cc,is_data), text);
+		return 4;
+	default:
+		XXXASSERT(is_data);
+		// wenn zuletzt 4 gleiche Bytes geloggt wurden
+		// und noch mehr als 4 Bytes folgen
+		// und nur noch diese Bytes folgen
+		// dann verkürze die ausgegebenen Datenbytes mit "...":
+		if(offset>=4 && count>4)
+		{
+			uint8* p = bytes-4;
+			uint8* e = bytes+count;
+			uint8  c = *p++;
+			while(p<e && *p==c) ++p;
+			if(p==e)
+			{
+				fd.write_fmt("%04X: %02X...             %s\n", address, peek1X(bytes), text);
+				return count;
+			}
+		}
+
+		fd.write_fmt("%04X: %08X          %s\n", address, peek4X(bytes), text);
 		return 4;
 	}
 }
@@ -193,6 +294,8 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	//
 	if(style&2)
 	{
+		uint32 cc = 0;
+
 		while( si<source.count() )
 		{
 			SourceLine& sourceline = source[si++];
@@ -226,7 +329,16 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 			// print line with address, up to 4 opcode bytes and source line:
 			// note: real z80 opcodes have max. 4 bytes
-			offset = write_line_with_objcode(fd, address, bytes, count, 0, sourceline.text);
+			if(style&8)
+			{
+				if(sourceline.is_label) cc = 0;
+				bool is_data = sourceline.is_data;
+				offset = write_line_with_objcode_and_cycles(fd, address, bytes, count, 0, cc, is_data, sourceline.text);
+			}
+			else
+			{
+				offset = write_line_with_objcode(fd, address, bytes, count, 0, sourceline.text);
+			}
 
 			// print errors and suppress printing of further opcode bytes:
 			while( ei<errors.count() && errors[ei].sourceline == &sourceline )

@@ -33,10 +33,9 @@
 #include "Templates/Array.h"
 #include "SyntaxError.h"
 
-
-
-
+class Label;
 class Segment;
+
 
 inline bool is_space ( unsigned char c )	{ return c<=' ' && c>0; }
 inline bool is_idf	 ( char c ) { return is_letter(c) || is_dec_digit(c) || c=='_'; }
@@ -62,6 +61,9 @@ public:
 	Segment* segment;			// of object code
 	uint	byteptr;			// index of object code in segment
 	uint	bytecount;			// of bytes[]
+
+	bool	is_label;			// if a label is defined in this line
+	bool	is_data;			// if generated data is no executable code
 
 	cptr	p;					// for source parser
 

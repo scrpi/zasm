@@ -24,9 +24,9 @@ const char so_many_days_per_month[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
 
 	void Intr(void) __naked __interrupt 0
 	{
-		__asm__(" exx\n");
+		__asm__(" exx\n ex af,af'\n");
 		a_counter++;
-		__asm__(" exx\n reti\n");
+		__asm__(" exx\n ex af,af'\n reti\n");
 	}
 
 	void NMI_Intr(void) __critical __interrupt

@@ -85,6 +85,8 @@ SourceLine::SourceLine(cstr sourcefile, uint linenumber, cstr text)
 	segment(NULL),
 	byteptr(0),
 	bytecount(0),
+	is_label(no),
+	is_data(no),
 	p(text)
 {}
 

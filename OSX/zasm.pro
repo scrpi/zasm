@@ -44,6 +44,7 @@ SOURCES += \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
+    Libraries/Z80/Z80_clock_cycles.cpp
 
 HEADERS += \
     Source/Error.h \
@@ -56,6 +57,7 @@ HEADERS += \
     Source/settings.h \
 	Source/Z80Head.h \
 	Source/CharMap.h \
+    Source/helpers.h \
     config.h \
     Libraries/cstrings/base85.h \
     Libraries/cstrings/cstrings.h \
@@ -70,7 +72,7 @@ HEADERS += \
 	Libraries/kio/peekpoke.h \
     Libraries/Templates/Array.h \
     Libraries/Templates/HashMap.h \
-    Source/helpers.h \
+    Libraries/Z80/Z80_clock_cycles.h \
 
 OTHER_FILES += \
     ../.gitignore \

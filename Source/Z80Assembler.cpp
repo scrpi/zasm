@@ -287,9 +287,9 @@ void Z80Assembler::assembleFile(cstr sourcefile, cstr destpath, cstr listpath, c
 	if(listpath) listpath = fullpath(listpath); XXASSERT(errno==ok || errno==ENOENT);
 	if(temppath) temppath = fullpath(temppath); XXASSERT(errno==ok && is_dir(temppath));
 
-	XXASSERT(liststyle>=0 && liststyle<=7);
+	XXASSERT(liststyle>=0 && liststyle<=15);
 	XXASSERT(deststyle==0 || deststyle=='b' || deststyle=='x' || deststyle=='s');
-
+	if(liststyle&8) liststyle |= 2;	// "mit clock cycles" implies "with opcodes"
 
 	source_directory = directory_from_path(sourcefile);
 	source_filename  = filename_from_path(sourcefile);
@@ -781,6 +781,8 @@ op:
 void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 {
 	XXXASSERT(q.p==q.text+(q[0]=='!'));
+
+	q.is_label = yes;		// this source line defines a label
 
 	cstr name = q.nextWord();
 	bool is_reusable = is_dec_digit(name[0]) && q.test_char('$');				// SDASZ80
@@ -2322,19 +2324,22 @@ wlen4:
 	default:		goto unknown_opcode;	// error
 	case 'defs':	// space
 	{
-ds:		n = value(q,pAny,v=1);
+ds:		q.is_data = yes;
+		n = value(q,pAny,v=1);
 		if(q.testComma()) { bool u=1; storeSpace(n,v,value(q,pAny,u)); } else storeSpace(n,v);
 		return;
 	}
 	case 'defw':
 	{
-dw:		do { storeWord(value(q,pAny,v=1)); } while(q.testComma());
+dw:		q.is_data = yes;
+		do { storeWord(value(q,pAny,v=1)); } while(q.testComma());
 		return;
 	}
 	case 'defb':	// defb und defm synonym behandeln.
 	case 'defm':	// erlaube jede Mixtur von literal, label, "text", 'c' Char, $abcdef stuffed hex, usw.
 	{
-dm:db:	w = q.nextWord();
+dm:db:	q.is_data = yes;
+		w = q.nextWord();
 		if(*w==0) throw syntax_error("value expected");
 
 	// Text string:
@@ -2427,6 +2432,7 @@ sh:			if(n&1) throw syntax_error("even number of hex characters expected");
 wlenXL:
 	if(eq(w,"align"))				// align <value> [,<filler>]
 	{								// note: current address is evaluated as uint
+		q.is_data = yes;
 		n = value(q,pAny,v=1);
 		if(v&&n<1) throw syntax_error("alignment value must be ≥ 1");
 		if(v&&n>0x4000) throw syntax_error("alignment value must be ≤ $4000");
