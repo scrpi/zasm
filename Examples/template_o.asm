@@ -1,7 +1,11 @@
+; ================================================================
+;	Example source with target 'o' or '80'
+;	ZX80 tape file / snapshot
+;	Copyright  (c)	Günter Woigk 1994 - 2014
+;					mailto:kio@little-bat.de
+; ================================================================
 
-; Example zasm source with target 'o' or '80':
-; 
-; ZX80 tape file / snapshot
+
 ; "o" and "80" files are the same and used for saving ZX80 programs.
 ; The file consists of the raw ram data as saved by the ZX80 tape saving routine.
 ; The data is save from and loaded back to address $4000++.
@@ -18,13 +22,13 @@
 ; 	The system area should contain proper data.
 ; 	$400A       (2 bytes) defines the data end address (used to calculate the file length).
 ; 	$4028++     may be misused for whatever purpose.
-; 
-; 	While loading, the data at address $400A/400B is overwritten. After this they contain 
+;
+; 	While loading, the data at address $400A/400B is overwritten. After this they contain
 ; 	the real data end address of the data loaded and define when loading will stop. :-)
-; 
+;
 ; 	Files should usually not exceed 16 kBytes.
 ; 	The memory detection procedure in both ZX80 and ZX81 stops after 16 kBytes (at $8000),
-; 
+;
 ;
 ; ---------------------------------------------------------------
 ; 					The Character Set
@@ -46,7 +50,7 @@
 
 
 
- 
+
 #target o			; output file is saved with filename extension ".o"
 ;#target 80			; output file is saved with filename extension ".80"
 
@@ -55,7 +59,7 @@
 ; 					THE SYSTEM VARIABLES
 ; ---------------------------------------------------------------
 ;
-; Note: the names of the system variables are taken from the original Nine Tiles Assembly Listing. 
+; Note: the names of the system variables are taken from the original Nine Tiles Assembly Listing.
 ; Example values are taken _AS_AN_EXAMPLE_ONLY_ from Breakout (Macronics, 1980)
 ;
 #code SYSVARS, 0x4000, 0x28
@@ -105,7 +109,7 @@ CH_ADD	 dw	$FFFF	; X2  16422 $4026 IY+$26	Address of next character to be interp
 ;#code DFILE
 
 
-; TODO: add code for Basic loader 
+; TODO: add code for Basic loader
 
 
 

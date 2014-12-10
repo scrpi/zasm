@@ -8,30 +8,33 @@ A problem with the sdcc documentation is, that many options are for the MCS51 po
 Command line options
 --------------------
 
+Options marked with 'x' are unlikely to work with zasm.
+Options marked with '-' are probably not useful with zasm.
+
 Command line options which are set by default by zasm:
-Note: in an .asm file you can use #CFLAGS to set or add compiler options for #INCLUDEd c files.
+Note: in a .asm file you can use #CFLAGS to set or add compiler options for #INCLUDEd .c files.
 
 	-S                    	Compile only; do not assemble or link (this will be done by zasm)
 	-mz80                 	Set the port to z80
 
 General command line options:
 
-	-Dname[=value]        	Define macro 
+	-Dname[=value]        	Define macro
 	-Ipath                	Add to the header include path
-	-o path               	Place the output into the given directory or file
 	--nostdinc            	Do not include the standard directory in the #include search path
 	--Werror              	Treat warnings as errors
 	--std-c89             	Use C89 standard (slightly incomplete)
 	--std-sdcc89          	Use C89 standard with SDCC extensions (default)
 	--std-c99             	Use C99 standard (incomplete)
 	--std-sdcc99          	Use C99 standard with SDCC extensions
-	--funsigned-char      	Make "char" unsigned by default  
+	--funsigned-char      	Make "char" unsigned by default
 	--disable-warning nnnn 	Disable specific warning
 
 	--print-search-dirs   	Display the directories in the compiler's search path
-	-E  --preprocessonly  	Preprocess only, do not compile  
+	-E  --preprocessonly  	Preprocess only, do not compile
 	--use-stdout          	Send errors to stdout instead of stderr
-	
+
+x	-o path               	Place the output into the given directory or file
 x	--std-c11             	Use C11 standard (very incomplete)	(PREPROCESSOR FAILS)
 -	--debug               	Enable debugging symbol output
 -	--cyclomatic          	Display complexity of compiled functions
@@ -41,34 +44,42 @@ x	--nostdlib            	Do not include the standard directory in the library se
 x	--use-non-free        	Search / include non-free licensed libraries and header files (probably PIC)
 x	--fdollars-in-identifiers  Permit '$' as an identifier character (INCOMPATIBLE WITH ZASM)
 -	--c1mode	          	Act in c1 mode.  The standard input is preprocessed code, the output is assembly code.
-x	-c  --compile-only    	Compile and assemble, but do not link 
+x	-c  --compile-only    	Compile and assemble, but do not link
 	-A -U -M              	Preprocessor option
 	-W                    	Pass through options to the pre-processor (p), assembler (a) or linker (l)
 
 Code generation options:
 
 	--callee-saves func[,func,...]  Cause the called function to save registers instead of the caller
-	--profile             On supported ports, generate extra profiling information	TODO: z80?
-	--fomit-frame-pointer Leave out the frame pointer.
-	--all-callee-saves    all functions save and restore all registers
-	--stack-probe         insert call to function __stack_probe at each function prologue
-	--no-c-code-in-asm    don't include c-code as comments in the asm file
-	--no-peep-comments    don't include peephole optimizer comments
-	--codeseg name		  put code (and const's) in .area _name 
+	--all-callee-saves		all functions save and restore all registers
+	--callee-saves-bc		all functions save/restore BC on entry/exit (z80 only)
+	--profile				On supported ports, generate extra profiling information	TODO: z80?
+	--fomit-frame-pointer	Leave out the frame pointer.
+	--fno-omit-frame-pointer  Never omit frame pointer (z80 only)
+	--stack-probe			insert call to function __stack_probe at each function prologue
+	--no-c-code-in-asm		don't include c-code as comments in the asm file
+	--no-peep-comments		don't include peephole optimizer comments
+	--codeseg name			put code (and const's) in .area _name, e.g. --codeseg CODE => .area _CODE
+	--reserve-regs-iy		Do not use IY (incompatible with --fomit-frame-pointer) (z80 only)
 
--	--short-is-8bits      Make short 8 bits (for old times sake)	
-x	--no-xinit-opt        don't memcpy initialized xram from code		(z80: done by crt0.s)
-x	--constseg name		  use this name for the const segment			(z80: does not work)
-x	--model-small         internal data space is used (default)			(MCS51)
-x	--model-medium        external paged data space is used				(MCS51)
-x	--model-large         external data space is used					(MCS51)
-x	--model-huge          functions are banked, data in external space	(MCS51)
-x	--stack-auto          Stack automatic variables						(z80: all variables always on stack)
-x	--xstack              Use external stack							(MCS51)
-x	--int-long-reent      Use reentrant calls on the int and long support functions  (z80: all functions are reentrant)
+-	--short-is-8bits		Make short 8 bits (for old times sake)
+-	--oldralloc				Use old register allocator						(z80 only)
+x	--no-std-crt0			For the z80/gbz80 do not link default crt0.rel	(z80 only)
+x	--constseg name			use this name for the const segment. DOES NOT WORK: const always in code segment! (z80 only)
+x	--portmode=[z80|z180]	Determine PORT I/O mode							(z80 only, z180 etc. not supported)
+x	--asm=[rgbds|sdasz80|isas|z80asm|zasm]  Define assembler name			(z80 only)
+x	--no-xinit-opt        don't memcpy initialized xram from code			(z80: done by crt0.s)
+x	--constseg name		  use this name for the const segment				(z80: does not work)
+x	--stack-auto          Stack automatic variables							(z80: all variables always on stack)
+x	--model-small         internal data space is used (default)				(MCS51)
+x	--model-medium        external paged data space is used					(MCS51)
+x	--model-large         external data space is used						(MCS51)
+x	--model-huge          functions are banked, data in external space		(MCS51)
+x	--xstack              Use external stack								(MCS51)
+x	--xram-movc           Use movc instead of movx to read xram				(MCS51)
+x	--int-long-reent      Use reentrant calls on the int and long support functions (z80: all functions are reentrant)
 x	--float-reent         Use reentrant calls on the float support functions	(z80: all functions are reentrant)
-x	--xram-movc           Use movc instead of movx to read xram			(MCS51)
-x	-p                    Select port specific processor e.g. -mpic14 -p16f84	(zxsp does not support z180 etc.)
+x	-p                    Select port specific processor e.g. -mpic14 -p16f84	(z180 etc. not supported)
 
 Optimization options:
 
@@ -85,14 +96,14 @@ Optimization options:
 	--no-peep-return      No peephole optimization for return instructions
 	--peep-file file	  use this extra peephole file
 	--max-allocs-per-node Maximum number of register assignments considered at each node of the tree decomposition
-	--nolospre            Disable lospre. lospre is an advanced redundancy elimination technique, 
+	--nolospre            Disable lospre. lospre is an advanced redundancy elimination technique,
 						  essentially an improved variant of global subexpression elimination.
-	--lospre-unsafe-read  Allow unsafe reads in lospre. code may sometimes read from random memory locations. 
+	--lospre-unsafe-read  Allow unsafe reads in lospre. code may sometimes read from random memory locations.
 						  (should be ok for the z80, because it has no memory mapped i/o)
 
 -	--opt-code-speed      Optimize for code speed rather than size (not much effect)
 -	--opt-code-size       Optimize for code size rather than speed (not much effect)
-x	--nooverlay           Disable overlaying leaf function auto variables. 
+x	--nooverlay           Disable overlaying leaf function auto variables.
 						  (probably not for z80, because z80 functions are reentrant.)
 
 Internal debugging options:
@@ -105,7 +116,7 @@ mostly for the compiler developers
 -	--fverbose-asm        Include code generator comments in the asm output
 
 Linker options:
-all unusable with zasm, because zasm _is_ the linker
+all unusable with zasm, because zasm is the linker
 
 x	-l					Include the given library in the link
 x	-L					Add the next field to the library search path
@@ -120,21 +131,8 @@ x	--code-loc nnnn		Code Segment Location
 x	--code-size nnnn	Code Segment size
 x	--stack-loc nnnn	Stack pointer initial value
 x	--data-loc nnnn		Direct data start location
-x	--idata-loc           
+x	--idata-loc
 x	--no-optsdcc-in-asm	Do not emit .optsdcc in asm
-
-Options for the z80 port:
-
-	--callee-saves-bc		all functions save/restore BC on entry/exit
-	--codeseg name			define code segment to use, e.g. --codeseg CODE => .area _CODE
-	--reserve-regs-iy		Do not use IY (incompatible with --fomit-frame-pointer)
-	--fno-omit-frame-pointer  Never omit frame pointer
-
--	--oldralloc				Use old register allocator
-x	--no-std-crt0			For the z80/gbz80 do not link default crt0.rel
-x	--constseg name			use this name for the const segment. DOES NOT WORK: const always in code segment!
-x	--portmode=[z80|z180] Determine PORT I/O mode
-x	--asm=[rgbds|sdasz80|isas|z80asm|zasm]  Define assembler name
 
 
 Pragmas
@@ -143,25 +141,25 @@ Pragmas
 #pragma save			save most pragma settings
 #pragma restore			restore last saved
 
-#pragma callee_saves function1[,function2,…]	
-						The compiler by default uses a caller saves convention for register saving across function 
-						calls, however this can cause unnecessary register pushing and popping when calling small 
-						functions from larger functions. The named functions are added to the list which was eventually 
+#pragma callee_saves function1[,function2,…]
+						The compiler by default uses a caller saves convention for register saving across function
+						calls, however this can cause unnecessary register pushing and popping when calling small
+						functions from larger functions. The named functions are added to the list which was eventually
 						set by cmd line option --callee-saves
 
 #pragma exclude  none | {acc[,b[,dpl[,dph[,bits]]]]}
-						The exclude pragma disables the generation of pairs of push/pop instructions in 
-						Interrupt Service Routines. The directive should be placed immediately before the 
-						ISR func- tion definition and it affects ALL ISR functions following it. 
-						To enable the normal register saving for ISR functions use #pragma exclude none. 
+						The exclude pragma disables the generation of pairs of push/pop instructions in
+						Interrupt Service Routines. The directive should be placed immediately before the
+						ISR func- tion definition and it affects ALL ISR functions following it.
+						To enable the normal register saving for ISR functions use #pragma exclude none.
 						See also the related keyword __naked.		TODO: verify: also Z80 port?
-							
+
 #pragma less_pedantic	Don't warn for obvious errors:
-						comparison is always [true/false] due to limited range of data type (94); 
-						overflow in implicit constant conversion (158); 
-						[the (in)famous] conditional flow changed by optimizer: so said EVELYN the modified DOG (110); 
+						comparison is always [true/false] due to limited range of data type (94);
+						overflow in implicit constant conversion (158);
+						[the (in)famous] conditional flow changed by optimizer: so said EVELYN the modified DOG (110);
 						function ’[function name]’ must return value (59).
-						
+
 #pragma disable_warning <nnnn>
 
 #pragma nogcse			No global common subexpression elimination
@@ -170,10 +168,10 @@ Pragmas
 
 #pragma noiv			Do not generate interrupt vector table entries for all ISR functions defined after the pragma.
 						probably NOT FOR Z80.
-						
-#pragma nojtbound		Don't generate code for boundary value checking, when switch statements are turned 
+
+#pragma nojtbound		Don't generate code for boundary value checking, when switch statements are turned
 						into jump-tables. (dangerous)
-						
+
 #pragma noloopreverse	No loop reversal optimization
 
 #pragma nooverlay		Don't overlay the parameters and local variables of a function. (probably NOT FOR Z80.)
@@ -186,12 +184,12 @@ Pragmas
 #pragma std_sdcc99
 #pragma std_c99
 #pragma codeseg name	Put code in .area _name
-			Defines code segment FOR THE WHOLE FILE. 
-			If multiple #pragma codeseg are in the file, then the last one wins.
+						Defines code segment FOR THE WHOLE FILE.
+						If multiple #pragma codeseg are in the file, then the last one wins.
 #pragma constseg name	NO EFFECT FOR Z80: consts are always put in the current code segment.
 
 preprocessor:
-#pragma pedantic_parse_number [+|-]  
+#pragma pedantic_parse_number [+|-]
 							Allow 'LO_B' to be used as macro name. default: NO.
 #pragma preproc_asm [+|-]	Switch the __asm __endasm block preprocessing on/off. default: YES.
 #pragma sdcc_hash [+|-]		Allow naked '#' in macro definitions. used for sdasz80 style assembler. default: NO.
@@ -203,7 +201,7 @@ Defines defined by sdcc:
 	__SDCC					SDCC_3_2_0			how to test value of this macro?
 	__SDCC_REVISION			SVN revision number
 
-	__SDCC_z80				--mz80				default=defined		
+	__SDCC_z80				--mz80				default=defined
 	__SDCC_CHAR_UNSIGNED	--funsigned-char	default=undefined
 	__SDCC_ALL_CALLEE_SAVES	--all-callee-saves	default=undefined
 
@@ -218,7 +216,7 @@ x	__SDCC_USE_XSTACK		--xstack			8051
 ?	SDCC_PARMS_IN_BANK1		--parms-in-bank1	undocumented
 -	__STDC_VERSION__		--std-c89			not defined
 							--std-c99			199901L
-							--std-c11			201112L (to be tested)
+							--std-c11			201112L (to be tested as soon as it works in sdcc)
 
 
 Special code:
@@ -248,7 +246,7 @@ Named address spaces for bank switching:
 
 ei/di and interrupts:
 
-	void Intr(void) __interrupt 0				// INT handler, jump from int vector address must be added 
+	void Intr(void) __interrupt 0				// INT handler, jump from int vector address must be added
 	{ ... }										// manually in asm file
 
 	void nmi_isr (void) __critical __interrupt	// NMI handler

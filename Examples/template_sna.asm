@@ -1,8 +1,12 @@
+; ================================================================
+;	Example file with target 'sna'
+;	NMI snapshot for ZX Spectrum 16k or 48k
+;	Copyright  (c)	Günter Woigk 1994 - 2014
+;					mailto:kio@little-bat.de
+; ================================================================
 
-; example file with target 'sna'
-; NMI snapshot for ZX Spectrum 16k or 48k
-;
-; assembler should check 
+
+; assembler should check
 ; - that the first segment is 27 bytes
 ; - that no data segment is defined
 ; - that total segment size is 0x4000 or 0xc000 bytes
@@ -14,7 +18,7 @@
 
 
 ; ---------------------------------------------------
-;		.sna header: saved registers 
+;		.sna header: saved registers
 ; ---------------------------------------------------
 
 #code HEAD, 0, 27
@@ -55,7 +59,7 @@ code_start:
 
 
 ; ---------------------------------------------------
-;		fast ram: frequently used code, 
+;		fast ram: frequently used code,
 ;		variables and machine stack
 ; ---------------------------------------------------
 

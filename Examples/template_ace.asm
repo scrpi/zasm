@@ -1,7 +1,11 @@
+; ================================================================
+;	Example source for target 'ace'
+;	Emulator snapshot format for Jupiter ACE
+;	Copyright  (c)	Günter Woigk 1994 - 2014
+;					mailto:kio@little-bat.de
+; ================================================================
 
 
-; Example file for target 'ace'
-; Emulator snapshot format for Jupiter ACE
 ;
 ; space is filled with 0x00
 ; #segments have no additional argument
@@ -19,7 +23,7 @@
 ;	$3C00		built-in programme ram
 ;	$4000++		expansion ram
 ;
-; The page copies are blanked-out. 
+; The page copies are blanked-out.
 ; The Z80 registers are saved in the VRAM echo page at $2000.
 
 
@@ -111,8 +115,8 @@ ramtop	equ	$3400+ramsize	; Ramtop: $4000 (3K), $8000(19K), $C000(35K)
 
 ; ______________________________________________________________
 ; ram at $3C00
-; $3C00 - $3FFF built-in programme ram 
-; $4000++       expansion ram 
+; $3C00 - $3FFF built-in programme ram
+; $4000++       expansion ram
 
 #code SYSVARS, 0x3C00, 0x40
 FP_WS		ds	19		; $3C00 (15360)	19 bytes used as work space for floating point arithmetic.
@@ -123,7 +127,7 @@ SCRPOS		dw	0		; $3C1C (15388)	The address of the place in video RAM where the ne
 INSCRN		dw	0		; $3C1E (15390)	The address of the start of the current 'logical line' in the input buffer.
 CURSOR		dw	0		; $3C20 (15392)	The address of the cursor in the input buffer.
 ENDBUF		dw	0		; $3C22 (15394)	The address of the end of the current logical line in the input buffer.
-L_HALF		dw	0		; $3C24 (15396)	The address of the start of the the input buffer. 
+L_HALF		dw	0		; $3C24 (15396)	The address of the start of the the input buffer.
 KEYCOD		db	0		; $3C26 (15398)	The ASCII code of the last key pressed.
 KEYCNT		db	0		; $3C27 (15399)	Used by the routine that reads the keyboard.
 STATIN		db	0		; $3C28 (15400)	Used by the routine that reads the keyboard.
@@ -133,11 +137,11 @@ XCOORD		db	0		; $3C2F (15407)	The x-coordinate last used by 'PLOT'.
 YCOORD		db	0		; $3C30 (15408)	The y-coordinate last used by 'PLOT'.
 CURRENT		dw	0		; $3C31 (15409)	The parameter field address for the vocabulary word of the current vocabulary.
 CONTEXT		dw	0		; $3C33 (15411)	The parameter field address for the vocabulary word of the context vocabulary.
-VOCLNK		dw	0		; $3C35 (15413)	The address of the fourth byte in the parameter field - the vocabulary linkage - 
+VOCLNK		dw	0		; $3C35 (15413)	The address of the fourth byte in the parameter field - the vocabulary linkage -
 STKBOT		dw	0		; $3C37 (15415)	The address of the next byte into which anything will be enclosed in the
-DICT		dw	0		; $3C39 (15417)	The address of the length field in the newest word in the dictionary. 
+DICT		dw	0		; $3C39 (15417)	The address of the length field in the newest word in the dictionary.
 SPARE		dw	0		; $3C3B (15419)	The address of the first byte past the top of the stack.
-ERR_NO		db	0		; $3C3D (15421)	This is usually 255, meaning "no error". 
+ERR_NO		db	0		; $3C3D (15421)	This is usually 255, meaning "no error".
 FLAGS		db	0		; $3C3E (15422)	Shows the state of various parts of the system.
 BASE		db	0		; $3C3F (15423)	The system number base.
 

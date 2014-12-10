@@ -44,7 +44,7 @@ SOURCES += \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
-    Libraries/Z80/Z80_clock_cycles.cpp
+    Libraries/Z80/Z80_clock_cycles.cpp \
 
 HEADERS += \
     Source/Error.h \
@@ -243,23 +243,27 @@ OTHER_FILES += \
     ../Examples/sdcc/device/include/tinibios.h \
     ../Examples/sdcc/device/include/typeof.h \
 	\
-    ../Examples/Jupiter Ace Character Ram.bin \
-    ../Examples/Jupiter Ace Character Ram.asm \
-    ../Examples/template_ace_sysvars.asm \
-    ../Examples/template_ace.asm \
+    ../Examples/main.c \
+    ../Examples/globls.s \
+    ../Examples/sdcc_info.txt \
+    \
+    ../Examples/jupiter_ace_character_ram.s \
+    ../Examples/jupiter_ace_sysvars.s \
+    ../Examples/zx80_sysvars.s \
+    ../Examples/zx81_sysvars.s \
+    ../Examples/zx_spectrum_basic_tokens.s \
+    ../Examples/zx_spectrum_sysvars.s \
+    \
     ../Examples/template_bin.asm \
     ../Examples/template_minimal_rom.asm \
+    ../Examples/template_rom_with_c_code.asm \
     ../Examples/template_o.asm \
     ../Examples/template_p.asm \
     ../Examples/template_rom.asm \
     ../Examples/template_sna.asm \
     ../Examples/template_tap.asm \
     ../Examples/template_z80.asm \
-    ../Examples/template_zx80_sysvars.asm \
-    ../Examples/template_zx81_sysvars.asm \
-    ../Examples/template_zx82_sysvars.asm \
-    ../Examples/template_zx82_basic_tokens.asm \
-    ../Examples/template_zx82_control_codes.asm \
+    ../Examples/template_ace.asm \
     \
     ../Test/main.c \
     ../Test/main.s \
@@ -272,6 +276,7 @@ OTHER_FILES += \
     ../Test/test-tap.lst \
     ../Test/zx82_rom.asm \
     ../Test/zx82_rom.lst \
+    ../Examples/zx_spectrum_io_rom.s
 
 
 

@@ -1,7 +1,10 @@
+; ================================================================
+;	Example tape file with c code for ZX Spectrum
+;	Copyright  (c)	Günter Woigk 1994 - 2014
+;					mailto:kio@little-bat.de
+; ================================================================
 
 
-; Example tape file for ZX Spectrum
-;
 ; fill byte is 0x00
 ; #segment has an additional argument: the sync byte for the block.
 ; The assembler calculates and appends checksum byte to each segment.
@@ -154,28 +157,6 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 
 #code _GSINIT
 
-; set print channel to Screen:
-
-		ld		a,2
-		call	$1601
-
-
-; print "Hello World"
-
-		ld		hl,3$		;_hello_world
-1$		ld		a,(hl)
-		and		a
-		jr		z,2$
-		inc		hl
-		rst		2
-		jr		1$
-
-3$		dm		13, "Hello World!", 13, 0
-2$:
-
-
-#code _GSINIT
-
 ; initialize initialized data:
 
 		ld	bc,_INITIALIZER_len	; length of segment _INITIALIZER
@@ -192,72 +173,6 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 #code _HOME
 
 		jp	_main		; execute main() and return to BASIC
-
-
-
-; ================================================================
-; 	Input & Output:
-; ================================================================
-
-; extern char getchar(void);
-;
-; note:
-;
-; char getchar(void) { return inchar; }
-; -->	ld	hl,#_inchar
-;		ld	l,(hl)
-;		ret
-
-gc1:	halt					; wait for next interrupt -> next key press detect
-
-_getchar::
-		LD		HL,$5C3B        ; FLAGS
-		RES		6,(HL)          ; signal string result.
-;		BIT		7,(HL)          ; checking syntax ?
-;		JR		Z,L2665         ; forward to S-INK$-EN if so
-
-		CALL	$028E           ; routine KEY-SCAN key in E, shift in D.
-;		LD		C,$00           ; the length of an empty string
-;		JR		NZ,L2660        ; to S-IK$-STK to store empty string if no key returned.
-		jr		nz,gc1			; no key available
-
-		CALL	$031E           ; routine K-TEST get main code in A
-;		JR		NC,L2660        ; to S-IK$-STK to stack null string if invalid
-		jr		nc,gc1			; key is invalid
-
-		DEC     D               ; D is expected to be FLAGS so set bit 3 $FF
-								; 'L' Mode so no keywords.
-		LD      E,A				; main key to A
-								; C is MODE 0 'KLC' from above still.
-		CALL    $0333			; routine K-DECODE
-;		PUSH    AF				; save the code
-
-        ld		l,a				; load key into return value
-        ret
-
-
-; extern void putchar(char);
-;
-; note:
-;
-; void putchar(char c) { outchar = c; }
-; -->	push  ix
-;		ld	  ix,#0
-;		add	  ix,sp
-;		ld	  a, 4 (ix)
-;		ld	  (#_outchar),a
-;		pop	  ix
-;		ret
-
-_putchar::
-		ld	  hl,2
-		add	  hl,sp
-		ld	  a,(hl)			; a = char
-		cp	  a,10				; '\n' ?
-		jr	  nz,1$
-		ld	  a,13				; replace 10 with 13
-1$		rst	  2
-		ret
 
 
 
@@ -292,15 +207,36 @@ _putchar::
 #cflags $CFLAGS --nostdinc -Iinclude --reserve-regs-iy
 
 
-; include c files:
+; include .c and other source files:
 ;
 #include "main.c"
 #include "../Examples/sdcc/lib/_days_per_month.c"
 #include "../Examples/sdcc/lib/_asctime.c"
+#include "../Examples/zx_spectrum_io_rom.s"
+
 
 ; resolved missing labels:
 ;
 #include library "library"
+
+
+
+; print "Hello World!" from init code:
+;
+#code _GSINIT
+; print "Hello World"
+
+		ld		hl,3$		; "Hello World!"
+1$		ld		a,(hl)
+		and		a
+		jr		z,2$
+		inc		hl
+		rst		2
+		jr		1$
+2$:
+
+#code _CODE
+3$		dm		13, "Hello World!", 13, 0
 
 
 

@@ -1,8 +1,12 @@
+; ================================================================
+;	Example source with target 'p' or '81'
+;	ZX81 tape file / snapshot
+;	Copyright  (c)	Günter Woigk 1994 - 2014
+;					mailto:kio@little-bat.de
+; ================================================================
 
-; Example zasm source with target 'p' or '81':
-;
-; ZX81 tape file / snapshot
-;
+
+
 ; #target p  /  #target 81
 ;
 ; "p" and "81" files are the same and used when saving ZX81 programs.

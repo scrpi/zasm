@@ -1,8 +1,11 @@
+; ================================================================
+;	Example source for target 'tap'
+;	Tape file for ZX Spectrum and Jupiter ACE
+;	Copyright  (c)	Günter Woigk 1994 - 2014
+;					mailto:kio@little-bat.de
+; ================================================================
 
 
-; Example file for target 'tap'
-; Tape file for ZX Spectrum and Jupiter ACE.
-;
 ; fill byte is 0x00
 ; #segment has an additional argument: the sync byte for the block.
 ; The assembler calculates and appends checksum byte to each segment.

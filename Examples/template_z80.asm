@@ -1,8 +1,11 @@
+; ================================================================
+;	Example file for target 'z80'
+;	Emulator snapshot format for Sinclair computers
+;	Copyright  (c)	Günter Woigk 1994 - 2014
+;					mailto:kio@little-bat.de
+; ================================================================
 
 
-; Example file for target 'z80'
-; Emulator snapshot format for Sinclair computers
-;
 ; space is filled with 0x00
 ;
 ; The first code segment must contain the z80 header data and must be properly set up.
