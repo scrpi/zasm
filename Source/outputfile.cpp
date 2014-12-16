@@ -29,7 +29,7 @@
 #define SAFE 3
 #define LOG 1
 #include "Z80Assembler.h"
-#include "Z80Head.h"
+#include "Z80Header.h"
 #include "helpers.h"
 
 
@@ -50,6 +50,7 @@ void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
 	if(style=='x' && (eq(ext,"rom") || eq(ext,"bin"))) ext = "hex";
 
 	if(endswith(dname,".$")) dname = catstr(leftstr(dname,strlen(dname)-1),ext);
+	target_filepath = dname;
 	FD fd(dname,'w');	// create & open file for writing
 
 	if(eq(ext,"rom") || eq(ext,"bin")) writeBinFile(fd);
@@ -686,7 +687,7 @@ void Z80Assembler::checkZ80File() throw(any_error)
 	Segment& hs = segments[i0];
 	if(hs.flag_valid) throw syntax_error("first code segment must be the z80 file header (no flag!)");
 
-	Z80Head& head = *(Z80Head*)hs.getData();
+	Z80Header& head = *(Z80Header*)hs.getData();
 
 	// handle version 1.45:
 	if(hs.size == z80v1len)

@@ -34,7 +34,7 @@
 #define z80v1len    30
 #define z80v2len    55
 #define z80v3len    86
-#define z80maxlen   sizeof(Z80Head)
+#define z80maxlen   sizeof(Z80Header)
 
 
 enum Model
@@ -53,7 +53,7 @@ enum Model
 
 
 
-struct Z80Head
+struct Z80Header
 {
 	uint8	a,f,c,b,l,h,pcl,pch,spl,sph,i,r, data,
 			e,d,c2,b2,e2,d2,l2,h2,a2,f2,

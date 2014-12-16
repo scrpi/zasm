@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 1994 - 2014
+﻿/*	Copyright  (c)	Günter Woigk 1994 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -69,6 +69,7 @@ Z80Assembler::Z80Assembler()
 	source_filename(NULL),
 	temp_directory(NULL),
 	target(NULL),
+	target_filepath(NULL),
 	current_sourceline_index(0),
 	current_segment_ptr(NULL),
 	local_labels_index(0),
@@ -532,6 +533,24 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 			XXXASSERT(q.bytecount==0);
 		}
 	}
+}
+
+
+/*	Minimalistic single line assembler for use with zxsp:
+	instruction will be prepended with a space
+	=> only instructions, no labels, directives, etc.
+	returns size of assembled instruction or 0 for error
+*/
+uint Z80Assembler::assembleSingleLine(uint address, cstr instruction, char buffer[])
+{
+	StrArray sourcelines;
+	sourcelines.append(catstr(" org ",numstr(address)));	// set the destination address (allow use of '$')
+	sourcelines.append(catstr(" ",instruction));			// the instruction to assemble
+	assemble(sourcelines);
+	if(current_segment_ptr->size>4) addError("resulting code size exceeds size of z80 opcodes");	// defs etc.
+	if(errors.count()) return 0;
+	memcpy(buffer,current_segment_ptr->getData(),current_segment_ptr->size);
+	return current_segment_ptr->size;
 }
 
 

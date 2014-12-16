@@ -32,7 +32,6 @@ SOURCES += \
     Source/Segment.cpp \
     Source/Source.cpp \
     Source/Z80Assembler.cpp \
-	Source/Z80Head.cpp \
 	Source/CharMap.cpp \
     Source/helpers.cpp \
     Source/outputfile.cpp \
@@ -45,6 +44,7 @@ SOURCES += \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
     Libraries/Z80/Z80_clock_cycles.cpp \
+    Source/Z80Header.cpp
 
 HEADERS += \
     Source/Error.h \
@@ -55,7 +55,6 @@ HEADERS += \
     Source/SyntaxError.h \
     Source/Z80Assembler.h \
     Source/settings.h \
-	Source/Z80Head.h \
 	Source/CharMap.h \
     Source/helpers.h \
     config.h \
@@ -73,186 +72,188 @@ HEADERS += \
     Libraries/Templates/Array.h \
     Libraries/Templates/HashMap.h \
     Libraries/Z80/Z80_clock_cycles.h \
+    Source/Z80Header.h
 
 OTHER_FILES += \
     ../.gitignore \
-    ../Examples/sdcc/device/lib/___setjmp.s \
-    ../Examples/sdcc/device/lib/__divsint.s \
-    ../Examples/sdcc/device/lib/__divsuchar.s \
-    ../Examples/sdcc/device/lib/__divuint.s \
-    ../Examples/sdcc/device/lib/__divuschar.s \
-    ../Examples/sdcc/device/lib/__modsint.s \
-    ../Examples/sdcc/device/lib/__modsuchar.s \
-    ../Examples/sdcc/device/lib/__moduint.s \
-    ../Examples/sdcc/device/lib/__mulint.s \
-    ../Examples/sdcc/device/lib/__mulschar.s \
-    ../Examples/sdcc/device/lib/__sdcc_call_hl.s \
-    ../Examples/sdcc/device/lib/_localtime.s \
-    ../Examples/sdcc/device/lib/_memmove.s \
-    ../Examples/sdcc/device/lib/_putchar.s \
-    ../Examples/sdcc/device/lib/_strcpy.s \
-    ../Examples/sdcc/device/lib/_strlen.s \
-    ../Examples/sdcc/device/lib/crt0 .s \
-    ../Examples/sdcc/device/lib/heap .s \
-    ../Examples/sdcc/device/lib/___fs2schar.c \
-    ../Examples/sdcc/device/lib/___fs2sint.c \
-    ../Examples/sdcc/device/lib/___fs2slong.c \
-    ../Examples/sdcc/device/lib/___fs2uchar.c \
-    ../Examples/sdcc/device/lib/___fs2uint.c \
-    ../Examples/sdcc/device/lib/___fs2ulong.c \
-    ../Examples/sdcc/device/lib/___fsadd.c \
-    ../Examples/sdcc/device/lib/___fsdiv.c \
-    ../Examples/sdcc/device/lib/___fseq.c \
-    ../Examples/sdcc/device/lib/___fsgt.c \
-    ../Examples/sdcc/device/lib/___fslt.c \
-    ../Examples/sdcc/device/lib/___fsmul.c \
-    ../Examples/sdcc/device/lib/___fsneq.c \
-    ../Examples/sdcc/device/lib/___fssub.c \
-    ../Examples/sdcc/device/lib/___schar2fs.c \
-    ../Examples/sdcc/device/lib/___sint2fs.c \
-    ../Examples/sdcc/device/lib/___slong2fs.c \
-    ../Examples/sdcc/device/lib/___uchar2fs.c \
-    ../Examples/sdcc/device/lib/___uint2fs.c \
-    ../Examples/sdcc/device/lib/___ulong2fs.c \
-    ../Examples/sdcc/device/lib/__assert.c \
-    ../Examples/sdcc/device/lib/__divslong.c \
-    ../Examples/sdcc/device/lib/__divslonglong.c \
-    ../Examples/sdcc/device/lib/__divulong.c \
-    ../Examples/sdcc/device/lib/__divulonglong.c \
-    ../Examples/sdcc/device/lib/__itoa.c \
-    ../Examples/sdcc/device/lib/__modslong.c \
-    ../Examples/sdcc/device/lib/__modulong.c \
-    ../Examples/sdcc/device/lib/__mullong.c \
-    ../Examples/sdcc/device/lib/__mullonglong.c \
-    ../Examples/sdcc/device/lib/__print_format.c \
-    ../Examples/sdcc/device/lib/__rlslonglong.c \
-    ../Examples/sdcc/device/lib/__rlulonglong.c \
-    ../Examples/sdcc/device/lib/__rrslonglong.c \
-    ../Examples/sdcc/device/lib/__rrulonglong.c \
-    ../Examples/sdcc/device/lib/__uitoa.c \
-    ../Examples/sdcc/device/lib/_abs.c \
-    ../Examples/sdcc/device/lib/_acosf.c \
-    ../Examples/sdcc/device/lib/_asctime.c \
-    ../Examples/sdcc/device/lib/_asincosf.c \
-    ../Examples/sdcc/device/lib/_asinf.c \
-    ../Examples/sdcc/device/lib/_atan2f.c \
-    ../Examples/sdcc/device/lib/_atanf.c \
-    ../Examples/sdcc/device/lib/_atof.c \
-    ../Examples/sdcc/device/lib/_atoi.c \
-    ../Examples/sdcc/device/lib/_atol.c \
-    ../Examples/sdcc/device/lib/_calloc.c \
-    ../Examples/sdcc/device/lib/_ceilf.c \
-    ../Examples/sdcc/device/lib/_check_struct_tm.c \
-    ../Examples/sdcc/device/lib/_cosf.c \
-    ../Examples/sdcc/device/lib/_coshf.c \
-    ../Examples/sdcc/device/lib/_cotf.c \
-    ../Examples/sdcc/device/lib/_ctime.c \
-    ../Examples/sdcc/device/lib/_days_per_month.c \
-    ../Examples/sdcc/device/lib/_errno.c \
-    ../Examples/sdcc/device/lib/_expf.c \
-    ../Examples/sdcc/device/lib/_fabsf.c \
-    ../Examples/sdcc/device/lib/_floorf.c \
-    ../Examples/sdcc/device/lib/_free.c \
-    ../Examples/sdcc/device/lib/_frexpf.c \
-    ../Examples/sdcc/device/lib/_gets.c \
-    ../Examples/sdcc/device/lib/_gmtime.c \
-    ../Examples/sdcc/device/lib/_heap.c \
-    ../Examples/sdcc/device/lib/_isalnum.c \
-    ../Examples/sdcc/device/lib/_isalpha.c \
-    ../Examples/sdcc/device/lib/_isblank.c \
-    ../Examples/sdcc/device/lib/_iscntrl.c \
-    ../Examples/sdcc/device/lib/_isdigit.c \
-    ../Examples/sdcc/device/lib/_isgraph.c \
-    ../Examples/sdcc/device/lib/_islower.c \
-    ../Examples/sdcc/device/lib/_isprint.c \
-    ../Examples/sdcc/device/lib/_ispunct.c \
-    ../Examples/sdcc/device/lib/_isspace.c \
-    ../Examples/sdcc/device/lib/_isupper.c \
-    ../Examples/sdcc/device/lib/_isxdigit.c \
-    ../Examples/sdcc/device/lib/_labs.c \
-    ../Examples/sdcc/device/lib/_ldexpf.c \
-    ../Examples/sdcc/device/lib/_log10f.c \
-    ../Examples/sdcc/device/lib/_logf.c \
-    ../Examples/sdcc/device/lib/_ltoa.c \
-    ../Examples/sdcc/device/lib/_malloc.c \
-    ../Examples/sdcc/device/lib/_memchr.c \
-    ../Examples/sdcc/device/lib/_memcmp.c \
-    ../Examples/sdcc/device/lib/_memcpy.c \
-    ../Examples/sdcc/device/lib/_memset.c \
-    ../Examples/sdcc/device/lib/_mktime.c \
-    ../Examples/sdcc/device/lib/_modff.c \
-    ../Examples/sdcc/device/lib/_powf.c \
-    ../Examples/sdcc/device/lib/_printf_small.c \
-    ../Examples/sdcc/device/lib/_printf.c \
-    ../Examples/sdcc/device/lib/_put_char_to_stdout.c \
-    ../Examples/sdcc/device/lib/_put_char_to_string.c \
-    ../Examples/sdcc/device/lib/_puts.c \
-    ../Examples/sdcc/device/lib/_rand.c \
-    ../Examples/sdcc/device/lib/_realloc.c \
-    ../Examples/sdcc/device/lib/_sincosf.c \
-    ../Examples/sdcc/device/lib/_sincoshf.c \
-    ../Examples/sdcc/device/lib/_sinf.c \
-    ../Examples/sdcc/device/lib/_sinhf.c \
-    ../Examples/sdcc/device/lib/_sprintf.c \
-    ../Examples/sdcc/device/lib/_sqrtf.c \
-    ../Examples/sdcc/device/lib/_strcat.c \
-    ../Examples/sdcc/device/lib/_strchr.c \
-    ../Examples/sdcc/device/lib/_strcmp.c \
-    ../Examples/sdcc/device/lib/_strcspn.c \
-    ../Examples/sdcc/device/lib/_strncat.c \
-    ../Examples/sdcc/device/lib/_strncmp.c \
-    ../Examples/sdcc/device/lib/_strncpy.c \
-    ../Examples/sdcc/device/lib/_strpbrk.c \
-    ../Examples/sdcc/device/lib/_strrchr.c \
-    ../Examples/sdcc/device/lib/_strspn.c \
-    ../Examples/sdcc/device/lib/_strstr.c \
-    ../Examples/sdcc/device/lib/_strtok.c \
-    ../Examples/sdcc/device/lib/_strxfrm.c \
-    ../Examples/sdcc/device/lib/_tancotf.c \
-    ../Examples/sdcc/device/lib/_tanf.c \
-    ../Examples/sdcc/device/lib/_tanhf.c \
-    ../Examples/sdcc/device/lib/_time.c \
-    ../Examples/sdcc/device/lib/_tolower.c \
-    ../Examples/sdcc/device/lib/_toupper.c \
-    ../Examples/sdcc/device/lib/_vprintf.c \
-    ../Examples/sdcc/device/lib/_vsprintf.c \
-    ../Examples/sdcc/device/lib/_log_table.h \
+    ../sdcc/lib/___setjmp.s \
+    ../sdcc/lib/__divsint.s \
+    ../sdcc/lib/__divsuchar.s \
+    ../sdcc/lib/__divuint.s \
+    ../sdcc/lib/__divuschar.s \
+    ../sdcc/lib/__modsint.s \
+    ../sdcc/lib/__modsuchar.s \
+    ../sdcc/lib/__moduint.s \
+    ../sdcc/lib/__mulint.s \
+    ../sdcc/lib/__mulschar.s \
+    ../sdcc/lib/__sdcc_call_hl.s \
+    ../sdcc/lib/_localtime.s \
+    ../sdcc/lib/_memmove.s \
+    ../sdcc/lib/_putchar.s \
+    ../sdcc/lib/_strcpy.s \
+    ../sdcc/lib/_strlen.s \
+    ../sdcc/lib/crt0 .s \
+    ../sdcc/lib/heap .s \
+    ../sdcc/lib/___fs2schar.c \
+    ../sdcc/lib/___fs2sint.c \
+    ../sdcc/lib/___fs2slong.c \
+    ../sdcc/lib/___fs2uchar.c \
+    ../sdcc/lib/___fs2uint.c \
+    ../sdcc/lib/___fs2ulong.c \
+    ../sdcc/lib/___fsadd.c \
+    ../sdcc/lib/___fsdiv.c \
+    ../sdcc/lib/___fseq.c \
+    ../sdcc/lib/___fsgt.c \
+    ../sdcc/lib/___fslt.c \
+    ../sdcc/lib/___fsmul.c \
+    ../sdcc/lib/___fsneq.c \
+    ../sdcc/lib/___fssub.c \
+    ../sdcc/lib/___schar2fs.c \
+    ../sdcc/lib/___sint2fs.c \
+    ../sdcc/lib/___slong2fs.c \
+    ../sdcc/lib/___uchar2fs.c \
+    ../sdcc/lib/___uint2fs.c \
+    ../sdcc/lib/___ulong2fs.c \
+    ../sdcc/lib/__assert.c \
+    ../sdcc/lib/__divslong.c \
+    ../sdcc/lib/__divslonglong.c \
+    ../sdcc/lib/__divulong.c \
+    ../sdcc/lib/__divulonglong.c \
+    ../sdcc/lib/__itoa.c \
+    ../sdcc/lib/__modslong.c \
+    ../sdcc/lib/__modulong.c \
+    ../sdcc/lib/__mullong.c \
+    ../sdcc/lib/__mullonglong.c \
+    ../sdcc/lib/__print_format.c \
+    ../sdcc/lib/__rlslonglong.c \
+    ../sdcc/lib/__rlulonglong.c \
+    ../sdcc/lib/__rrslonglong.c \
+    ../sdcc/lib/__rrulonglong.c \
+    ../sdcc/lib/__uitoa.c \
+    ../sdcc/lib/_abs.c \
+    ../sdcc/lib/_acosf.c \
+    ../sdcc/lib/_asctime.c \
+    ../sdcc/lib/_asincosf.c \
+    ../sdcc/lib/_asinf.c \
+    ../sdcc/lib/_atan2f.c \
+    ../sdcc/lib/_atanf.c \
+    ../sdcc/lib/_atof.c \
+    ../sdcc/lib/_atoi.c \
+    ../sdcc/lib/_atol.c \
+    ../sdcc/lib/_calloc.c \
+    ../sdcc/lib/_ceilf.c \
+    ../sdcc/lib/_check_struct_tm.c \
+    ../sdcc/lib/_cosf.c \
+    ../sdcc/lib/_coshf.c \
+    ../sdcc/lib/_cotf.c \
+    ../sdcc/lib/_ctime.c \
+    ../sdcc/lib/_days_per_month.c \
+    ../sdcc/lib/_errno.c \
+    ../sdcc/lib/_expf.c \
+    ../sdcc/lib/_fabsf.c \
+    ../sdcc/lib/_floorf.c \
+    ../sdcc/lib/_free.c \
+    ../sdcc/lib/_frexpf.c \
+    ../sdcc/lib/_gets.c \
+    ../sdcc/lib/_gmtime.c \
+    ../sdcc/lib/_heap.c \
+    ../sdcc/lib/_isalnum.c \
+    ../sdcc/lib/_isalpha.c \
+    ../sdcc/lib/_isblank.c \
+    ../sdcc/lib/_iscntrl.c \
+    ../sdcc/lib/_isdigit.c \
+    ../sdcc/lib/_isgraph.c \
+    ../sdcc/lib/_islower.c \
+    ../sdcc/lib/_isprint.c \
+    ../sdcc/lib/_ispunct.c \
+    ../sdcc/lib/_isspace.c \
+    ../sdcc/lib/_isupper.c \
+    ../sdcc/lib/_isxdigit.c \
+    ../sdcc/lib/_labs.c \
+    ../sdcc/lib/_ldexpf.c \
+    ../sdcc/lib/_log10f.c \
+    ../sdcc/lib/_logf.c \
+    ../sdcc/lib/_ltoa.c \
+    ../sdcc/lib/_malloc.c \
+    ../sdcc/lib/_memchr.c \
+    ../sdcc/lib/_memcmp.c \
+    ../sdcc/lib/_memcpy.c \
+    ../sdcc/lib/_memset.c \
+    ../sdcc/lib/_mktime.c \
+    ../sdcc/lib/_modff.c \
+    ../sdcc/lib/_powf.c \
+    ../sdcc/lib/_printf_small.c \
+    ../sdcc/lib/_printf.c \
+    ../sdcc/lib/_put_char_to_stdout.c \
+    ../sdcc/lib/_put_char_to_string.c \
+    ../sdcc/lib/_puts.c \
+    ../sdcc/lib/_rand.c \
+    ../sdcc/lib/_realloc.c \
+    ../sdcc/lib/_sincosf.c \
+    ../sdcc/lib/_sincoshf.c \
+    ../sdcc/lib/_sinf.c \
+    ../sdcc/lib/_sinhf.c \
+    ../sdcc/lib/_sprintf.c \
+    ../sdcc/lib/_sqrtf.c \
+    ../sdcc/lib/_strcat.c \
+    ../sdcc/lib/_strchr.c \
+    ../sdcc/lib/_strcmp.c \
+    ../sdcc/lib/_strcspn.c \
+    ../sdcc/lib/_strncat.c \
+    ../sdcc/lib/_strncmp.c \
+    ../sdcc/lib/_strncpy.c \
+    ../sdcc/lib/_strpbrk.c \
+    ../sdcc/lib/_strrchr.c \
+    ../sdcc/lib/_strspn.c \
+    ../sdcc/lib/_strstr.c \
+    ../sdcc/lib/_strtok.c \
+    ../sdcc/lib/_strxfrm.c \
+    ../sdcc/lib/_tancotf.c \
+    ../sdcc/lib/_tanf.c \
+    ../sdcc/lib/_tanhf.c \
+    ../sdcc/lib/_time.c \
+    ../sdcc/lib/_tolower.c \
+    ../sdcc/lib/_toupper.c \
+    ../sdcc/lib/_vprintf.c \
+    ../sdcc/lib/_vsprintf.c \
+    ../sdcc/lib/_log_table.h \
     \
-    ../Examples/sdcc/device/include/asm/default/features.h \
-    ../Examples/sdcc/device/include/asm/z80/features.h \
-    ../Examples/sdcc/device/include/assert.h \
-    ../Examples/sdcc/device/include/ctype.h \
-    ../Examples/sdcc/device/include/errno.h \
-    ../Examples/sdcc/device/include/float.h \
-    ../Examples/sdcc/device/include/iso646.h \
-    ../Examples/sdcc/device/include/limits.h \
-    ../Examples/sdcc/device/include/malloc.h \
-    ../Examples/sdcc/device/include/math.h \
-    ../Examples/sdcc/device/include/sdcc-lib.h \
-    ../Examples/sdcc/device/include/setjmp.h \
-    ../Examples/sdcc/device/include/stdalign.h \
-    ../Examples/sdcc/device/include/stdarg.h \
-    ../Examples/sdcc/device/include/stdbool.h \
-    ../Examples/sdcc/device/include/stddef.h \
-    ../Examples/sdcc/device/include/stdint.h \
-    ../Examples/sdcc/device/include/stdio.h \
-    ../Examples/sdcc/device/include/stdlib.h \
-    ../Examples/sdcc/device/include/stdnoreturn.h \
-    ../Examples/sdcc/device/include/string.h \
-    ../Examples/sdcc/device/include/time.h \
-    ../Examples/sdcc/device/include/tinibios.h \
-    ../Examples/sdcc/device/include/typeof.h \
+    ../sdcc/include/asm/default/features.h \
+    ../sdcc/include/asm/z80/features.h \
+    ../sdcc/include/assert.h \
+    ../sdcc/include/ctype.h \
+    ../sdcc/include/errno.h \
+    ../sdcc/include/float.h \
+    ../sdcc/include/iso646.h \
+    ../sdcc/include/limits.h \
+    ../sdcc/include/malloc.h \
+    ../sdcc/include/math.h \
+    ../sdcc/include/sdcc-lib.h \
+    ../sdcc/include/setjmp.h \
+    ../sdcc/include/stdalign.h \
+    ../sdcc/include/stdarg.h \
+    ../sdcc/include/stdbool.h \
+    ../sdcc/include/stddef.h \
+    ../sdcc/include/stdint.h \
+    ../sdcc/include/stdio.h \
+    ../sdcc/include/stdlib.h \
+    ../sdcc/include/stdnoreturn.h \
+    ../sdcc/include/string.h \
+    ../sdcc/include/time.h \
+    ../sdcc/include/tinibios.h \
+    ../sdcc/include/typeof.h \
+    \
+    ../sdcc/sdcc_info.txt \
 	\
     ../Examples/main.c \
     ../Examples/globls.s \
-    ../Examples/sdcc_info.txt \
-    \
     ../Examples/jupiter_ace_character_ram.s \
     ../Examples/jupiter_ace_sysvars.s \
     ../Examples/zx80_sysvars.s \
     ../Examples/zx81_sysvars.s \
     ../Examples/zx_spectrum_basic_tokens.s \
     ../Examples/zx_spectrum_sysvars.s \
+    ../Examples/zx_spectrum_io_rom.s \
     \
     ../Examples/template_bin.asm \
     ../Examples/template_minimal_rom.asm \
@@ -276,7 +277,6 @@ OTHER_FILES += \
     ../Test/test-tap.lst \
     ../Test/zx82_rom.asm \
     ../Test/zx82_rom.lst \
-    ../Examples/zx_spectrum_io_rom.s
 
 
 

@@ -27,7 +27,7 @@
 
 #define SAFE 3
 #define LOG 1
-#include "Z80Head.h"
+#include "Z80Header.h"
 
 
 
@@ -35,7 +35,7 @@
 /*  get zxsp-style model id from header data
     returns -1 on error or not supported
 */
-Model Z80Head::getZxspModel()
+Model Z80Header::getZxspModel()
 {
     if(isVersion145())
     {
@@ -131,7 +131,7 @@ Model Z80Head::getZxspModel()
 /*	get required ramsize for machine
 	returns 0 for default ram size
 */
-uint32 Z80Head::getRamsize()
+uint32 Z80Header::getRamsize()
 {
 	uint model = this->model;
     if(isVersion201() && (model==3||model==4)) model += 1;
@@ -144,7 +144,7 @@ uint32 Z80Head::getRamsize()
 
 
 
-int32 Z80Head::getCpuCycle(int cc_per_frame)
+int32 Z80Header::getCpuCycle(int cc_per_frame)
 {
     int32 cc_per_4th = cc_per_frame/4;
     int32 n = ((t_h-3)&3) * cc_per_4th + cc_per_4th -1 - uint16(t_m*256+t_l);

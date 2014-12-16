@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 1994 - 2014
+﻿/*	Copyright  (c)	Günter Woigk 1994 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -54,6 +54,7 @@ public:
 	cstr		source_filename;
 	cstr		temp_directory;
 	cstr		target;				// "BIN, "ROM", "SNA", ...
+	cstr		target_filepath;
 
 // source:
 	Source		source;						// SourceLine[] accumulating total source
@@ -160,6 +161,7 @@ public:
 							 bool clean=no)			throw();
 	void	assemble		(StrArray& sourcelines)	throw();
 	void	assembleLine	(SourceLine&)			TAE;
+	uint	assembleSingleLine(uint address, cstr z80_instruction, char buffer[]);
 
 	void	checkTargetfile	()		TAE;
 	void	writeListfile	(cstr filepath, int style) TAE;
@@ -179,6 +181,9 @@ public:
 	void	checkAceFile	()		TAE;
 	void	checkZX80File	()		TAE;
 	void	checkZX81File	()		TAE;
+
+	uint	numErrors		()							{ return errors.count(); }
+	cstr	targetFilepath	()							{ return target_filepath; }
 };
 
 

@@ -1,4 +1,12 @@
 
+
+sdcc = small devices c compiler
+This folder contains what zasm is using from the sdcc z80 port.
+Usage info for using c sources in zasm can be found in Examples/.
+This file contains additional notes for using sdcc.
+
+
+
 Usage information for sdcc
 --------------------------
 
