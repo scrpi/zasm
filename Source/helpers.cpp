@@ -32,12 +32,14 @@
 #include <sys/time.h>
 
 
+#ifndef NO_HELPERS_NOW	// -> zxsp
 double now()
 {
 	struct timeval tv;
 	gettimeofday ( &tv, NULL );
 	return tv.tv_sec + tv.tv_usec/1000000.0;
 }
+#endif
 
 
 /*	calculate size of compressed data in .z80 format

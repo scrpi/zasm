@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 1994 - 2014
+/*	Copyright  (c)	Günter Woigk 1994 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -93,8 +93,9 @@ public:
 	uint		verbose;
 
 // c compiler:
-	cstr		c_compiler;		// fqn to sdcc or similar
-	cstr		c_includes;		// custom include dir or NULL
+	cstr		c_compiler;		// -c: fqn to sdcc or similar
+	cstr		c_includes;		// -I: fqn to custom include dir or NULL
+	cstr		stdlib_dir;		// -L: fqn to custom library dir or NULL (not only c but any .globl)
 	Array<cstr>	c_flags;
 	uint		c_qi;			// index of source file in cc_argv[]
 	uint		c_zi;			// index of output file in cc_argv[]

@@ -10,8 +10,6 @@ sdcc/bin
 Test/Zeug*
 Test/z80 test/
 Test/zxsp test files/
-Test/include
-Test/library
 Test/s/
 Test/*.bin
 Test/*.rom

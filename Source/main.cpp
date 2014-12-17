@@ -95,7 +95,8 @@ static cstr help =
 "  -v[0,1,2]       verbosity of messages to stderr (0=off,1=default,2=more)\n"
 "  -c path/to/cc   set path to c compiler (default: sdcc in $PATH)\n"
 "  -t path/to/dir  set path to temp dir for c compiler (default: output dir)"
-"  -I path/to/dir  set path to c system header dir (default: sdcc default)\n\n"
+"  -I path/to/dir  set path to c system header dir (default: sdcc default)\n"
+"  -L path/to/dir  set path to standard library dir (default: none)\n\n"
 
 "–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\n"
 "";
@@ -122,6 +123,7 @@ int main( int argc, cstr argv[] )
 	cstr tempdir    = NULL;
 	cstr c_compiler = NULL;
 	cstr c_includes	= NULL;
+	cstr libraries	= NULL;
 
 //	eval arguments:
 	for(int i=1; i<argc; )
@@ -170,6 +172,7 @@ int main( int argc, cstr argv[] )
 					  if(listfile   || i==argc) goto h; else listfile   = argv[i++]; continue;
 
 			case 'I': if(c_includes || i==argc) goto h; else c_includes = argv[i++]; continue;
+			case 'L': if(libraries|| i==argc) goto h; else libraries= argv[i++]; continue;
 			case 'c': if(c_compiler || i==argc) goto h; else c_compiler = argv[i++]; continue;
 			case 't': if(tempdir    || i==argc) goto h; else tempdir    = argv[i++]; continue;
 			default:  goto h;
@@ -235,6 +238,18 @@ int main( int argc, cstr argv[] )
 		}
 	}
 
+// check c_libraries path:
+	if(libraries)
+	{
+		libraries = fullpath(libraries);
+		if(errno==ok && lastchar(libraries)!='/') errno = ENOTDIR;
+		if(errno)
+		{
+			if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", libraries, strerror(errno));
+			return 1;
+		}
+	}
+
 // check cc_path:
 	if(c_compiler)
 	{
@@ -277,6 +292,7 @@ int main( int argc, cstr argv[] )
 	Z80Assembler ass;
 	ass.verbose = verbose;
 	if(c_includes) ass.c_includes = c_includes;
+	if(libraries) ass.stdlib_dir = libraries;
 	if(c_compiler) ass.c_compiler = c_compiler;
 	ass.assembleFile( inputfile, outputfile, listfile, listfile, liststyle, outputstyle, clean );
 

@@ -210,14 +210,14 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 ; include .c and other source files:
 ;
 #include "main.c"
-#include "../Examples/sdcc/lib/_days_per_month.c"
-#include "../Examples/sdcc/lib/_asctime.c"
+#include "../sdcc/lib/_days_per_month.c"
+#include "../sdcc/lib/_asctime.c"
 #include "../Examples/zx_spectrum_io_rom.s"
 
 
 ; resolved missing labels:
 ;
-#include library "library"
+#include standard library
 
 
 

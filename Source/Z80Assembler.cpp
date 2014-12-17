@@ -1,4 +1,4 @@
-﻿/*	Copyright  (c)	Günter Woigk 1994 - 2014
+/*	Copyright  (c)	Günter Woigk 1994 - 2014
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -75,12 +75,14 @@ Z80Assembler::Z80Assembler()
 	local_labels_index(0),
 	local_blocks_count(0),
 	cond_off(0),
-	max_errors(5),	// 30
+	max_errors(30),
 	pass(0),
 	final(0),
 	end(0),
 	verbose(1),
 	c_compiler(NULL),
+	c_includes(NULL),
+	stdlib_dir(NULL),
 	c_qi(0),
 	c_zi(0),
 	charset(NULL)
@@ -89,11 +91,6 @@ Z80Assembler::Z80Assembler()
 
 	c_flags.append("-mz80");			// machine = Z80
 	c_flags.append("-S");				// Preprocess & compile only
-	if(c_includes)
-	{
-		c_flags.append("--nostdinc");
-		c_flags.append(catstr("-I",c_includes));	// -Iincludepath
-	}
 }
 
 
@@ -282,6 +279,10 @@ void Z80Assembler::assembleFile(cstr sourcefile, cstr destpath, cstr listpath, c
 								 int liststyle, int deststyle , bool clean) throw()
 {
 	timestamp = now();
+
+	XXXASSERT(!c_includes || (eq(c_includes,fullpath(c_includes)) && lastchar(c_includes)=='/' && !errno));
+	XXXASSERT(!stdlib_dir || (eq(stdlib_dir,fullpath(stdlib_dir)) && lastchar(stdlib_dir)=='/' && !errno));
+	XXXASSERT(!c_compiler || (eq(c_compiler,fullpath(c_compiler)) && lastchar(c_compiler)!='/' && !errno));
 
 	sourcefile = fullpath(sourcefile);			XXASSERT(errno==ok && is_file(sourcefile));
 	if(destpath) destpath = fullpath(destpath); XXASSERT(errno==ok || errno==ENOENT);
@@ -1109,7 +1110,8 @@ static int find(Array<cstr> a, cstr s)
 	filenames ending on ".c" are compiled with sdcc (or the compiler set on the cmd line) into the temp directory
 
 	#INCLUDE LIBRARY "libdir" [ RESOLVE label1, label2 … ]
-	all source files for not-yet-defined labels which were declared with .globl found in libdir are included
+	#INCLUDE STANDARD LIBRARY [ RESOLVE label1, label2 … ]
+	all source files for not-yet-defined labels which were declared with .globl and found in libdir are included
 	if keyword RESOLVE is also present,
 		then only labels from this list are included.
 		labels already defined or not declared with .globl or not yet used are silently ignored
@@ -1122,15 +1124,28 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 	if(pass>1) { q.skip_to_eol(); return; }
 
 	XXXASSERT(lastchar(temp_directory)=='/');
+	XXXASSERT(!stdlib_dir || (eq(stdlib_dir,fullpath(stdlib_dir)) && lastchar(stdlib_dir)=='/' && !errno));
 
+	bool is_stdlib = q.testWord("standard") || q.testWord("default") || q.testWord("system");
 	bool is_library = q.testWord("library");
-	cstr fqn = q.nextWord();
-	if(fqn[0]!='"') throw syntax_error(is_library?"quoted directoryname expected":"quoted filename expected");
-	fqn = unquotedstr(fqn);
-	if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+	if(is_stdlib && !is_library) throw syntax_error("keyword 'library' expected");
 
 	if(is_library)
 	{
+		cstr fqn;
+		if(is_stdlib)
+		{
+			if(!stdlib_dir) throw syntax_error("standard library path is not set (use command line option -L)");
+			fqn = stdlib_dir;
+		}
+		else
+		{
+			fqn = q.nextWord();
+			if(fqn[0]!='"') throw syntax_error("quoted directory name expected");
+			fqn = unquotedstr(fqn);
+			if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+		}
+
 		if(lastchar(fqn)!='/') fqn = catstr(fqn,"/");
 
 		Array<cstr> names;
@@ -1183,6 +1198,11 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 	}
 	else
 	{
+		cstr fqn = q.nextWord();
+		if(fqn[0]!='"') throw syntax_error("quoted filename expected");
+		fqn = unquotedstr(fqn);
+		if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+
 		if(endswith(fqn,".c"))
 		{
 			//	#include "path/fname"			; <-- current_sourceline
