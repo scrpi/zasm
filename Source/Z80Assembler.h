@@ -93,12 +93,12 @@ public:
 	uint		verbose;
 
 // c compiler:
-	cstr		c_compiler;		// -c: fqn to sdcc or similar
+	cstr		c_compiler;		// -c: fqn to sdcc or similar or NULL
 	cstr		c_includes;		// -I: fqn to custom include dir or NULL
 	cstr		stdlib_dir;		// -L: fqn to custom library dir or NULL (not only c but any .globl)
 	Array<cstr>	c_flags;
-	uint		c_qi;			// index of source file in cc_argv[]
-	uint		c_zi;			// index of output file in cc_argv[]
+	int			c_qi;			// index of source file in cc_argv[] or -1
+	int			c_zi;			// index of output file in cc_argv[] or -1
 
 // more:
 	CharMap*	charset;
@@ -149,6 +149,7 @@ private:
 
 	void	setError		(any_error&);				// set error for current file, line & column
 	void	addError		(cstr text);				// add error without source line
+	void	init_c_flags	();
 
 public:
 			Z80Assembler	();

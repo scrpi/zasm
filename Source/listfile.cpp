@@ -259,7 +259,7 @@ cstr calc_padding(ObjArray<Labels>& labelsAE)
 
 cstr u5str(uint n, bool valid)
 {
-	if(!valid) return "***invalid***";
+	if(!valid) return "VOID ";
 	str s = spacestr(5);
 	sprintf(s,"%u",n&0xffff); if(n<10000) *strchr(s,0)=' ';
 	return s;
@@ -343,7 +343,10 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			// print errors and suppress printing of further opcode bytes:
 			while( ei<errors.count() && errors[ei].sourceline == &sourceline )
 			{
-				fd.write_fmt("***ERROR***   \t%s^ %s\n", sourceline.whitestr(), errors[ei++].text);
+				if(style&8)
+					fd.write_fmt("***ERROR***             %s^ %s\n", sourceline.whitestr(), errors[ei++].text);
+				else
+					fd.write_fmt("***ERROR***   \t%s^ %s\n", sourceline.whitestr(), errors[ei++].text);
 				offset = count;
 			}
 
@@ -447,9 +450,9 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				fd.write_fmt("%s%s = ", name, lpadding+strlen(name));
 
 				if(!l->is_defined)
-					fd.write_str("***undefined***");
+					fd.write_str("***UNDEFINED***");
 				else if(!l->is_valid)
-					fd.write_fmt("***invalid***   %s%s %s:%u",
+					fd.write_fmt("  ***VOID***    %s%s %s:%u",
 						segment->name, spadding+strlen(segment->name), sourcefile, linenumber+1);
 				else
 					fd.write_fmt("$%04X = %6i  %s%s %s:%u",

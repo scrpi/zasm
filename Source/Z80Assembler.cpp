@@ -83,14 +83,14 @@ Z80Assembler::Z80Assembler()
 	c_compiler(NULL),
 	c_includes(NULL),
 	stdlib_dir(NULL),
-	c_qi(0),
-	c_zi(0),
+	c_qi(-1),
+	c_zi(-1),
 	charset(NULL)
 {
-	cond[0] = no_cond;					// memset(cond,no_cond,sizeof(cond));
+//	cond[0] = no_cond;					// memset(cond,no_cond,sizeof(cond));
 
-	c_flags.append("-mz80");			// machine = Z80
-	c_flags.append("-S");				// Preprocess & compile only
+//	c_flags.append("-mz80");			// machine = Z80
+//	c_flags.append("-S");				// Preprocess & compile only
 }
 
 
@@ -284,10 +284,10 @@ void Z80Assembler::assembleFile(cstr sourcefile, cstr destpath, cstr listpath, c
 	XXXASSERT(!stdlib_dir || (eq(stdlib_dir,fullpath(stdlib_dir)) && lastchar(stdlib_dir)=='/' && !errno));
 	XXXASSERT(!c_compiler || (eq(c_compiler,fullpath(c_compiler)) && lastchar(c_compiler)!='/' && !errno));
 
-	sourcefile = fullpath(sourcefile);			XXASSERT(errno==ok && is_file(sourcefile));
-	if(destpath) destpath = fullpath(destpath); XXASSERT(errno==ok || errno==ENOENT);
-	if(listpath) listpath = fullpath(listpath); XXASSERT(errno==ok || errno==ENOENT);
-	if(temppath) temppath = fullpath(temppath); XXASSERT(errno==ok && is_dir(temppath));
+	sourcefile = fullpath(sourcefile);			  XXASSERT(errno==ok && is_file(sourcefile));
+	if(destpath) { destpath = fullpath(destpath); XXASSERT(errno==ok || errno==ENOENT); }
+	if(listpath) { listpath = fullpath(listpath); XXASSERT(errno==ok || errno==ENOENT); }
+	if(temppath) { temppath = fullpath(temppath); XXASSERT(errno==ok && is_dir(temppath)); }
 
 	XXASSERT(liststyle>=0 && liststyle<=15);
 	XXASSERT(deststyle==0 || deststyle=='b' || deststyle=='x' || deststyle=='s');
@@ -939,20 +939,39 @@ void Z80Assembler::asmAssert( SourceLine& q ) throw(any_error)
 	if(!n) throw fatal_error("assertion failed");
 }
 
+// helper:
+void Z80Assembler::init_c_flags()
+{
+	XXXASSERT(c_flags.count()==0);
+
+	c_flags.append("-mz80");
+	c_flags.append("-S");
+	if(c_includes)
+	{
+		c_flags.append("--nostdinc");
+		c_flags.append(catstr("-I",c_includes));	// -Ipath
+	}
+}
 
 /*	#CFLAGS -opt1 -opt2 …
 	arguments may be quoted
 	detects special arguments $SOURCE, $DEST and $CFLAGS
+	validates path in -Ipath
 	note: argv[0] (the executable's path) is not included in c_flags[].
-		  $SOURCE and $DEST may be present or missing: then c_qi or c_zi = 0
-		  default in c'tor: c_flags = { "-S", "-mz80" }
-		  in #include: default argv[] = { "…/sdcc", "-S", "-mz80", "-o", outfile, sourcefile }
+		  $SOURCE and $DEST may be present or missing: then c_qi or c_zi = -1
+		  $CFLAGS adds the old cflags. default: -S -mz80 [ --nostdinc -Ipath ]
+		  in #include: default argv[] = { "/…/sdcc", "-S", "-mz80", [ "--nostdinc", "-Ipath", ] "-o", outfile, sourcefile }
 */
 void Z80Assembler::asmCFlags( SourceLine& q ) throw(any_error)
 {
 	if(pass>1) { q.skip_to_eol(); return; }
 
+	XXXASSERT(c_qi<(int)c_flags.count() && c_zi<(int)c_flags.count());
+
+	if(c_flags.count()==0) init_c_flags();	// --> sdcc -mz80 -S
 	Array<cstr> old_cflags = c_flags;		// moves contents
+	int old_c_qi = c_qi; c_qi = -1;
+	int old_c_zi = c_zi; c_zi = -1;
 
 	while(!q.testEol())
 	{
@@ -960,15 +979,46 @@ void Z80Assembler::asmCFlags( SourceLine& q ) throw(any_error)
 		while((uint8)*q>' ') ++q;
 		cstr s = substr(a,q.p);
 		if(s[0]=='"') s = unquotedstr(s);
-		if(s[0]=='$' && eq(s,"$SOURCE")) c_qi = c_flags.count();
-		if(s[0]=='$' && eq(s,"$DEST"))   c_zi = c_flags.count();
+
+		if(s[0]=='$' && eq(s,"$SOURCE"))
+		{
+			if(c_qi<0) c_qi = c_flags.count();
+			else throw fatal_error("$SOURCE redefined");
+		}
+
+		if(s[0]=='$' && eq(s,"$DEST"))
+		{
+			if(c_zi<0) c_flags.count();
+			else throw fatal_error("$DEST redefined");
+		}
+
 		if(s[0]=='$' && eq(s,"$CFLAGS"))
 		{
-			if(c_qi) c_qi += old_cflags.count();
-			if(c_zi) c_zi += old_cflags.count();
+			if(old_c_qi>=0&&c_qi>=0) throw fatal_error("$SOURCE redefined");
+			if(old_c_zi>=0&&c_zi>=0) throw fatal_error("$DEST redefined");
+			if(old_c_qi>=0) c_qi = old_c_qi + c_flags.count();
+			if(old_c_zi>=0) c_zi = old_c_zi + c_flags.count();
 			c_flags.append(old_cflags);	// moves contents
 			continue;
 		}
+
+		if(s[0]=='-'&&s[1]=='I')	// -I/full/path/to/include/dir
+		{							// -Ior/path/rel/to/source/dir	=> path in #cflags is relative to source file!
+			cstr path = s+2;
+//			if(path[0]=='/') throw fatal_error("hard path not allowed here (use command line option -I instead)");
+//			if(contains(path,"..")) throw fatal_error("'..' not allowed here (use command line option -I instead)");
+			if(path[0]!='/') path = catstr(source_directory,path);
+			path = fullpath(path); if(errno) throw fatal_error(errno);
+			if(lastchar(path)!='/') throw fatal_error(ENOTDIR);
+			s = catstr("-I",path);
+		}
+//		else
+//		{
+//			if(contains(s,"..")) throw fatal_error("'..' not allowed here");
+//			if(s[0]=='/') throw fatal_error("hard path not allowed here");
+//			if(s[0]=='-' && s[1] && s[2]=='/') throw fatal_error("hard path not allowed here");
+//		}
+
 		c_flags.append(s);
 	}
 }
@@ -1201,7 +1251,7 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 		cstr fqn = q.nextWord();
 		if(fqn[0]!='"') throw syntax_error("quoted filename expected");
 		fqn = unquotedstr(fqn);
-		if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+		if(fqn[0]!='/') fqn = catstr(source_directory,fqn);
 
 		if(endswith(fqn,".c"))
 		{
@@ -1238,27 +1288,21 @@ cstr Z80Assembler::compileFile(cstr fqn, cstr tempdir) throw(any_error)
 		if(!exists_node(c_compiler))	throw fatal_error("sdcc not found");
 		if(!is_file(c_compiler))		throw fatal_error("sdcc is not a regular file");
 		if(!is_executable(c_compiler))	throw fatal_error("sdcc is not executable");
-
-		c_flags.purge();
 	}
 
-	if(c_flags.count()==0)			// --> sdcc -mz80 -S
-	{
-		c_flags.append("-mz80");
-		c_flags.append("-S");
-		if(c_includes)
-		{
-			c_flags.append("--nostdinc");
-			c_flags.append(catstr("-I",c_includes));	// -Iincludepath
-		}
-	}
+	if(c_flags.count()==0) init_c_flags();	// --> sdcc -mz80 -S
 
 	cstr fqn_q = fqn;
 	cstr fqn_z = catstr(tempdir, basename_from_path(fqn), ".s");
 
-	// if the .a file exists and is newer than the .c file, then don't compile again:
+	// if the .s file exists and is newer than the .c file, then don't compile again:
 	// note: this does not handle modified header files or modified CFLAGS or upgraded SDCC itself!
 	if(exists_node(fqn_z) && file_mtime(fqn_z) > file_mtime(fqn_q)) return fqn_z;
+
+	// create pipe:
+    const int R=0,W=1;
+    int pipout[2];
+    if(pipe(pipout)) throw fatal_error(errno);
 
 	// compile source file:
 
@@ -1267,10 +1311,20 @@ cstr Z80Assembler::compileFile(cstr fqn, cstr tempdir) throw(any_error)
 
 	if(child_id==0)				// child process:
 	{
-		if(c_zi==0) { c_flags.append("-o"); c_flags.append(fqn_z); } else { c_flags[c_zi] = fqn_z; }
-		if(c_qi==0) {                       c_flags.append(fqn_q); } else { c_flags[c_qi] = fqn_q; }
-		c_flags.append(NULL);
+		close(pipout[R]);		// close unused fd
+        close(1);				// close stdout
+        close(2);				// close stderr
+		dup(pipout[W]);			// becomes lowest unused fileid: stdout
+		dup(pipout[W]);			// becomes lowest unused fileid: stderr
+	    close(pipout[W]);		// close unused fd
+
+		int result = chdir(source_directory);	// => partial paths passed to sdcc will start in source dir
+		if(result) exit(errno);
+
+		if(c_zi<0) { c_flags.append("-o"); c_flags.append(fqn_z); } else { c_flags[c_zi] = fqn_z; }
+		if(c_qi<0) {                       c_flags.append(fqn_q); } else { c_flags[c_qi] = fqn_q; }
 		c_flags.insertat(0,c_compiler);
+		c_flags.append(NULL);
 
 		execve(c_compiler, (char**)c_flags.getData(), environ);	// exec cmd
 		exit(errno);			// exec failed: return errno: will be printed in error msg,
@@ -1278,7 +1332,28 @@ cstr Z80Assembler::compileFile(cstr fqn, cstr tempdir) throw(any_error)
 	}
 	else						// parent process:
 	{
+		close(pipout[W]);		// close unused fd
+		FD fd(pipout[R],"PIPE");
+
 		int status;
+		const uint SIZE = 0x7fff;	// if we get more output there is something going very wrong
+		char bu[SIZE+1];			// collector
+		uint32 size = fd.read_bytes(bu,SIZE,0);
+		if(size==SIZE) { fd.close_file(no); bu[SIZE-1]='\n'; }	// there is something wrong => kill child
+		bu[size] = 0;
+
+		/*	Output in case of NO ERROR:
+			0 bytes
+
+			Sample output in case of ERROR:
+		/pub/Develop/Projects/zasm-4.0/Test/main.c:63: warning 112: function 'strcmp' implicit declaration
+		/pub/Develop/Projects/zasm-4.0/Test/main.c:64: warning 112: function 'memcpy' implicit declaration
+		/pub/Develop/Projects/zasm-4.0/Test/main.c:65: warning 112: function 'strcpy' implicit declaration
+		/pub/Develop/Projects/zasm-4.0/Test/main.c:63: error 101: too many parameters
+		/pub/Develop/Projects/zasm-4.0/Test/main.c:64: error 101: too many parameters
+		/pub/Develop/Projects/zasm-4.0/Test/main.c:65: error 101: too many parameters
+		*/
+
 		for(int err; (err = waitpid(child_id,&status,0)) != child_id; )
 		{
 			XXXASSERT(err==-1);
@@ -1288,8 +1363,8 @@ cstr Z80Assembler::compileFile(cstr fqn, cstr tempdir) throw(any_error)
 		if(WIFEXITED(status))				// child process exited normally
 		{
 			if(WEXITSTATUS(status)!=0)		// child process returned error code
-				throw fatal_error(usingstr("\"%s %s\" returned exit code %i",
-					filename_from_path(c_compiler), filename_from_path(fqn_q), (int)WEXITSTATUS(status)));
+				throw fatal_error(usingstr("\"%s %s\" returned exit code %i\n- - - - - -\n%s- - - - - -\n",
+					filename_from_path(c_compiler), filename_from_path(fqn_q), (int)WEXITSTATUS(status), bu));
 		}
 		else if(WIFSIGNALED(status))		// child process terminated by signal
 		{
