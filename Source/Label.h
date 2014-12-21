@@ -51,6 +51,7 @@ public:
 
 public:
 	Label(cstr name, Segment*, uint sourceline, int32 value, bool is_valid, bool is_global, bool is_defined, bool is_used);
+	Label(Label const&);
 };
 
 
@@ -72,6 +73,7 @@ public:
 	Label&		find(cstr name)				{ return ObjHashMap::get(name); }
 	Label const& find(cstr name) const		{ return ObjHashMap::get(name); }
 	Array<Label*>& getItems()				{ return ObjHashMap::getItems(); }
+	void		remove(cstr name)			{ ObjHashMap::remove(name); }
 };
 
 

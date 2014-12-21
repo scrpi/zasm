@@ -48,6 +48,17 @@ Label::Label(cstr name, Segment* segment, uint sourceline, int32 value, bool is_
 	is_used(is_used)
 {}
 
+Label::Label(Label const& q)
+:	name(q.name),
+	segment(q.segment),
+	sourceline(q.sourceline),
+	value(q.value),
+	is_valid(q.is_valid),
+	is_global(q.is_global),
+	is_defined(q.is_defined),
+	is_used(q.is_used)
+{}
+
 
 /*	Destructor for Labels[]
 	nach der sdas-Anweisung .globl werden derart markierte globale Label

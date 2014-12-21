@@ -36,6 +36,7 @@ SOURCES += \
     Source/helpers.cpp \
     Source/outputfile.cpp \
     Source/listfile.cpp \
+    Source/Z80Header.cpp \
     Libraries/cstrings/cstrings.cpp \
     Libraries/kio/abort.cpp \
     Libraries/kio/errors.cpp \
@@ -43,8 +44,8 @@ SOURCES += \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
-    Libraries/Z80/Z80_clock_cycles.cpp \
-    Source/Z80Header.cpp
+    Libraries/Z80/z80_clock_cycles.cpp \
+    Libraries/Z80/z80_major_opcode.cpp \
 
 HEADERS += \
     Source/Error.h \
@@ -57,6 +58,7 @@ HEADERS += \
     Source/settings.h \
 	Source/CharMap.h \
     Source/helpers.h \
+    Source/Z80Header.h \
     config.h \
     Libraries/cstrings/base85.h \
     Libraries/cstrings/cstrings.h \
@@ -71,8 +73,10 @@ HEADERS += \
 	Libraries/kio/peekpoke.h \
     Libraries/Templates/Array.h \
     Libraries/Templates/HashMap.h \
-    Libraries/Z80/Z80_clock_cycles.h \
-    Source/Z80Header.h
+    Libraries/Z80/z80_clock_cycles.h \
+    Libraries/Z80/z80_major_opcode.h \
+    Libraries/Z80/z80_major_opcode_tables.h \
+    Libraries/Z80/Z80opcodes.h \
 
 OTHER_FILES += \
     ../.gitignore \

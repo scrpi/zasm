@@ -180,12 +180,6 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 ; 	The Payload:
 ; ================================================================
 
-; SDCC does not generate a .globl statement for these labels:
-; they must be declared before they are used,
-; else they are not marked 'used' and "#include library" won't load them
-;
-#include "globls.s"
-
 
 ; the test environment of sdcc is at a non-standard location.
 ; also IY must not be used else we can't call most rom routines

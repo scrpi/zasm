@@ -36,6 +36,7 @@
 #include "Templates/HashMap.h"
 #include "helpers.h"
 #include "CharMap.h"
+#include "Z80/Z80_major_opcode.h"
 extern char** environ;
 
 
@@ -87,10 +88,7 @@ Z80Assembler::Z80Assembler()
 	c_zi(-1),
 	charset(NULL)
 {
-//	cond[0] = no_cond;					// memset(cond,no_cond,sizeof(cond));
-
-//	c_flags.append("-mz80");			// machine = Z80
-//	c_flags.append("-S");				// Preprocess & compile only
+	cond[0] = no_cond;
 }
 
 
@@ -699,36 +697,108 @@ hi:			n = uint8(value(q,pAny,valid)>>8);
 			q.expect(')');
 			goto op;
 		}
+		else if(eq(w,"opcode"))		// opcode(ld a,N)  or  opcode(bit 7,(hl))  etc.
+		{
+			cptr a = q.p;
+			uint nkl = 1;
+			while(nkl)
+			{
+				w = q.nextWord();
+				if(w[0]==0) throw syntax_error("')' missing");	// EOL
+				if(w[0]=='(') { nkl++; continue; }
+				if(w[0]==')') { nkl--; continue; }
+			}
+			n = z80_major_opcode(substr(a,q.p-1));
+			valid = yes;
+			goto op;
+		}
 		else --q;	// put back '('
 	}
 
 	if(is_letter(w[0]) || w[0]=='_')			// name
 	{
-label:	Label* l = &local_labels().find(w);
-		if(l)						// lokales Label
+label:	if(pass==1)	// Pass 1:
 		{
-			n = l->value;
-			valid = valid && l->is_valid;
-			if(!valid) final = false;
-			l->is_used = true;
-		}
-		else if(local_labels_index!=0 && (l = &global_labels().find(w)))		// globales Label
-		{
-			n = l->value;
-			valid = valid && pass>1 && l->is_valid;	// in pass1 kann ein gefundenes glob. label noch durch
-													// ein später definiertes lokales label verdeckt werden
-			if(!valid) final = false;
-			l->is_used = true;
-		}
-		else	// Label nicht gefunden
-		{
-			if(pass>1)
+		/*	In Pass 1 können auch gefundene, definierte globale Label noch durch lokalere Label,
+			die im Source weiter hinten definiert werden, ersetzt werden.
+
+			Label lokal nicht gefunden?
+			=> ACTION: Label als referenziert & nicht definiert eintragen
+			   dadurch kann das Label im Labellisting ausgegeben werden
+			   context==lokal?
+			   => wenn das Label bis #endlocal nicht definiert wurde,
+				  wird es von #endlocal in den umgebenden Context verschoben
+				  (oder evtl. gelöscht, wenn es das dort schon gibt)
+				  Dadurch wandern nicht definierte Label in Richtung globaler Context
+			   context==global?
+			   => dadurch kann das Label von #include library definiert werden
+
+			Label lokal gefunden?
+			=> Label definiert?
+			   => ACTION: dieses Label nehmen
+			   Label noch nicht definiert?
+			   => context==lokal?
+				  => lokales Label?
+				     => Label wurde schon einmal referenziert und dabei eingetragen
+				        ACTION: no action
+				     globales label?
+				     => Label wurde mit .globl deklariert
+				        es ist *auch* in globals[] eingetragen.
+				        wenn es später mit #include library definiert wird, wird es auch hier definiert sein.
+				        ACTION: no action
+			   => context==global?
+			      => lokales Label?
+			         => can't happen (Internal Error)
+			         globales Label?
+			         => Label wurde schon einmal referenziert und dabei eingetragen
+						oder Label wurde mit .globl deklariert
+				        ACTION: no action
+		*/
+			Label* l = &local_labels().find(w);
+
+			if(!l)	// => ACTION: Label als referenziert & nicht definiert eintragen
 			{
-				labels[0].add(new Label(w,NULL,0,0,no,yes,no,yes));				// for listing
-				throw syntax_error(usingstr("label \"%s\" not found",w));
+				local_labels().add(new Label(w,NULL,0,0,no,local_labels_index==0,no,yes));
+				valid = no; final = no;
 			}
-			valid = no;
-			final = false;
+			else if(l->is_defined) // => ACTION: dieses Label nehmen
+			{
+				n = l->value;
+				if(!l->is_valid) { valid = no; final = no; }
+				l->is_used = true;
+			}
+			else	// => ACTION: no action
+			{
+				valid = no; final = no;
+				l->is_used = true;
+			}
+		}
+		else
+		{
+			// Pass 2++:
+			// Für das Label existiert ein Label-Eintrag in this.labels[][] weil in Pass 1 für alle
+			// referenzierten Label ein Labeleintrag erzeugt wird. Dieser wird gesucht.
+			// Ist er nicht als definiert markiert, wurde in Pass1 die Definition nicht gefunden. => Error
+
+			for( uint i=local_labels_index; ; i=labels[i].outer_index )
+			{
+				Label* l = &(labels[i].find(w));
+				if(!l) continue;
+				if(!l->is_defined)
+				{
+					// Dies muss ein globales Label sein, da alle undeklarierten Label von #endlocal in den
+					// umgebenden Kontext geschoben werden.
+					// es kann aber evtl. schon in einem lokalen Kontext gefunden werden,
+					// wenn es dort mit .globl deklariert wurde:
+					XXXASSERT(l->is_global);
+					throw syntax_error(usingstr("label \"%s\" not found",w));
+				}
+
+				n = l->value;
+				if(!l->is_valid) { valid = no; final = no; }
+				XXXASSERT(l->is_used);// = yes;
+				break;
+			}
 		}
 	}
 	else
@@ -1504,6 +1574,39 @@ void Z80Assembler::asmLocal(SourceLine&) throw(any_error)
 void Z80Assembler::asmEndLocal(SourceLine&) throw(any_error)
 {
 	if(local_labels_index==0) throw syntax_error("#endlocal without #local");
+
+	if(pass==1)	// Pass 1: verschiebe undefinierte lokale Label in den umgebenden Kontext
+	{
+		Labels& local_labels = this->local_labels();
+		Array<Label*>& local_labels_array = local_labels.getItems();
+		Array<Label*> undef_labels_array;
+		uint outer_index = local_labels.outer_index;
+		Labels& outer_labels = labels[outer_index];
+		bool is_global = outer_labels.is_global;
+
+		// Suche lokal undefinierte Labels,
+		// die nicht mit .globl als global deklariert wurden:
+		for(uint lli = local_labels_array.count(); lli--; )
+		{
+			Label* label = local_labels_array[lli];
+			if( !label->is_defined && !label->is_global )
+				undef_labels_array.append(label);
+		}
+
+		// Verschiebe diese Labels in den umgebenden Kontext:
+		for(uint uli = undef_labels_array.count(); uli--; )
+		{
+			Label* ql = undef_labels_array[uli];		XXXASSERT(!ql->is_global);
+			Label* zl = &outer_labels.find(ql->name);
+
+			LogLine("pushing %s",ql->name);
+
+			if(zl==NULL) { zl = new Label(*ql); outer_labels.add(zl); zl->is_global = is_global; }
+			else zl->is_used = yes;
+			local_labels.remove(ql->name);
+		}
+	}
+
 	local_labels_index = local_labels().outer_index;
 }
 
