@@ -32,7 +32,7 @@
 #include "unix/files.h"
 #include "unix/tempmem.h"
 #include "helpers.h"
-#include "Libraries/Z80/Z80_clock_cycles.h"
+#include "Libraries/Z80/z80_clock_cycles.h"
 
 
 /*	Helper: write one line with address, code and text to log file
@@ -166,7 +166,7 @@ uint write_line_with_objcode_and_cycles( FD& fd, uint address, uint8* bytes, uin
 		fd.write_fmt("%04X: %08X %s%s\n",    address, peek4X(bytes), cc_str(bytes,count,cc,is_data), text);
 		return 4;
 	default:
-		XXXASSERT(is_data);
+		XXXASSERT(is_data || count==6);		// compound opcode ld rr,(ix+dis) TODO: cycles
 		// wenn zuletzt 4 gleiche Bytes geloggt wurden
 		// und noch mehr als 4 Bytes folgen
 		// und nur noch diese Bytes folgen

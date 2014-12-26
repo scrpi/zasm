@@ -36,7 +36,7 @@
 #include "Templates/HashMap.h"
 #include "helpers.h"
 #include "CharMap.h"
-#include "Z80/Z80_major_opcode.h"
+#include "Z80/z80_major_opcode.h"
 extern char** environ;
 
 
@@ -86,10 +86,13 @@ Z80Assembler::Z80Assembler()
 	stdlib_dir(NULL),
 	c_qi(-1),
 	c_zi(-1),
-	charset(NULL)
-{
-	cond[0] = no_cond;
-}
+	charset(NULL),
+	enable_illegal_ixcb_r2_instructions(no),	// 	e.g. bit b,(ix+d),r2
+	enable_illegal_ixcb_xh_instructions(no),	// 	e.g. bit b,xh
+	target_hd64180(no),
+	target_8080(no),
+	allow_non8080regs_as_label_names(no)
+{}
 
 
 Z80Assembler::~Z80Assembler()
@@ -103,142 +106,6 @@ Z80Assembler::~Z80Assembler()
 // --------------------------------------------------
 //					Helper
 // --------------------------------------------------
-
-
-/*	store signed or unsigned byte
-	validates byte if valid=true
-*/
-void Z80Assembler::storeByte(int byte, bool valid) throw(any_error)
-{
-	if(valid && (byte>255||byte<-128)) throw syntax_error( "byte value out of range" );
-	current_segment().store(byte);
-}
-
-/*	store offset byte and check range
-	validates offset if valid=true
-*/
-void Z80Assembler::storeOffset(int offset, bool valid) throw(any_error)
-{
-	if(valid && (offset!=(signed char)offset)) throw syntax_error("offset out of range");
-	current_segment().store(offset);
-}
-
-/*	store XY CB dis opcode
-	validates displacement if valid=true
-*/
-void Z80Assembler::store_XYCB_op( int pfx, int opcode, int dis, bool valid ) throw(any_error)
-{
-	if (valid && dis!=(signed char)dis) throw syntax_error("displacement out of range");
-	current_segment().store(pfx,PFX_CB,dis,opcode);
-}
-
-#define	store_IXCB_opcode(OP,DIS,VALID)	store_XYCB_op(PFX_IX,OP,DIS,VALID)
-#define	store_IYCB_opcode(OP,DIS,VALID)	store_XYCB_op(PFX_IY,OP,DIS,VALID)
-
-
-/*	store pfx + opcode
-*/
-#define	store_ED_opcode(OP)	current_segment().store(PFX_ED,OP)
-#define	store_CB_opcode(OP)	current_segment().store(PFX_CB,OP)
-#define	store_IX_opcode(OP)	current_segment().store(PFX_IX,OP)
-#define	store_IY_opcode(OP)	current_segment().store(PFX_IY,OP)
-
-
-/*	store XY opcode dis
-	validates displacement if valid=true
-*/
-void Z80Assembler::store_XY_byte_op( int pfx, int opcode, int dis, bool valid ) throw(any_error)
-{
-	if (valid && dis!=(signed char)dis) throw syntax_error("displacement out of range");
-	current_segment().store(pfx,opcode,dis);
-}
-
-#define	store_IX_byte_opcode(OP,DIS,VALID)	store_XY_byte_op(PFX_IX,OP,DIS,VALID)
-#define	store_IY_byte_opcode(OP,DIS,VALID)	store_XY_byte_op(PFX_IY,OP,DIS,VALID)
-
-
-/*	expect and evaluate condition
-*/
-enum { NZ=0,Z=8,NC=16,C=24,PO=32,PE=40,P=48,M=56 };
-
-int Z80Assembler::getCondition( cstr w ) throw(syntax_error)
-{
-	switch(strlen(w))
-	{
-	case 1:
-		switch(peek1(w)|0x20)
-		{
-		case 'z': return Z;
-		case 'c': return C;
-		case 'p': return P;
-		case 'm': return M;
-		}
-		break;
-	case 2:
-		switch(peek2X(w)|0x20202020)
-		{
-		case '  nz':	return NZ;
-		case '  nc':	return NC;
-		case '  po':	return PO;
-		case '  pe':	return PE;
-		}
-		break;
-	}
-	throw syntax_error ( "condition expected" );
-}
-
-
-/*	test for and evaluate register
-*/
-enum
-{	RB,RC,RD,RE,RH,RL,OPEN,RA,
-	XH,XL,YH,YL,
-	RF, RI, RR,   BC,DE,HL,SP,
-	IX,IY,AF,PC,  AF2,BC2,DE2,HL2
-};
-
-int Z80Assembler::getRegister(SourceLine& q)
-{
-	cstr w = q.nextWord();
-
-	switch(strlen(w))
-	{
-	case 1:
-		switch(*w | 0x20)
-		{
-		case 'a':	return RA;
-		case 'f':	return RF;
-		case 'b':	return RB;
-		case 'c':	return RC;
-		case 'd':	return RD;
-		case 'e':	return RE;
-		case 'h':	return RH;
-		case 'l':	return RL;
-		case '(':	return OPEN;
-		case 'i':	return RI;
-		case 'r':	return RR;
-		}
-		break;
-	case 2:
-		switch(peek2X(w) | 0x20202020)
-		{
-		case '  af':	return AF;
-		case '  bc':	return BC;
-		case '  de':	return DE;
-		case '  hl':	return HL;
-		case '  ix':	return IX;
-		case '  iy':	return IY;
-		case '  sp':	return SP;
-		case '  pc':	return PC;
-		case '  xh':	return XH;
-		case '  xl':	return XL;
-		case '  yh':	return YH;
-		case '  yl':	return YL;
-		}
-		break;
-	}
-	return -1;
-}
 
 
 // set error for current file, line & column
@@ -364,7 +231,8 @@ void Z80Assembler::assemble(StrArray& sourcelines) throw()
 
 	// setup conditional assembly:
 	cond_off = 0x00;
-	cond[0] = no_cond;
+	static_assert(sizeof(cond[0])==1,"type of cond[] must be byte");
+	memset(cond,no_cond,sizeof(cond));
 
 	// DOIT:
 	for(pass=1,final=no; pass<9 && !final && errors.count()==0; pass++)
@@ -616,7 +484,8 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 			uint slen = strlen(w); if(slen<3||w[slen-1]!='\'') goto syntax_error;
 			w = unquotedstr(w);		// unquote & unescape
 			if(charset) { w = (cstr) charset->translate(w); slen = (uint8) *w++; }
-			else		{ w = fromutf8str(w); slen = strlen(w); }
+			else		{ errno=0; w = fromutf8str(w); if(errno) throw syntax_error(errno); slen = strlen(w); }
+		//	if(slen!=1) throw syntax_error("only one character expected");
 			while(slen--) n = (n<<8) + (uint8) *w++;
 			goto op;
 		}
@@ -905,7 +774,13 @@ void Z80Assembler::asmLabel(SourceLine& q) throw(any_error)
 			l->sourceline = current_sourceline_index;	// und keine Source-Zeilennummer
 		}
 
-		if(l->sourceline != current_sourceline_index) throw syntax_error("label redefined");
+		if(l->sourceline != current_sourceline_index)
+		{
+			if(l->is_valid && is_valid && l->value==value &&	// allow trivial defs to occur multiple times
+				l->is_global==is_global)						// e.g.:	SPACE equ $20 ; somewhere in source
+				return;											// later:	SPACE equ $20 ; somewhere else in source
+			throw syntax_error("label redefined");
+		}
 
 		XXXASSERT(is_valid || !l->is_valid);
 		XXXASSERT(l->segment == current_segment_ptr);
@@ -1117,9 +992,12 @@ void Z80Assembler::asmIf(SourceLine& q) throw(any_error)
 {
 	if(cond[NELEM(cond)-1] != no_cond) throw fatal_error("too many conditions nested");
 
+	uint lli = local_labels_index;			// force global context: else most labels won't resolve in pass1!
+			   local_labels_index=0;		// TODO: denk: Probleme wenn value() throws? (final_error anyway)
 	bool v = yes;
-	bool f = cond_off || value(q,pAny,v);			// higher nesting level off => ignore; else evaluate value
-	if(!v) throw fatal_error("condition must be evaluatable in pass1");
+	bool f = cond_off || value(q,pAny,v);	// higher nesting level off => ignore; else evaluate value
+	local_labels_index = lli;				// restore local_labels_index
+	if(!v) throw fatal_error("condition not evaluatable in pass1");
 	if(cond_off) q.skip_to_eol();
 
 	memmove( cond+1, cond, sizeof(cond)-sizeof(*cond) );
@@ -1150,7 +1028,13 @@ void Z80Assembler::asmElif(SourceLine& q) throw(any_error)
 		bool v = yes;
 		bool f = cond_off>>1;		// outer nesting level
 		if(f) q.skip_to_eol();		// outer nesting level off => just skip expression; value is irrelevant
-		else f = value(q,pAny,v);	// else evaluate value
+		else
+		{
+			uint lli = local_labels_index;			// force global context: else most labels won't resolve in pass1!
+					   local_labels_index=0;		// TODO: denk: Probleme wenn value() throws? (final_error anyway)
+			f = value(q,pAny,v);	// else evaluate value
+			local_labels_index = lli;				// restore local_labels_index
+		}
 		if(!v) throw fatal_error("condition must be evaluatable in pass1");
 
 		cond_off -= f;			// if f==1 then clear bit 0 => enable #elif clause
@@ -1611,6 +1495,147 @@ void Z80Assembler::asmEndLocal(SourceLine&) throw(any_error)
 }
 
 
+#if 0
+// --------------------------------------------------
+//				Assemble Opcode
+// --------------------------------------------------
+
+
+/*	store signed or unsigned byte
+	validates byte if valid=true
+*/
+void Z80Assembler::storeByte(int byte, bool valid) throw(any_error)
+{
+	if(valid && (byte>255||byte<-128)) throw syntax_error( "byte value out of range" );
+	current_segment().store(byte);
+}
+
+/*	store offset byte and check range
+	validates offset if valid=true
+*/
+void Z80Assembler::storeOffset(int offset, bool valid) throw(any_error)
+{
+	if(valid && (offset!=(signed char)offset)) throw syntax_error("offset out of range");
+	current_segment().store(offset);
+}
+
+/*	store XY CB dis opcode
+	validates displacement if valid=true
+*/
+void Z80Assembler::store_XYCB_op( int pfx, int opcode, int dis, bool valid ) throw(any_error)
+{
+	if (valid && dis!=(signed char)dis) throw syntax_error("displacement out of range");
+	current_segment().store(pfx,PFX_CB,dis,opcode);
+}
+
+#define	store_IXCB_opcode(OP,DIS,VALID)	store_XYCB_op(PFX_IX,OP,DIS,VALID)
+#define	store_IYCB_opcode(OP,DIS,VALID)	store_XYCB_op(PFX_IY,OP,DIS,VALID)
+
+
+/*	store pfx + opcode
+*/
+#define	store_ED_opcode(OP)	current_segment().store(PFX_ED,OP)
+#define	store_CB_opcode(OP)	current_segment().store(PFX_CB,OP)
+#define	store_IX_opcode(OP)	current_segment().store(PFX_IX,OP)
+#define	store_IY_opcode(OP)	current_segment().store(PFX_IY,OP)
+
+
+/*	store XY opcode dis
+	validates displacement if valid=true
+*/
+void Z80Assembler::store_XY_byte_op( int pfx, int opcode, int dis, bool valid ) throw(any_error)
+{
+	if (valid && dis!=(signed char)dis) throw syntax_error("displacement out of range");
+	current_segment().store(pfx,opcode,dis);
+}
+
+#define	store_IX_byte_opcode(OP,DIS,VALID)	store_XY_byte_op(PFX_IX,OP,DIS,VALID)
+#define	store_IY_byte_opcode(OP,DIS,VALID)	store_XY_byte_op(PFX_IY,OP,DIS,VALID)
+
+
+/*	expect and evaluate condition
+*/
+enum { NZ=0,Z=8,NC=16,C=24,PO=32,PE=40,P=48,M=56 };
+
+int Z80Assembler::getCondition( cstr w ) throw(syntax_error)
+{
+	switch(strlen(w))
+	{
+	case 1:
+		switch(peek1(w)|0x20)
+		{
+		case 'z': return Z;
+		case 'c': return C;
+		case 'p': return P;
+		case 'm': return M;
+		}
+		break;
+	case 2:
+		switch(peek2X(w)|0x20202020)
+		{
+		case '  nz':	return NZ;
+		case '  nc':	return NC;
+		case '  po':	return PO;
+		case '  pe':	return PE;
+		}
+		break;
+	}
+	throw syntax_error ( "condition expected" );
+}
+
+
+/*	test for and evaluate register
+*/
+enum
+{	RB,RC,RD,RE,RH,RL,OPEN,RA,
+	XH,XL,YH,YL,
+	RF, RI, RR,   BC,DE,HL,SP,
+	IX,IY,AF,PC,  AF2,BC2,DE2,HL2
+};
+
+int Z80Assembler::getRegister(SourceLine& q)
+{
+	cstr w = q.nextWord();
+
+	switch(strlen(w))
+	{
+	case 1:
+		switch(*w | 0x20)
+		{
+		case 'a':	return RA;
+		case 'f':	return RF;
+		case 'b':	return RB;
+		case 'c':	return RC;
+		case 'd':	return RD;
+		case 'e':	return RE;
+		case 'h':	return RH;
+		case 'l':	return RL;
+		case '(':	return OPEN;
+		case 'i':	return RI;
+		case 'r':	return RR;
+		}
+		break;
+	case 2:
+		switch(peek2X(w) | 0x20202020)
+		{
+		case '  af':	return AF;
+		case '  bc':	return BC;
+		case '  de':	return DE;
+		case '  hl':	return HL;
+		case '  ix':	return IX;
+		case '  iy':	return IY;
+		case '  sp':	return SP;
+		case '  pc':	return PC;
+		case '  xh':	return XH;
+		case '  xl':	return XL;
+		case '  yh':	return YH;
+		case '  yl':	return YL;
+		}
+		break;
+	}
+	return -1;
+}
+
 /*	assemble opcode
 */
 void Z80Assembler::asmInstr(SourceLine& q) throw(any_error)
@@ -1863,35 +1888,59 @@ wlen2:
 	case '  rr':
 	{
 		i = RR_B;
-rr:		s=q.p;
+rr:		s = q.p;
 		n = getRegister(q);
+		int r;
 
-		if(n<0)			// n(XY)
+		if(n<0)			// rr n(XY)  oder  illegal  rr n(XY),r
 		{
 			q.p=s;
 			n=value(q,pAny,v=1);
 			q.expect('(');
-			int r=getRegister(q);
-			if(r!=IX&&r!=IY) goto ix_iy_expected;
-			q.expectClose();
-			store_XYCB_op(r==IX?PFX_IX:PFX_IY,i+OPEN,n,v);
-			return;
+			r = getRegister(q);
+			if(r!=IX && r!=IY) goto ix_iy_expected;
+			goto rrxy;
+//			q.expectClose();
+//			int r2 = OPEN;
+//			if(q.testComma())		// illegal  rr d(ix),r
+//			{
+//				r2 = getRegister(q);
+//				if(r2<RB || r2>RA || r2==OPEN) goto ill_target;
+//			}
+//			store_XYCB_op(r==IX?PFX_IX:PFX_IY, i+r2, n, v);
 		}
-
-		if(n<RB||n>RA) goto ill_target;
-		if(n==OPEN) 	// hl/ix/iy register indirect ?
+		else if(n==OPEN) 	// hl/ix/iy register indirect ?
 		{
-			switch(getRegister(q))
+			r = getRegister(q);
+			if(r==HL)
 			{
-			case IX:	n=value(q,pAny,v=1); store_IXCB_opcode(i+OPEN,n,v); break;
-			case IY:	n=value(q,pAny,v=1); store_IYCB_opcode(i+OPEN,n,v); break;
-			case HL:	store_CB_opcode  (i+OPEN);          break;
-			default:	goto ill_reg;
+				store_CB_opcode(i+OPEN);
+				q.expectClose();
 			}
-			q.expectClose();
-			return;
+			else if(r==IX||r==IY)
+			{
+				n = value(q,pAny,v=1);
+rrxy:			q.expectClose();
+				int r2 = OPEN;
+				if(enable_illegal_ixcb_r2_instructions && q.testComma()) // illegal: rr (ix+d),r ***NOT ALL Z80 CPUs!***
+				{
+					r2 = getRegister(q);
+					if(r2<RB || r2>RA || r2==OPEN) goto ill_target;
+				}
+				store_XYCB_op(r==IX?PFX_IX:PFX_IY, i+r2, n, v);
+			}
+			else if(enable_illegal_ixcb_xh_instructions && n>=XH && n<=YL) // illegal: rr xh ***NOT ALL Z80 CPUs!***
+			{
+				int pfx = n>=YH ? PFX_IY : PFX_IX;
+				n -= n>=YH ? YH-RH : XH-RH;
+				store_XYCB_op(pfx, i+n, 0, true);
+			}
+			else goto ill_reg;
 		}
-		store_CB_opcode(i+n);
+		else if(n>=RB && n<=RA)
+			store_CB_opcode(i+n);
+		else
+			goto ill_target;
 		return;
 	}
 	case '  ex':
@@ -2376,40 +2425,53 @@ sbc:	if(n!=HL) goto ill_reg;
 bit:	n = value(q,pAny,v=1); if (v && (n<0 || n>7)) throw syntax_error("illegal bit number");
 		i += n*8;
 		q.expectComma();
-		s=q.p;
+		s = q.p;
 		n = getRegister(q);
+		int r;
 
 		if(n<0)		// n(XY)
 		{
-			q.p=s;
+			q.p = s;
 			m = value(q,pAny,v);
 			q.expect('(');
-			int r = getRegister(q);
-			if(r!=IX&&r!=IY) goto ix_iy_expected;
-			q.expectClose();
-			store_XYCB_op(r==IX?PFX_IX:PFX_IY,i+OPEN, m, v);
-			return;
+			r = getRegister(q);
+			if(r==IX || r==IY) goto bitxy;
+			else goto ix_iy_expected;
+//			q.expectClose();
+//			store_XYCB_op(r==IX?PFX_IX:PFX_IY,i+OPEN, m, v);
 		}
-
-		if(n<RB||n>RA) goto ill_target;
-		if(n!=OPEN) { store_CB_opcode(i+n); return; }
-		switch(getRegister(q))
+		else if(n==OPEN)
 		{
-		case HL:
-			store_CB_opcode(i+n);
-			break;
-		case IX: 				// 2007-09-25 kio: (IX) w/o offset
-			m=0; v=1; if(q.peekChar()!=')') m = value(q,pAny,v);
-			store_IXCB_opcode(i+n, m, v);
-			break;
-		case IY:				// 2007-09-25 kio: (IY) w/o offset
-			m=0; v=1; if(q.peekChar()!=')') m = value(q,pAny,v);
-			store_IYCB_opcode(i+n, m, v);
-			break;
-		default:
-			goto ill_reg;
+			r = getRegister(q);
+			if(r==HL)
+			{
+				store_CB_opcode(i+n);
+				q.expectClose();
+			}
+			else if(r==IX||r==IY) 				// 2007-09-25 kio: also support (IX) w/o offset
+			{
+				m=0; v=1; if(q.peekChar()!=')') m = value(q,pAny,v);
+bitxy:			q.expectClose();
+				int r2 = OPEN;
+				if(enable_illegal_ixcb_r2_instructions && q.testComma()) // illegal: bit b,(ix+d),r ***NOT ALL Z80 CPUs!***
+				{
+					r2 = getRegister(q);
+					if(r2<RB || r2>RA || r2==OPEN) goto ill_target;
+				}
+				store_XYCB_op(r==IX?PFX_IX:PFX_IY, i+r2, m, v);
+			}
+			else goto ill_reg;
 		}
-		q.expectClose();
+		else if(n>=RB && n<=RA)
+			store_CB_opcode(i+n);
+		else if(enable_illegal_ixcb_xh_instructions && n>=XH && n<=YL) // illegal: bit b,xh ***NOT ALL Z80 CPUs!***
+		{
+			int pfx = n>=YH ? PFX_IY : PFX_IX;
+			n -= n>=YH ? YH-RH : XH-RH;
+			store_XYCB_op(pfx, i+n, 0, true);
+		}
+		else
+			goto ill_target;
 		return;
 	}
 	case ' inc':
@@ -2675,7 +2737,1032 @@ ill_dest:		throw syntax_error("illegal destination");
 ix_iy_expected:	throw syntax_error("IX or IY expected");
 }
 
+#else
 
+
+// --------------------------------------------------
+//				Assemble Opcode
+// --------------------------------------------------
+
+
+/*	store signed or unsigned byte
+	validates byte if valid=true
+*/
+void Z80Assembler::storeByte(int byte, bool valid) throw(any_error)
+{
+	if(valid && (byte>255||byte<-128)) throw syntax_error( "byte value out of range" );
+	store(byte);
+}
+
+/*	store offset byte and check range
+	validates offset if valid=true
+*/
+void Z80Assembler::storeOffset(int offset, bool valid) throw(any_error)
+{
+	if(valid && (offset!=(signed char)offset)) throw syntax_error("offset out of range");
+	store(offset);
+}
+
+void Z80Assembler::storeEDopcode( int n ) TAE
+{
+	if(target_8080) throw syntax_error("no i8080 opcode (option --8080)");
+	store(0xED,n);
+}
+
+
+// enumeration of identifiers:
+//
+enum
+{
+	NIX,	// end of line
+
+	// conditions:
+	NZ,		Z,		NC,		CY,		PO,		PE,		P,		M,	// <-- DO NOT REORDER!
+
+	// 8-bit registers:
+	RB,		RC,		RD,		RE,		RH,		RL,		XHL,	RA,	// <-- DO NOT REORDER!
+	XH,		XL,		YH,		YL,									// <-- DO NOT REORDER!
+	RI,		RR,
+
+	// 16-bit registers:
+	BC,		DE,		HL,		SP,			// <-- DO NOT REORDER!
+	IX,		IY,		AF,
+
+	// others:
+	XBC,	XDE,	XC,		XSP,	XIX,	XIY,
+	XNN,	NN,
+};
+
+
+/*	test and skip over condition
+	returns NIX or enum [Z, NZ .. P]
+	expect_comma
+		must be set if cond must be followed by a comma --> jr, jp and call
+		and must be cleared for --> ret
+*/
+uint Z80Assembler::getCondition( SourceLine& q, bool expect_comma ) throw(syntax_error)
+{
+	cptr p = q.p;
+	cstr w = q.nextWord();	if(w[0]==0) return NIX;
+	if(expect_comma && !q.testComma()) { q.p = p; return NIX; }
+
+	char c1 = *w++ | 0x20;
+	char c2 = *w++ | 0x20;
+
+	if(c2==0x20)	// strlen = 1
+	{
+		if(c1=='z') return Z;	if(c1=='c') return CY;
+		if(c1=='p') return P;	if(c1=='m') return M;
+	}
+	else if(*w==0)	// strlen = 2
+	{
+		if(c1=='n') { if(c2=='z') return NZ; if(c2=='c') return NC; }
+		if(c1=='p') { if(c2=='o') return PO; if(c2=='e') return PE; }
+	}
+	throw syntax_error("illegal condition");
+}
+
+
+/*	test and skip over register or value
+	in:	q: source line
+		v: selects error message
+	returns register enum:
+		normal register:     n and v are void (not modified)
+		NN, XNN, XIX or XIY: n and v are set
+		does not return i, r, (c), ix, iy or related if target_8080
+	throws on error
+	throws at end of line
+*/
+uint Z80Assembler::getRegister(SourceLine& q, int32& n, bool& v) throw(syntax_error)
+{
+	cptr p = q.p;
+	cstr w = q.nextWord();
+
+	char c1 = *w++ | 0x20;	if(c1==0) throw syntax_error("unexpected end of line");
+	char c2 = *w++ | 0x20;
+
+	if(c2==0x20)	// strlen=1
+	{
+		switch(c1)
+		{
+		case 'a':	return RA;
+		case 'b':	return RB;
+		case 'c':	return RC;
+		case 'd':	return RD;
+		case 'e':	return RE;
+		case 'h':	return RH;
+		case 'l':	return RL;
+		case 'i':	if(!target_8080) return RI;
+		case 'r':	if(!target_8080) return RR;
+
+ill_8080_reg:		if(allow_non8080regs_as_label_names) break;	// allow ix iy xh xl yh yl i and r as label names
+					throw syntax_error("no 8080 register");	// TODO: cmd line option to allow z80 reg names for labels
+
+		case '(':
+			{
+				if(q.testWord("hl")) { q.expect(')'); return XHL; }
+				if(q.testWord("de")) { q.expect(')'); return XDE; }
+				if(q.testWord("bc")) { q.expect(')'); return XBC; }
+				if(q.testWord("sp")) { q.expect(')'); return XSP; }
+
+				int r = XNN; n=0; v=1;
+
+				if(q.testWord("ix")) { if(target_8080) goto ill_8080_reg; r = XIX; if(q.testChar(')')) return r; } else
+				if(q.testWord("iy")) { if(target_8080) goto ill_8080_reg; r = XIY; if(q.testChar(')')) return r; } else
+				if(q.testWord("c"))  { /* if(target_8080) break; */ q.expect(')'); return XC; }
+
+				n = value(q,pAny,v);
+				q.expect(')');
+				return r;
+			}
+		}
+	}
+	else if(*w==0)	// strlen=2
+	{
+		switch(c1)
+		{
+		case 'a':	if(c2=='f') return AF; else break;
+		case 'b':	if(c2=='c') return BC; else break;
+		case 'd':	if(c2=='e') return DE; else break;
+		case 'h':	if(c2=='l') return HL; else break;
+		case 's':	if(c2=='p') return SP; else break;
+		case 'i':	if(target_8080 && (c2=='x' || c2=='y')) goto ill_8080_reg; else
+					if(c2=='x') return IX; else if(c2=='y') return IY; else break;
+		case 'x':	if(target_8080 && (c2=='h' || c2=='l')) goto ill_8080_reg; else
+					if(c2=='h') return XH; else if(c2=='l') return XL; else break;
+		case 'y':	if(target_8080 && (c2=='h' || c2=='l')) goto ill_8080_reg; else
+					if(c2=='h') return YH; else if(c2=='l') return YL; else break;
+		}
+	}
+
+	// not a register: evaluate expression:
+	q.p = p;
+	n = value(q,pAny,v=1);
+	if(target_8080 || !q.testChar('(')) return NN;
+
+	// SDASZ80 syntax: n(IX)
+	if(q.testWord("ix")) { q.expectClose(); return XIX; }
+	if(q.testWord("iy")) { q.expectClose(); return XIY; }
+	throw syntax_error("syntax error");
+}
+
+
+/*	assemble opcode
+*/
+void Z80Assembler::asmInstr(SourceLine& q) throw(any_error)
+{
+	int   r,r2;
+	int32 n,n2;
+	bool  v,v2;
+	uint  instr;
+
+	cstr w = q.nextWord();
+
+// strlen-Verteiler:
+
+	switch(strlen(w))
+	{
+	case 0:		return;					// end of line
+	case 1:		goto wlen1;
+	case 2:		goto wlen2;
+	case 3:		goto wlen3;
+	case 4:		goto wlen4;
+	default:	goto wlenXL;
+	}
+
+
+// opcode len = 1:
+
+wlen1:
+	if(*w=='.')							// SDASZ80 opcodes
+	{
+		w = lowerstr(q.nextWord());
+
+		if(eq(w,"module"))				// for listing
+		{
+			q.skip_to_eol();
+			return;
+		}
+		if(eq(w,"optsdcc"))				// .optsdcc -mz80
+		{
+			if(!q.testChar('-') )		throw syntax_error("-mz80 expected");
+			if(ne(q.nextWord(),"mz80"))	throw syntax_error("-mz80 expected");
+			return;
+		}
+		if(eq(w,"area"))				// select segment for following code
+		{
+			cstr name = upperstr(q.nextWord());
+			if(!is_letter(*name) && *name!='_') throw fatal_error("segment name expected");
+			Segment* segment = segments.find(name);
+			if(!segment) throw fatal_error("segment not found");
+
+			current_segment_ptr = segment;
+			q.segment = current_segment_ptr;
+			q.byteptr = currentPosition();
+			XXXASSERT(q.bytecount==0);
+
+			if((eq(name,"_CABS")||eq(name,"_DABS")||eq(name,"_RSEG"))	// SDCC generates: " .area _CABS (ABS)"
+				&& q.testChar('('))										// KCC  generates: " .area _RSEG (ABS)"
+			{
+				if(!q.testWord("ABS")) throw syntax_error("'ABS' expected");
+				q.expect(')');
+			}
+			return;
+		}
+		if(eq(w,"globl"))				// declare global label for linker: mark label for #include library "libdir"
+		{								// das Label wird in mehrere Labels[] eingehängt! => special d'tor!
+			w = q.nextWord();
+			if(!is_letter(*w) && *w!='_') throw syntax_error("label name expected");
+
+			if(local_labels_index)		// local context?
+			{
+				Label* g = &global_labels().find(w);
+				Label* l = &local_labels().find(w);
+				if(l && !l->is_global) throw syntax_error("label already defined local");
+				XXXASSERT(!g||!l||g==l);
+
+				Label* label = l ? l : g ? g : new Label(w,NULL,current_sourceline_index,0,no,yes,no,no);
+				if(!l) local_labels().add(label);
+				if(!g) global_labels().add(label);
+			}
+			else						// global context
+			{
+				Label* g = &global_labels().find(w);
+				Label* label = g ? g : new Label(w,NULL,current_sourceline_index,0,no,yes,no,no);
+				if(!g) global_labels().add(label);
+			}
+			return;
+		}
+		if(eq(w,"ds"))	 goto ds;
+		if(eq(w,"dw"))	 goto dw;
+		if(eq(w,"db"))	 goto db; // SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
+		if(eq(w,"byte")) goto db; // SDASZ80: truncates value to byte (not implemented, done if used this way by SDCC)
+		if(eq(w,"org"))	 goto org;
+		if(eq(w,"ascii"))goto dm;
+		throw fatal_error(usingstr("SDASZ80 opcode \".%s\": TODO",w));
+	}
+	goto unknown_opcode;	// error
+
+
+// opcode len = 2:
+
+wlen2:
+	switch(peek2X(w)|0x20202020)
+	{
+	default:		goto unknown_opcode;	// error
+	case '  db':	goto db;
+	case '  dw':	goto dw;
+	case '  ds':	goto ds;
+	case '  dm':	goto dm;
+	case '  ei':	store(EI); return;
+	case '  di':	store(DI); return;
+
+	case '  jp':
+		// jp NN
+		// jp rr	hl ix iy
+		// jp (rr)	hl ix iy
+		r2 = getCondition(q,yes);
+		r  = getRegister(q,n,v);
+		if(r==NN) { store(r2==NIX ? JP : JP_NZ+(r2-NZ)*8); storeWord(n); return; }
+		if(target_8080) goto ill_8080;
+		if(r==HL||r==XHL)			 { store(JP_HL); return; }
+		if(r==IX||(r==XIX&&v&&n==0)) { store(PFX_IX,JP_HL); return; }
+		if(r==IY||(r==XIY&&v&&n==0)) { store(PFX_IY,JP_HL); return; }
+		goto ill_dest;
+
+	case '  im':
+		// im n		0 1 2
+		r = getRegister(q,n,v);
+		if(r==NN && ((uint)n<=2 || !v)) { if(n) n++; storeEDopcode(IM_0 + n*8); return; }
+		throw syntax_error("illegal interrupt mode");
+
+	case '  in':
+		// in a,(N)
+		// in r,(c)		a f b c d e h l
+		// in r,(bc)	a f b c d e h l
+		if(q.testWord("f")) r = XHL;
+		else { r = getRegister(q,n,v); if(r==XHL) goto ill_dest; }
+		q.expectComma();
+		r2 = getRegister(q,n2,v2);
+		if(r2==XC || r2==XBC)
+		{
+			if(r>RA) goto ill_dest;
+			storeEDopcode(IN_B_xC+(r-RB)*8); return;
+		}
+		if(r2==XNN)
+		{
+			if(r!=RA) goto ill_dest;
+			store(INA); storeByte(n2,v2); return;
+		}
+		goto ill_source;
+
+	case '  rl':
+		instr = RL_B;
+		goto rr;
+
+	case '  rr':
+		instr = RR_B;
+		goto rr;
+
+		// bit n,r			0..7  a b c d e h l (hl)
+		// bit n,(ix+d)
+		// bit n,xh			ILLEGAL ***NOT ALL Z80 CPUs!***
+		// bit n,(ix+d),r	ILLEGAL ***NOT ALL Z80 CPUs!***
+
+		// common handler for:
+		// bit, set, res
+
+		// rr r			a b c d e h l (hl)
+		// rr xh		xh xl yh yl		// ILLEGAL: ***NOT ALL Z80 CPUs!***
+		// rr (ix+n)	ix iy
+		// rr (ix+n),r	a b c d e h l	// ILLEGAL: ***NOT ALL Z80 CPUs!***
+
+		// common handler for:
+		// rr rrc rl rlc sla sra sll srl
+
+rr:		if(target_8080) goto ill_8080;
+		r2 = getRegister(q,n2,v2);
+
+		if(r2<=RA) { store(PFX_CB, instr + r2-RB); return; }
+
+		if(r2<=YL)
+		{
+			if(!enable_illegal_ixcb_xh_instructions) throw syntax_error("command line option --ixcb=xh not enabled");
+			if(r2>=YH) store(PFX_IY, PFX_CB, 0, instr+r2+RH-YH-RB);
+			else	   store(PFX_IX, PFX_CB, 0, instr+r2+RH-XH-RB);
+			return;
+		}
+
+		if(r2==XIX || r2==XIY)
+		{
+			r = XHL;
+			if(q.testComma())
+			{
+				if(!enable_illegal_ixcb_r2_instructions) throw syntax_error("command line option --ixcb=r2 not enabled");
+				r = getRegister(q,n,v);
+				if(r>RA || r==XHL) throw syntax_error("illegal secondary destination");
+			}
+			store(r2==XIX?PFX_IX:PFX_IY, PFX_CB);
+			storeOffset(n2,v2);
+			store(instr+r-RB);
+			return;
+		}
+		goto ill_target;
+
+	case '  ex':
+		// ex af,af'
+		// ex hl,de		(or vice versa)
+		// ex hl,(sp)
+		// ex ix,(sp)	valid illegal. 2006-09-13 kio
+		// ex ix,de		does not work: swaps de and hl only. 2006-09-13 kio
+		r = getRegister(q,n,v);
+		q.expectComma();
+		r2 = getRegister(q,n2,v2);
+
+		if(r==AF) { if(target_8080) goto ill_8080;
+					if(r2==AF) store(EX_AF_AF); else goto ill_source; q.expect('\''); return; }
+		if(r==HL) { if(r2==DE) store(EX_DE_HL); else if(r2==XSP) store(EX_HL_xSP); else goto ill_source; return; }
+		if(r==DE) { if(r2==HL) store(EX_DE_HL); else goto ill_source; return; }
+		if(r==IX) { if(r2==XSP) store(PFX_IX, EX_HL_xSP); else goto ill_source; return; }
+		if(r==IY) { if(r2==XSP) store(PFX_IY, EX_HL_xSP); else goto ill_source; return; }
+		if(r==XSP){ if(r2==HL) store(EX_HL_xSP); else if(r2==IX) store(PFX_IX, EX_HL_xSP);
+					else if(r2==IY) store(PFX_IY, EX_HL_xSP); else goto ill_source; return; }
+		goto ill_target;
+
+	case '  jr':
+		// jr nn
+		// jr cc,nn
+		if(target_8080) goto ill_8080;
+		r2 = getCondition(q,yes); if(r2>CY) throw syntax_error("illegal condition");
+		r  = getRegister(q,n,v); if(r!=NN) goto ill_dest;	// before store opcode JR for correct value of "$"
+
+		store(r2==NIX ? JR : JR_NZ+(r2-NZ)*8);
+		storeOffset(n - (currentAddress()+1), v && currentAddressValid());
+		return;
+
+	case '  or':
+		instr = OR_B;
+		goto cp;
+
+	case '  cp':
+		// cp a,N			first argument (the 'a' register) may be omitted
+		// cp a,r			a b c d e h l (hl)
+		// cp a,xh
+		// cp a,(ix+dis)
+
+		// common handler for
+		// add adc sub sbc and or xor cp
+
+		instr = CP_B;
+
+cp:		r = getRegister(q,n,v);
+cp_a:	if(q.testComma()) { if(r!=RA) goto ill_target; else r = getRegister(q,n,v); }
+
+		if(r<=RA) { store(instr+r-RB); return; }
+		if(r<=XL) { store(PFX_IX, instr+r+RH-XH-RB); return; }
+		if(r<=YL) { store(PFX_IY, instr+r+RH-YH-RB); return; }
+		if(r==NN) { store(instr+CP_N-CP_B); storeByte(n,v); return; }	// TODO:	8080: CP => CALL P,nnnn
+
+		if(r==XIX) store(PFX_IX); else if(r==XIY) store(PFX_IY); else goto ill_source;
+		store(instr+XHL-RB);
+		storeOffset(n,v);
+		return;
+
+	case '  ld':
+		r = getRegister(q,n,v);
+		q.expectComma();
+		r2 = getRegister(q,n2,v2);
+		XXXASSERT(r>=RB);
+		XXXASSERT(r2>=RB);
+
+		switch(r)
+		{
+		case RI:
+			// ld i,a
+			if(r2==RA) { storeEDopcode(LD_I_A); return; }
+			goto ill_source;
+
+		case RR:
+			// ld r,a
+			if(r2==RA) { storeEDopcode(LD_R_A); return; }
+			goto ill_source;
+
+		case IX:
+			// ld ix,rr		bc de			Goodie
+			// ld ix,(NN)
+			// ld ix,NN
+			instr = PFX_IX;
+			goto ld_iy;
+
+		case IY:
+			// ld iy,rr		bc de			Goodie
+			// ld iy,(NN)
+			// ld iy,NN
+			instr = PFX_IY;
+ld_iy:		store(instr);
+			if(r2==BC)  { store(LD_H_B, instr, LD_L_C); return; }
+			if(r2==DE)  { store(LD_H_D, instr, LD_L_E); return; }
+			goto ld_hl;
+
+		case HL:
+			// ld hl,rr		bc de			Goodie
+			// ld hl,(ix+d)					Goodie
+			// ld hl,(NN)
+			// ld hl,NN
+			if(r2==BC)  { store(LD_H_B, LD_L_C); return; }
+			if(r2==DE)  { store(LD_H_D, LD_L_E); return; }
+			if(r2==XIX)	{ store(PFX_IX, LD_L_xHL); storeOffset(n2,v2); store(PFX_IX, LD_H_xHL); storeOffset(n2+1,v2); return; }
+			if(r2==XIY)	{ store(PFX_IY, LD_L_xHL); storeOffset(n2,v2); store(PFX_IY, LD_H_xHL); storeOffset(n2+1,v2); return; }
+ld_hl:		if(r2==XNN) { store(LD_HL_xNN); storeWord(n2); return; }
+			if(r2==NN)  { store(LD_HL_NN);  storeWord(n2); return; }
+			goto ill_source;
+
+		case BC:
+			// ld bc,NN
+			// ld bc,(NN)
+			// ld bc,rr		de hl ix iy		Goodie
+			// ld bc(hl)					Goodie
+			// ld bc,(ix+d)					Goodie
+			if(r2==NN)  { store(LD_BC_NN); storeWord(n2); return; }
+			if(r2==XNN) { storeEDopcode(LD_BC_xNN); storeWord(n2); return; }
+			if(r2==DE)  { store(LD_B_D, LD_C_E); return; }
+			if(r2==HL)  { store(LD_B_H, LD_C_L); return; }
+			if(r2==IX)  { store(PFX_IX, LD_B_H, PFX_IX, LD_C_L); return; }
+			if(r2==IY)  { store(PFX_IY, LD_B_H, PFX_IY, LD_C_L); return; }
+			if(r2==XHL)	{ store(LD_C_xHL, INC_HL, LD_B_xHL, DEC_HL); return; }
+			if(r2==XIX)	{ store(PFX_IX, LD_C_xHL); storeOffset(n2,v2); store(PFX_IX, LD_B_xHL); storeOffset(n2+1,v2); return; }
+			if(r2==XIY)	{ store(PFX_IY, LD_C_xHL); storeOffset(n2,v2); store(PFX_IY, LD_B_xHL); storeOffset(n2+1,v2); return; }
+			goto ill_source;
+
+		case DE:
+			// ld de,NN
+			// ld de,(NN)
+			// ld de,rr		bc hl ix iy		Goodie
+			// ld de(hl)					Goodie
+			// ld de,(ix+d)					Goodie
+			if(r2==NN)  { store(LD_DE_NN); storeWord(n2); return; }
+			if(r2==XNN) { storeEDopcode(LD_DE_xNN); storeWord(n2); return; }
+			if(r2==BC)  { store(LD_D_B, LD_E_C); return; }
+			if(r2==HL)  { store(LD_D_H, LD_E_L); return; }
+			if(r2==IX)  { store(PFX_IX, LD_D_H, PFX_IX, LD_E_L); return; }
+			if(r2==IY)  { store(PFX_IY, LD_D_H, PFX_IY, LD_E_L); return; }
+			if(r2==XHL)	{ store(LD_E_xHL, INC_HL, LD_D_xHL, DEC_HL); return; }
+			if(r2==XIX)	{ store(PFX_IX, LD_E_xHL); storeOffset(n2,v2); store(PFX_IX, LD_D_xHL); storeOffset(n2+1,v2); return; }
+			if(r2==XIY)	{ store(PFX_IY, LD_E_xHL); storeOffset(n2,v2); store(PFX_IY, LD_D_xHL); storeOffset(n2+1,v2); return; }
+			goto ill_source;
+
+		case SP:
+			// ld sp,rr		hl ix iy
+			// ld sp,NN
+			// ld sp,(NN)
+			if(r2==HL) { store(LD_SP_HL); return; }
+			if(r2==IX) { store(PFX_IX, LD_SP_HL); return; }
+			if(r2==IY) { store(PFX_IY, LD_SP_HL); return; }
+			if(r2==NN) { store(LD_SP_NN);  storeWord(n2); return; }
+			if(r2==XNN){ storeEDopcode(LD_SP_xNN); storeWord(n2); return; }
+			goto ill_source;
+
+		case XIX:
+			// ld (ix+d),r		a b c d e h l a
+			// ld (ix+d),n
+			// ld (ix+d),rr		bc de hl		Goodie
+			instr = PFX_IX;
+			goto ld_xiy;
+
+		case XIY:
+			// ld (iy+d),r		a b c d e h l a
+			// ld (iy+d),n
+			// ld (iy+d),rr		bc de hl		Goodie
+			instr = PFX_IY;
+ld_xiy:		if(r2<=RA && r2!=XHL) { store(instr,LD_xHL_B+r2-RB); storeOffset(n,v); return; }
+			if(r2==NN) { store(instr,LD_xHL_N); storeOffset(n,v); storeByte(n2,v2); return; }
+			if(r2==HL) { store(instr,LD_xHL_L); storeOffset(n,v); store(instr, LD_xHL_H); storeOffset(n+1,v); return; }
+			if(r2==DE) { store(instr,LD_xHL_E); storeOffset(n,v); store(instr, LD_xHL_D); storeOffset(n+1,v); return; }
+			if(r2==BC) { store(instr,LD_xHL_C); storeOffset(n,v); store(instr, LD_xHL_B); storeOffset(n+1,v); return; }
+			goto ill_source;
+
+		case XHL:
+			// ld (hl),r		a b c d e h l a
+			// ld (hl),n
+			// ld (hl),rr		bc de			Goodie
+			if(r2<=RA && r2!=XHL) { store(LD_xHL_B+r2-RB); return; }
+			if(r2==NN) { store(LD_xHL_N); storeByte(n2,v2); return; }
+			if(r2==BC) { store(LD_xHL_C, INC_HL, LD_xHL_B, DEC_HL); return; }
+			if(r2==DE) { store(LD_xHL_E, INC_HL, LD_xHL_D, DEC_HL); return; }
+			goto ill_source;
+
+		case XNN:
+			// ld (NN),a
+			// ld (NN),hl	hl ix iy
+			// ld (NN),rr	bc de sp
+			if(r2==RA) { store(		   LD_xNN_A ); storeWord(n); return; }
+			if(r2==HL) { store(		   LD_xNN_HL); storeWord(n); return; }
+			if(r2==IX) { store(PFX_IX, LD_xNN_HL); storeWord(n); return; }
+			if(r2==IY) { store(PFX_IY, LD_xNN_HL); storeWord(n); return; }
+			if(r2==BC) { storeEDopcode(LD_xNN_BC); storeWord(n); return; }
+			if(r2==DE) { storeEDopcode(LD_xNN_DE); storeWord(n); return; }
+			if(r2==SP) { storeEDopcode(LD_xNN_SP); storeWord(n); return; }
+			goto ill_source;
+
+		case XBC:
+			// ld (bc),a
+			if(r2==RA) { store(LD_xBC_A); return; }
+			goto ill_source;
+
+		case XDE:
+			// ld (de),a
+			if(r2==RA) { store(LD_xDE_A); return; }
+			goto ill_source;
+
+		case XH:
+		case XL:
+			// ld xh,r		a b c d e xh xl N
+			// ld xl,r		a b c d e xh xl N
+			store(PFX_IX);
+			r += RH-XH;
+			if(r2<=RE || r2==RA || r2==NN) goto ld_r;
+			if(r2==XH || r2==XL) { r2 += RH-XH; goto ld_r; }
+			goto ill_source;
+
+		case YH:
+		case YL:
+			// ld yh,r		a b c d e yh yl N
+			// ld yl,r		a b c d e yh yl N
+			store(PFX_IY);
+			r += RH-YH;
+			if(r2<=RE || r2==RA || r2==NN) goto ld_r;
+			if(r2==YH || r2==YL) { r2 += RH-YH; goto ld_r; }
+			goto ill_source;
+
+		case RA:
+			// ld a,i
+			// ld i,a
+			// ld a,(rr)	bc de
+			// ld a,(NN)
+			if(r2==RI)  { storeEDopcode(LD_A_I); return; }
+			if(r2==RR)  { storeEDopcode(LD_A_R); return; }
+			if(r2==XBC) { store(LD_A_xBC); return; }
+			if(r2==XDE) { store(LD_A_xDE); return; }
+			if(r2==XNN) { store(LD_A_xNN); storeWord(n2); return; }
+			goto ld_r;
+
+		case RH:
+		case RL:
+			if(r2>=XH && r2<=YL) goto ill_source;
+
+		case RB:
+		case RC:
+		case RD:
+		case RE:
+			// ld r,r		a b c d e h l (hl)
+			// ld r,(ix+d)
+			// ld r,N
+			// ld r,xh		a b c d e xh xl
+			// ld r,yh		a b c d e yh yl
+ld_r:		XXXASSERT(r<=RA && r!=XHL);
+			if(r2<=RA)  { store(LD_B_B + (r-RB)*8 + (r2-RB)); return; }
+			if(r2==XIX) { store(PFX_IX, LD_B_xHL+(r-RB)*8); storeOffset(n2,v2); return; }
+			if(r2==XIY) { store(PFX_IY, LD_B_xHL+(r-RB)*8); storeOffset(n2,v2); return; }
+			if(r2==NN)  { store(LD_B_N+(r-RB)*8); storeByte(n2,v2); return; }
+			if(r2==XH||r2==XL) { store(PFX_IX,LD_B_H+(r2-XH)+(r-RB)*8); return; }
+			if(r2==YH||r2==YL) { store(PFX_IY,LD_B_H+(r2-YH)+(r-RB)*8); return; }
+			goto ill_source;
+
+		case NN:
+			goto ill_dest;
+
+		default:
+			//IERR();
+			goto ill_dest;
+		}
+	}
+
+
+// opcode len = 3:
+
+wlen3:
+	switch(peek3X(w)|0x20202020)
+	{
+	default:		goto unknown_opcode;	// error
+	case ' mov':	throw fatal_error("this is no Z80 assembler source. ('mov' is no Z80 instruction)");
+	case ' scf':	store(SCF); return;
+	case ' ccf':	store(CCF); return;
+	case ' cpl':	store(CPL); return;
+	case ' daa':	store(DAA); return;
+	case ' rra':	store(RRA); return;
+	case ' rla':	store(RLA); return;
+	case ' nop':	store(NOP); return;
+	case ' exx':	if(target_8080) goto ill_8080; store(EXX); return;
+	case ' neg':	storeEDopcode(NEG); return;
+	case ' rrd':	storeEDopcode(RRD); return;
+	case ' rld':	storeEDopcode(RLD); return;
+	case ' ldi':	storeEDopcode(LDI); return;
+	case ' cpi':	storeEDopcode(CPI); return;
+	case ' ini':	storeEDopcode(INI); return;
+	case ' ldd':	storeEDopcode(LDD); return;
+	case ' cpd':	storeEDopcode(CPD); return;
+	case ' ind':	storeEDopcode(IND); return;
+	case ' and':	instr = AND_B; goto cp;
+	case ' xor':	instr = XOR_B; goto cp;
+	case ' sub':	instr = SUB_B; goto cp;
+	case ' rlc':	instr = RLC_B; goto rr;
+	case ' rrc':	instr = RRC_B; goto rr;
+	case ' sla':	instr = SLA_B; goto rr;
+	case ' sra':	instr = SRA_B; goto rr;
+	case ' sls':	// alias for sll found in some docs
+	case ' sll':	instr = SLL_B; goto rr;
+	case ' srl':	instr = SRL_B; goto rr;
+
+	case ' slp':
+		if(!target_hd64180) goto ill_hd64180;
+		storeEDopcode(0x76); return;
+
+	case ' in0':
+		// in0 r,(n)		a b c d e h l f
+		if(!target_hd64180) goto ill_hd64180;
+		if(q.testWord("f")) r = XHL;
+		else { r = getRegister(q,n,v); if(r>RA||r==XHL) goto ill_dest; }
+		q.expectComma();
+		r2 = getRegister(q,n2,v2);
+		if(r2==XNN) { storeEDopcode(0x00+8*(r-RB)); storeByte(n2,v2); return; }
+		goto ill_source;
+
+	case ' tst':
+		// tst r		b c d e h l (hl) a
+		// tst n
+		if(!target_hd64180) goto ill_hd64180;
+		r = getRegister(q,n,v);
+		if(r==NN) { storeEDopcode(0x64); storeByte(n,v); return; }
+		if(r<=RA) { storeEDopcode(0x04+8*(r-RB)); return; }
+		goto ill_source;
+
+	case ' org':
+org:	// org <value>	; set "logical" code address
+		// org $$		; $$ = "physical" code address = segment.address + dpos
+		n = value(q, pAny, v=1);
+		current_segment().setOrigin(n,v);
+		return;
+
+	case ' rst':
+		// rst n		0 .. 7  or  0*8 .. 7*8
+		n = value(q, pAny, v=1);
+		if(n%8==0) n>>=3;
+		if((n>>3) && v) throw syntax_error( "illegal vector" );
+		store(RST00+n*8);
+		return;
+
+	case ' add':
+		//	add	a,xxx
+		//	add hl,rr	bc de hl sp
+		//	add ix,rr	bc de ix sp
+		r = getRegister(q,n,v); if(r==RA || q.testEol()) { instr = ADD_B; goto cp_a; }
+		q.expectComma();
+		r2 = getRegister(q,n2,v2);
+
+		if(r==IX) { if(r2==HL) goto ill_source; store(PFX_IX); if(r2==IX) r2=HL; r=HL; }
+		if(r==IY) { if(r2==HL) goto ill_source; store(PFX_IY); if(r2==IY) r2=HL; r=HL; }
+		if(r==HL) { if(r2<BC || r2>SP) goto ill_source; store(ADD_HL_BC+(r2-BC)*16); return; }
+		goto ill_target;
+
+	case ' sbc':
+		//	sbc	a,xxx
+		//	sbc hl,rr	bc de hl sp
+		r = getRegister(q,n,v); if(r==RA || q.testEol()) { instr = SBC_B; goto cp_a; }
+		instr = SBC_HL_BC;
+		goto adc;
+
+	case ' adc':
+		//	adc	a,xxx
+		//	adc hl,rr	bc de hl sp
+		r = getRegister(q,n,v); if(r==RA || q.testEol()) { instr = ADC_B; goto cp_a; }
+		instr = ADC_HL_BC;
+adc:	q.expectComma();
+		r2 = getRegister(q,n2,v2);
+
+		if(r==HL) { if(r2<BC || r2>SP) goto ill_source; storeEDopcode(instr+(r2-BC)*16); return; }
+		goto ill_target;
+
+	case ' res':
+		instr = RES0_B;
+		goto bit;
+
+	case ' set':
+		instr = SET0_B;
+		goto bit;
+
+	case ' bit':
+		instr = BIT0_B;
+bit:	n = value(q,pAny,v=1);
+		if((uint)n>7 && v) throw syntax_error("illegal bit number");
+		instr += 8*n;
+		q.expectComma();
+		goto rr;
+
+	case ' dec':
+		n2 = 1;
+		goto inc;
+
+	case ' inc':
+		// inc r	a b c d e h l (hl) (ix+d)
+		// inc xh
+		// inc rr	bc de hl sp ix iy
+		n2 = 0;
+inc:	r = getRegister(q,n,v);
+		instr = INC_xHL + n2;	// inc (hl)  or  dec (hl)
+		if(r<=RA) { store(        instr+(r-XHL)*8); return; }
+		if(r==XIX){ store(PFX_IX, instr); storeOffset(n,v); return; }
+		if(r==XIY){ store(PFX_IY, instr); storeOffset(n,v); return; }
+		if(r<=XL) { store(PFX_IX, instr+(r+RH-XH-XHL)*8); return; }
+		if(r<=YL) { store(PFX_IY, instr+(r+RH-YH-XHL)*8); return; }
+		instr = INC_HL + n2*8;	// inc hl or dec hl
+		if(r>=BC && r<=SP) { store(instr+(r-HL)*16); return; }
+		if(r==IX) { store(PFX_IX, instr); return; }
+		if(r==IY) { store(PFX_IY, instr); return; }
+		goto ill_target;
+
+	case ' out':
+		// out (c),r	a b c d e h l
+		// out (c),0	*** NOT ON ALL SYSTEMS / NOT FOR ALL Z80 CPUs! (NMOS vs. CMOS?) ***
+		// out (bc),r	--> out (c),r
+		// out (bc),0	--> out (c),0
+		// out (n),a	--> outa n
+
+		r = getRegister(q,n,v);
+		q.expectComma();
+		r2 = getRegister(q,n2,v2);
+
+		if(r==XC || r==XBC)
+		{
+			if(r2<=RA && r2!=XHL) { storeEDopcode(OUT_xC_B+(r2-RB)*8); return; }
+			if(r2==NN) { if(v2&&n2!=0) goto ill_source; storeEDopcode(OUT_xC_0); return; }
+			goto ill_source;
+		}
+		if(r==XNN) { if(r2!=RA) goto ill_source; store(OUTA); storeByte(n,v); return; }
+		goto ill_dest;
+
+	case ' ret':
+		// ret
+		// ret cc
+		r = getCondition(q,no);
+		store(r==NIX ? RET : RET_NZ+(r-NZ)*8);
+		return;
+
+	case ' pop':
+		// pop rr		bc de hl af ix iy
+		instr = POP_HL;
+
+pop:	r = getRegister(q,n,v);
+		if(r>=BC && r<=HL) { store(instr+(r-HL)*16); return; }
+		if(r==AF) { store(instr+16); return; }
+		if(r==IX) { store(PFX_IX,instr); return; }
+		if(r==IY) { store(PFX_IY,instr); return; }
+		if(instr==POP_HL) goto ill_target; else goto ill_source;
+	}
+
+
+// opcode len = 4:
+
+wlen4:
+	switch(peek4X(w)|0x20202020)
+	{
+	default:		goto unknown_opcode;	// error
+
+	case 'rlca':	store(RLCA); return;
+	case 'rrca':	store(RRCA); return;
+	case 'halt':	store(HALT); return;
+	case 'outi':	storeEDopcode(OUTI); return;
+	case 'outd':	storeEDopcode(OUTD); return;
+	case 'ldir':	storeEDopcode(LDIR); return;
+	case 'cpir':	storeEDopcode(CPIR); return;
+	case 'inir':	storeEDopcode(INIR); return;
+	case 'otir':	storeEDopcode(OTIR); return;
+	case 'lddr':	storeEDopcode(LDDR); return;
+	case 'cpdr':	storeEDopcode(CPDR); return;
+	case 'indr':	storeEDopcode(INDR); return;
+	case 'otdr':	storeEDopcode(OTDR); return;
+	case 'reti':	storeEDopcode(RETI); return;
+	case 'retn':	storeEDopcode(RETN); return;
+	case 'push':	instr = PUSH_HL; goto pop;
+
+	case 'mult':
+		// mult rr		bc de hl sp
+		if(!target_hd64180) goto ill_hd64180;
+		r = getRegister(q,n,v);
+		if(r>=BC && r<=SP) { store(PFX_ED,0x4c+16*(r-BC)); return; }
+		goto ill_source;
+
+	case 'otim':
+		if(!target_hd64180) goto ill_hd64180;
+		store(PFX_ED,0x83); return;
+
+	case 'otdm':
+		if(!target_hd64180) goto ill_hd64180;
+		store(PFX_ED,0x8b); return;
+
+	case 'out0':
+		// out0 (n),r		b c d e h l a
+		if(!target_hd64180) goto ill_hd64180;
+		r = getRegister(q,n,v); if(r!=XNN) goto ill_dest;
+		q.expectComma();
+		r2 = getRegister(q,n2,v2);
+		if(r2<=RA && r2!=XHL) { store(PFX_ED, 0x01+8*(r2-RB)); storeByte(n,v); return; }
+		goto ill_source;
+
+	case 'defs':
+		// store space: (gap)
+		// defs cnt
+		// defs cnt, fillbyte
+ds:		q.is_data = yes;
+		n = value(q,pAny,v=1);
+		if(q.testComma()) storeSpace(n,v,value(q,pAny,v2)); else storeSpace(n,v);
+		return;
+
+	case 'defw':
+		// store words:
+		// defw nn [,nn ..]
+dw:		q.is_data = yes;
+		do { storeWord(value(q,pAny,v=1)); } while(q.testComma());
+		return;
+
+	case 'defb':
+		// store bytes:
+		// defb n [, …]
+db:		q.is_data = yes;
+		do { n=value(q,pAny,v=1); storeByte(n,v); } while(q.testComma());
+		return;
+
+	case 'defm':
+		// store bytes:
+		// erlaubt jede Mixtur von literal, label, "text", 'c' Char, $abcdef stuffed hex, usw.
+		// ACHTUNG: '…' wird als String behandelt! Das wird z.B. im Source  des ZXSP-Roms so verwendet.
+		// defb n, "…", "…"+n, '…', '…'+n, 0xABCDEF…, __date__, __time__, __file__, …
+dm:		q.is_data = yes;
+		w = q.nextWord();
+		if(w[0]==0) throw syntax_error("value expected");
+
+	// Text string:
+		if(w[0]=='"' || w[0]=='\'')
+		{
+			n = strlen(w);
+			if(n<3 || w[n-1]!=w[0]) throw syntax_error("closing quotes expected");
+			w = unquotedstr(w);
+cb:			if(charset) { w = (cstr) charset->translate(w); n = (uint8) *w++; }
+			else		{ w = fromutf8str(w); n = strlen(w); }
+			storeBlock(w,n);
+			q.skip_spaces();
+			if(q.test_char('+'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() + n,v); } else
+			if(q.test_char('-'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() - n,v); } else
+			if(q.test_char('|'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() | n,v); } else
+			if(q.test_char('&'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() & n,v); } else
+			if(q.test_char('^'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() ^ n,v); } else
+			if(q.test_char('*'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() * n,v); } else
+			if(q.test_char('%'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() % n,v); } else
+			if(q.test_char('\\'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() % n,v); } else
+			if(q.test_char('/'))	{ n=value(q,pAny,v=1); storeByte(popLastByte() / n,v); }
+			if(q.testComma()) goto dm; else return;
+		}
+
+	// Stuffed Hex:
+	// bytes are stored in order of occurance: in $ABCD byte $AB is stored first!
+		n = strlen(w);
+		if(n>3 && w[0]=='$')
+		{
+sx:			w = midstr(w,1); n-=1;
+sh:			if(n&1) throw syntax_error("even number of hex characters expected");
+			storeHexbytes(w,n/2);
+			if(q.testComma()) goto dm; else return;
+		}
+
+		if(n>4 && is_dec_digit(w[0]) && tolower(w[n-1])=='h')
+		{
+			w = leftstr(w,n-1); n-=1;
+			if(n&1 && w[0]=='0') goto sx; else goto sh;
+		}
+
+	// pre-defined special words:
+		if(w[0]=='_')
+		{
+			if(eq(w,"__date__")) { w = datestr(timestamp); w += *w==' ';  goto cb; }
+			if(eq(w,"__time__")) { w = timestr(timestamp); w += *w==' ';  goto cb; }
+			if(eq(w,"__file__")) { w = q.sourcefile; goto cb; }
+		}
+
+	// anything else:
+		q -= strlen(w);	// put back opcode
+		n = value(q,pAny,v=1); storeByte(n,v);
+		if(q.testComma()) goto dm; else return;
+
+	case 'call':
+		// call nn
+		// call cc,nn
+		r2 = getCondition(q,yes);
+		r  = getRegister(q,n,v);
+		if(r!=NN) goto ill_dest;
+		store(r2==NIX ? CALL : CALL_NZ+(r2-NZ)*8);
+		storeWord(n);
+		return;
+
+	case 'djnz':
+		// djnz nn
+		if(target_8080) goto ill_8080;
+		r = getRegister(q,n,v);		// vor store opcode DJNZ wg. Bezug eines evtl. genutzen $
+		if(r!=NN) goto ill_dest;
+		store(DJNZ);
+		storeOffset( n - (currentAddress()+1), v && currentAddressValid() );
+		return;
+	}
+
+wlenXL:
+	w = lowerstr(w);
+	if(eq(w,"align"))	// align <value> [,<filler>]
+	{					// note: current address is evaluated as uint
+		q.is_data = yes;
+		n = value(q,pAny,v=1);
+		if(v&&n<1) throw syntax_error("alignment value must be ≥ 1");
+		if(v&&n>0x4000) throw syntax_error("alignment value must be ≤ $4000");
+
+		int32 a = current_segment_ptr->logicalAddress();
+		v = v && current_segment_ptr->logicalAddressValid();
+		if(v && a<0 && (1<<(msbit(n)))!=n) throw syntax_error("alignment value must be 2^N if $ < 0");
+
+		n = n-1 - ((uint16)a+n-1) % n;
+
+		if(q.testComma()) { bool u=1; storeSpace(n,v,value(q,pAny,u)); } else storeSpace(n,v);
+		return;
+	}
+	else if(eq(w,"otimr"))
+	{
+		if(!target_hd64180) goto ill_hd64180;
+		store(PFX_ED,0x93); return;
+	}
+	else if(eq(w,"otdmr"))
+	{
+		if(!target_hd64180) goto ill_hd64180;
+		store(PFX_ED,0x9b); return;
+	}
+	else if(eq(w,"tstio"))
+	{
+		// tstio n
+		if(!target_hd64180) goto ill_hd64180;
+		r = getRegister(q,n,v);
+		if(r==NN) { store(PFX_ED,0x74); storeByte(n,v); return; }
+		goto ill_source;
+	}
+	else goto unknown_opcode;		// error
+
+
+// generate error
+unknown_opcode:	throw syntax_error("unknown opcode: ");
+ill_target:		throw syntax_error("illegal target");		// 1st arg
+ill_source:		throw syntax_error("illegal source");		// 2nd arg
+ill_dest:		throw syntax_error("illegal destination");	// jp etc., ld, in, out: destination (arg1 or after cc)
+ill_hd64180:	throw syntax_error("hd64180 opcode (no option --hd64180)");
+ill_8080:		throw syntax_error("no i8080 opcode (option --8080)");
+}
+
+
+
+#endif
 
 
 

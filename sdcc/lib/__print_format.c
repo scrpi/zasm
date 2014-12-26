@@ -31,10 +31,14 @@
    kio 2014-11-26	added #pragma std_sdcc99 for bool
    kio 2014-11-26	removed AUTOMEM because this is not used by the z80 port
    kio 2014-11-26	removed test for other targets than z80
+   kio 2014-12-26	removed test for __SDCC_STACK_AUTO: z80 is reent and implicitely stack-auto
+					removed __SDCC_mcs51 test
+					removed __SDCC_ds390 test
 */
 
 
-#pragma std_sdcc99	
+
+#pragma std_sdcc99
 #define USE_FLOATS 1
 #include <stdarg.h>
 #include <string.h>
@@ -46,7 +50,7 @@
 #define PTR value.ptr
 
 # define MEM_SPACE_BUF
-# define MEM_SPACE_BUF_PP 
+# define MEM_SPACE_BUF_PP
 
 
 //typedef const char * ptr_t;
@@ -71,6 +75,7 @@
 #define islower(c) ((unsigned char)c >= (unsigned char)'a' && (unsigned char)c <= (unsigned char)'z')
 #define isdigit(c) ((unsigned char)c >= (unsigned char)'0' && (unsigned char)c <= (unsigned char)'9')
 
+
 typedef union
 {
   unsigned char  byte[5];
@@ -80,127 +85,55 @@ typedef union
   const char     *ptr;
 } value_t;
 
-#ifndef __SDCC_STACK_AUTO
-  static bool lower_case;
-  static pfn_outputchar output_char;
-  static void* p;
-  static value_t value;
-  static int charsOutputted;
-#endif
 
 /****************************************************************************/
 
-#ifdef __SDCC_STACK_AUTO
-  #define OUTPUT_CHAR(c, p) { output_char (c, p); charsOutputted++; }
-#else
-  #define OUTPUT_CHAR(c, p) _output_char (c)
-  static void
-  _output_char (unsigned char c)
-  {
-    output_char( c, p );
-    charsOutputted++;
-  }
-#endif
+#define OUTPUT_CHAR(c, p)	{ output_char (c, p); charsOutputted++; }
+#define OUTPUT_2DIGITS(B)	{ output_2digits( B, lower_case, output_char, p ); charsOutputted += 2; }
 
-/*--------------------------------------------------------------------------*/
+static void
+output_digit (unsigned char n, bool lower_case, pfn_outputchar output_char, void* p)
+{
+	register unsigned char c = n + (unsigned char)'0';
 
-#ifdef __SDCC_STACK_AUTO
-  static void
-  output_digit (unsigned char n, bool lower_case, pfn_outputchar output_char, void* p)
-  {
-    register unsigned char c = n + (unsigned char)'0';
+	if (c > (unsigned char)'9')
+	{
+		c += (unsigned char)('A' - '0' - 10);
+		if (lower_case)
+			c += (unsigned char)('a' - 'A');
+	}
+	output_char( c, p );
+}
 
-    if (c > (unsigned char)'9')
-    {
-      c += (unsigned char)('A' - '0' - 10);
-      if (lower_case)
-         c += (unsigned char)('a' - 'A');
-    }
-    output_char( c, p );
-  }
-#else
-  static void
-  output_digit (unsigned char n)
-  {
-    register unsigned char c = n + (unsigned char)'0';
+static void
+output_2digits (unsigned char b, bool lower_case, pfn_outputchar output_char, void* p)
+{
+	output_digit( b>>4,   lower_case, output_char, p );
+	output_digit( b&0x0F, lower_case, output_char, p );
+}
 
-    if (c > (unsigned char)'9')
-    {
-      c += (unsigned char)('A' - '0' - 10);
-      if (lower_case)
-         c = tolower(c);
-    }
-    _output_char( c );
-  }
-#endif
-
-/*--------------------------------------------------------------------------*/
-
-#ifdef __SDCC_STACK_AUTO
-  #define OUTPUT_2DIGITS( B )   { output_2digits( B, lower_case, output_char, p ); charsOutputted += 2; }
-  static void
-  output_2digits (unsigned char b, bool lower_case, pfn_outputchar output_char, void* p)
-  {
-    output_digit( b>>4,   lower_case, output_char, p );
-    output_digit( b&0x0F, lower_case, output_char, p );
-  }
-#else
-  #define OUTPUT_2DIGITS( B )   output_2digits( B )
-  static void
-  output_2digits (unsigned char b)
-  {
-    output_digit( b>>4   );
-    output_digit( b&0x0F );
-  }
-#endif
-
-/*--------------------------------------------------------------------------*/
-
-#if defined __SDCC_STACK_AUTO
 static void
 calculate_digit (value_t * value, unsigned char radix)
 {
-  unsigned long ul = value->ul;
-  unsigned char * pb4 = &value->byte[4];
-  unsigned char i = 32;
+	unsigned long ul = value->ul;
+	unsigned char * pb4 = &value->byte[4];
+	unsigned char i = 32;
 
-  do
-  {
-    *pb4 = (*pb4 << 1) | ((ul >> 31) & 0x01);
-    ul <<= 1;
+	do
+	{
+		*pb4 = (*pb4 << 1) | ((ul >> 31) & 0x01);
+		ul <<= 1;
 
-    if (radix <= *pb4 )
-    {
-      *pb4 -= radix;
-      ul |= 1;
-    }
-  } while (--i);
-  value->ul = ul;
+		if (radix <= *pb4 )
+		{
+			*pb4 -= radix;
+			ul |= 1;
+		}
+	}
+	while (--i);
+	value->ul = ul;
 }
-#else
-static void
-calculate_digit (unsigned char radix)
-{
-  register unsigned long ul = value.ul;
-  register unsigned char b4 = value.byte[4];
-  register unsigned char i = 32;
 
-  do
-  {
-    b4 = (b4 << 1);
-    b4 |= (ul >> 31) & 0x01;
-    ul <<= 1;
-
-    if (radix <= b4 )
-    {
-      b4 -= radix;
-      ul |= 1;
-    }
-  } while (--i);
-  value.ul = ul;
-  value.byte[4] = b4;
-}
-#endif
 
 #if USE_FLOATS
 
@@ -213,215 +146,165 @@ calculate_digit (unsigned char radix)
 */
 
 #define DEFAULT_FLOAT_PRECISION 6
-
-#ifdef __SDCC_STACK_AUTO
 #define OUTPUT_FLOAT(F, W, D, L, Z, S, P)       output_float(F, W, D, L, Z, S, P, output_char, p)
+
 static unsigned char
 output_float (float f, unsigned char reqWidth,
               signed char reqDecimals,
               bool left, bool zero, bool sign, bool space,
               pfn_outputchar output_char, void* p)
 {
-  unsigned char charsOutputted = 0;
- #if defined (__SDCC_mcs51)
-  char fpBuffer[16];      //mcs51 has only a small stack
- #else
-  char fpBuffer[128];
- #endif
-#else
-#define OUTPUT_FLOAT(F, W, D, L, Z, S, P)       output_float(F, W, D, L, Z, S, P)
-static void
-output_float (float f, unsigned char reqWidth,
-              signed char reqDecimals,
-              bool left, bool zero, bool sign, bool space)
-{
-  __xdata char fpBuffer[128];
-#endif //__SDCC_STACK_AUTO
-  bool negative = 0;
-  unsigned long integerPart;
-  float rounding;
-  float decimalPart;
-  char fpBI=0, fpBD;
-  unsigned char minWidth, i;
-  signed char exp = -128;
+	unsigned char charsOutputted = 0;
+	char fpBuffer[128];
+	bool negative = 0;
+	unsigned long integerPart;
+	float rounding;
+	float decimalPart;
+	char fpBI=0, fpBD;
+	unsigned char minWidth, i;
+	signed char exp = -128;
 
-  // save the sign
-  if (f<0)
-  {
-    negative=1;
-    f=-f;
-  }
+	// save the sign
+	if (f<0)
+	{
+		negative=1;
+		f=-f;
+	}
 
-  if (f>0x00ffffff)
-  {
-    // this part is from Frank van der Hulst
+	if (f>0x00ffffff)
+	{
+		// this part is from Frank van der Hulst
 
-    for (exp = 0; f >= 10.0; exp++) f /=10.0;
-    for (       ; f < 1.0;   exp--) f *=10.0;
+		for (exp = 0; f >= 10.0; exp++) f /=10.0;
+		for (       ; f < 1.0;   exp--) f *=10.0;
 
-    if (negative)
-    {
-      OUTPUT_CHAR ('-', p);
-    }
-    else
-    {
-      if (sign)
-      {
-        OUTPUT_CHAR ('+', p);
-      }
-    }
-    reqWidth = 0;
-    left = 0;
-    zero = 0;
-    sign = 0;
-    space = 0;
-  }
+		if (negative) { OUTPUT_CHAR ('-', p); }
+		else if (sign) { OUTPUT_CHAR ('+', p); }
 
-  // display some decimals as default
-  if (reqDecimals==-1)
-    reqDecimals=DEFAULT_FLOAT_PRECISION;
+		reqWidth = 0;
+		left = 0;
+		zero = 0;
+		sign = 0;
+		space = 0;
+	}
 
-  // round the float
-  rounding = 0.5;
-  for (i=reqDecimals; i>0; i--)
-  {
-      rounding /= 10.0;
-  }
-  f += rounding;
+	// display some decimals as default
+	if (reqDecimals==-1)
+		reqDecimals=DEFAULT_FLOAT_PRECISION;
 
-  // split the float
-  integerPart = f;
-  decimalPart = f - integerPart;
+	// round the float
+	rounding = 0.5;
+	for (i=reqDecimals; i>0; i--)
+	{
+		rounding /= 10.0;
+	}
+	f += rounding;
 
-  // fill the buffer with the integerPart (in reversed order!)
-  while (integerPart)
-  {
-    fpBuffer[fpBI++]='0' + integerPart%10;
-    integerPart /= 10;
-  }
-  if (!fpBI)
-  {
-    // we need at least a 0
-    fpBuffer[fpBI++]='0';
-  }
+	// split the float
+	integerPart = f;
+	decimalPart = f - integerPart;
 
-  // fill buffer with the decimalPart (in normal order)
-  fpBD=fpBI;
+	// fill the buffer with the integerPart (in reversed order!)
+	while (integerPart)
+	{
+		fpBuffer[fpBI++]='0' + integerPart%10;
+		integerPart /= 10;
+	}
+	if (!fpBI)
+	{
+		// we need at least a 0
+		fpBuffer[fpBI++]='0';
+	}
 
-  for (i=reqDecimals; i>0; i--)
-  {
-      decimalPart *= 10.0;
-      // truncate the float
-      integerPart = decimalPart;
-      fpBuffer[fpBD++] = '0' + integerPart;
-      decimalPart -= integerPart;
-  }
+	// fill buffer with the decimalPart (in normal order)
+	fpBD = fpBI;
 
-  minWidth=fpBI; // we need at least these
-  minWidth+=reqDecimals?reqDecimals+1:0; // maybe these
-  if (negative || sign || space)
-    minWidth++; // and maybe even this :)
+	for (i=reqDecimals; i>0; i--)
+	{
+		decimalPart *= 10.0;
+		// truncate the float
+		integerPart = decimalPart;
+		fpBuffer[fpBD++] = '0' + integerPart;
+		decimalPart -= integerPart;
+	}
 
-  if (!left && reqWidth>i)
-  {
-    if (zero)
-    {
-      if (negative)
-      {
-        OUTPUT_CHAR('-', p);
-      }
-      else if (sign)
-      {
-        OUTPUT_CHAR('+', p);
-      }
-      else if (space)
-      {
-        OUTPUT_CHAR(' ', p);
-      }
-      while (reqWidth-->minWidth)
-      {
-        OUTPUT_CHAR('0', p);
-      }
-    }
-    else
-    {
-      while (reqWidth-->minWidth)
-      {
-        OUTPUT_CHAR(' ', p);
-      }
-      if (negative)
-      {
-        OUTPUT_CHAR('-', p);
-      }
-      else if (sign)
-      {
-        OUTPUT_CHAR('+', p);
-      }
-      else if (space)
-      {
-        OUTPUT_CHAR(' ', p);
-      }
-    }
-  }
-  else
-  {
-    if (negative)
-    {
-      OUTPUT_CHAR('-', p);
-    }
-    else if (sign)
-    {
-      OUTPUT_CHAR('+', p);
-    }
-    else if (space)
-    {
-      OUTPUT_CHAR(' ', p);
-    }
-  }
+	minWidth=fpBI; // we need at least these
+	minWidth+=reqDecimals?reqDecimals+1:0; // maybe these
+	if (negative || sign || space)
+	minWidth++; // and maybe even this :)
 
-  // output the integer part
-  i=fpBI-1;
-  do {
-    OUTPUT_CHAR (fpBuffer[i], p);
-  } while (i--);
+	if (!left && reqWidth>i)
+	{
+		if (zero)
+		{
+			if (negative) { OUTPUT_CHAR('-', p); }
+			else if (sign) { OUTPUT_CHAR('+', p); }
+			else if (space) { OUTPUT_CHAR(' ', p); }
+			while (reqWidth-->minWidth)
+			{
+				OUTPUT_CHAR('0', p);
+			}
+		}
+		else
+		{
+			while (reqWidth-->minWidth)
+			{
+				OUTPUT_CHAR(' ', p);
+			}
+			if (negative) { OUTPUT_CHAR('-', p); }
+			else if (sign) { OUTPUT_CHAR('+', p); }
+			else if (space) { OUTPUT_CHAR(' ', p); }
+		}
+	}
+	else
+	{
+		if (negative) { OUTPUT_CHAR('-', p); }
+		else if (sign) { OUTPUT_CHAR('+', p); }
+		else if (space) { OUTPUT_CHAR(' ', p); }
+	}
 
-  // ouput the decimal part
-  if (reqDecimals)
-  {
-    OUTPUT_CHAR ('.', p);
-    i=fpBI;
-    while (reqDecimals--)
-    {
-      OUTPUT_CHAR (fpBuffer[i++], p);
-    }
-  }
+	// output the integer part
+	i = fpBI-1;
+	do
+	{
+		OUTPUT_CHAR (fpBuffer[i], p);
+	}
+	while (i--);
 
-  if (left && reqWidth>minWidth)
-  {
-    while (reqWidth-->minWidth)
-    {
-      OUTPUT_CHAR(' ', p);
-    }
-  }
+	// ouput the decimal part
+	if (reqDecimals)
+	{
+		OUTPUT_CHAR ('.', p);
+		i = fpBI;
+		while (reqDecimals--)
+		{
+			OUTPUT_CHAR (fpBuffer[i++], p);
+		}
+	}
 
-  if (exp != -128)
-  {
-    OUTPUT_CHAR ('e', p);
-    if (exp<0)
-    {
-      OUTPUT_CHAR ('-', p);
-      exp = -exp;
-    }
-    OUTPUT_CHAR ('0'+exp/10, p);
-    OUTPUT_CHAR ('0'+exp%10, p);
-  }
-#ifdef __SDCC_STACK_AUTO
-  return charsOutputted;
-#else
-  return;
-#endif //__SDCC_STACK_AUTO
+	if (left && reqWidth>minWidth)
+	{
+		while (reqWidth-->minWidth)
+		{
+			OUTPUT_CHAR(' ', p);
+		}
+	}
+
+	if (exp != -128)
+	{
+		OUTPUT_CHAR ('e', p);
+		if (exp<0)
+		{
+			OUTPUT_CHAR ('-', p);
+			exp = -exp;
+		}
+		OUTPUT_CHAR ('0'+exp/10, p);
+		OUTPUT_CHAR ('0'+exp%10, p);
+	}
+	return charsOutputted;
 }
 #endif //USE_FLOATS
+
 
 int
 _print_format (pfn_outputchar pfn, void* pvoid, const char *format, va_list ap)
@@ -434,11 +317,9 @@ _print_format (pfn_outputchar pfn, void* pvoid, const char *format, va_list ap)
   bool   char_argument;
   bool   long_argument;
   bool   float_argument;
-#ifdef __SDCC_STACK_AUTO
   bool   lower_case;
   value_t value;
-  int charsOutputted;
-#endif
+  int    charsOutputted;
   bool   lsd;
 
   unsigned char radix;
@@ -447,23 +328,11 @@ _print_format (pfn_outputchar pfn, void* pvoid, const char *format, va_list ap)
   unsigned char  length;
   char           c;
 
-#ifdef __SDCC_STACK_AUTO
   #define output_char   pfn
   #define p             pvoid
-#else
-  output_char = pfn;
-  p = pvoid;
-#endif
 
   // reset output chars
   charsOutputted = 0;
-
-#ifdef __SDCC_ds390
-  if (format==0)
-  {
-    format=NULL_STRING;
-  }
-#endif
 
   while( c=*format++ )
   {
@@ -561,19 +430,8 @@ get_conversion_spec:
       case 'S':
         PTR = va_arg(ap,ptr_t);
 
-#ifdef __SDCC_ds390
-        if (PTR==0)
-        {
-          PTR=NULL_STRING;
-          length=NULL_STRING_LENGTH;
-        }
-        else
-        {
-          length = strlen(PTR);
-        }
-#else
         length = strlen(PTR);
-#endif
+
         if ( decimals == -1 )
         {
           decimals = length;
@@ -606,53 +464,10 @@ get_conversion_spec:
       case 'P':
         PTR = va_arg(ap,ptr_t);
 
-#if defined (__SDCC_ds390)
-        {
-          unsigned char memtype = value.byte[3];
-          if (memtype >= 0x80)
-            c = 'C';
-          else if (memtype >= 0x60)
-            c = 'P';
-          else if (memtype >= 0x40)
-            c = 'I';
-          else
-            c = 'X';
-        }
-        OUTPUT_CHAR(c, p);
-        OUTPUT_CHAR(':', p);
-        OUTPUT_CHAR('0', p);
-        OUTPUT_CHAR('x', p);
-        OUTPUT_2DIGITS( value.byte[2] );
-        OUTPUT_2DIGITS( value.byte[1] );
-        OUTPUT_2DIGITS( value.byte[0] );
-#elif defined (__SDCC_mcs51)
-        {
-          unsigned char memtype = value.byte[2];
-          if (memtype >= 0x80)
-            c = 'C';
-          else if (memtype >= 0x60)
-            c = 'P';
-          else if (memtype >= 0x40)
-            c = 'I';
-          else
-            c = 'X';
-        }
-        OUTPUT_CHAR(c, p);
-        OUTPUT_CHAR(':', p);
-        OUTPUT_CHAR('0', p);
-        OUTPUT_CHAR('x', p);
-        if ((c != 'I' /* idata */) &&
-            (c != 'P' /* pdata */))
-        {
-          OUTPUT_2DIGITS( value.byte[1] );
-        }
-        OUTPUT_2DIGITS( value.byte[0] );
-#else
         OUTPUT_CHAR('0', p);
         OUTPUT_CHAR('x', p);
         OUTPUT_2DIGITS( value.byte[1] );
         OUTPUT_2DIGITS( value.byte[0] );
-#endif
         break;
 
       case 'D':
@@ -686,7 +501,11 @@ get_conversion_spec:
       if (float_argument)
       {
         value.f = va_arg(ap, float);
-#if !USE_FLOATS
+#if USE_FLOATS
+        // ignore b and l conversion spec for now
+        charsOutputted += OUTPUT_FLOAT(value.f, width, decimals, left_justify,
+                                     zero_padding, prefix_sign, prefix_space);
+#else
         PTR="<NO FLOAT>";
         while (c=*PTR++)
         {
@@ -697,15 +516,6 @@ get_conversion_spec:
         //long_argument=1;
         //zero_padding=1;
         //width=8;
-#else
-        // ignore b and l conversion spec for now
-#ifdef __SDCC_STACK_AUTO
-        charsOutputted += OUTPUT_FLOAT(value.f, width, decimals, left_justify,
-                                     zero_padding, prefix_sign, prefix_space);
-#else
-        OUTPUT_FLOAT(value.f, width, decimals, left_justify,
-                     zero_padding, prefix_sign, prefix_space);
-#endif //__SDCC_STACK_AUTO
 #endif //USE_FLOATS
       }
       else if (radix != 0)
@@ -750,11 +560,7 @@ get_conversion_spec:
 
         do {
           value.byte[4] = 0;
-#if defined __SDCC_STACK_AUTO
           calculate_digit(&value, radix);
-#else
-          calculate_digit(radix);
-#endif
           if (!lsd)
           {
             *pstore = (value.byte[4] << 4) | (value.byte[4] >> 4) | *pstore;
@@ -839,12 +645,8 @@ get_conversion_spec:
           {
             value.byte[4] = *pstore & 0x0F;
           }
-#ifdef __SDCC_STACK_AUTO
           output_digit( value.byte[4], lower_case, output_char, p );
           charsOutputted++;
-#else
-          output_digit( value.byte[4] );
-#endif
         }
         if (left_justify)
         {
@@ -866,3 +668,5 @@ get_conversion_spec:
 }
 
 /****************************************************************************/
+
+

@@ -17,10 +17,10 @@ volatile int a_counter = 0;
 const char so_many_days_per_month[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
 
 
-// #pragma std_sdcc99
-// //bool requires std-c99 or std-sdcc99 or better
-// #include "stdbool.h"
-// bool f;
+ #pragma std_c99
+ //bool requires std-c99 or std-sdcc99 or better
+ #include "stdbool.h"
+ bool f;
 
 	void Intr(void) __naked __interrupt 0
 	{
@@ -36,7 +36,7 @@ const char so_many_days_per_month[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
 
 void main()
 {
-//	int i;
+	int i;
 	char c;
 	char* array;
 
@@ -53,9 +53,9 @@ void main()
 	if(c==bu1[0]) bu1[1]=c;
 
 #ifdef __STDC_VERSION__
-// __STDC_VERSION__ ist erst ab c99 definiert:
-//	printf("__STDC_VERSION__ = %l\n",(long)__STDC_VERSION__);		TODO: DEBUG
-	printf("__STDC_VERSION__ = %i%02i\n",(int)(__STDC_VERSION__/100),(int)(__STDC_VERSION__%100));
+// __STDC_VERSION__ ist erst ab c99 definiert:	(aber nicht für sdcc99!) (und nicht für #pragma std_c99!)
+	printf("__STDC_VERSION__ = %li\n",(long)__STDC_VERSION__);		//TODO: DEBUG
+//	printf("__STDC_VERSION__ = %i%02i\n",(int)(__STDC_VERSION__/100),(int)(__STDC_VERSION__%100));
 #else
 	puts("__STDC_VERSION__ undef (c89)");
 #endif
@@ -124,10 +124,10 @@ void main()
 
 
 
-//	for(i=0;i<10;i++)
-//	{
-//		printf("%i * %i = %i\n", i,i,i*i);
-//	}
+	for(i=0;i<10;i++)
+	{
+		printf("%i * %i = %i\n", i,i,i*i);
+	}
 }
 
 

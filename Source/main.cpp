@@ -92,6 +92,9 @@ static cstr help =
 "  -z  --clean     clear intermediate files, e.g. compiled c files\n"
 "  -o0             don't write output file\n"
 "  -l0             don't write list file\n"
+"  --ixcb=r2|xh    enable ill. instructions like 'bit b,(ix+d),r' or 'bit b,xh'\n"
+"  --8080          limit instruction set to Intel 8080 cpu\n"
+"  --hd64180       enable Hitachi HD64180 instructions\n"
 "  -v[0,1,2]       verbosity of messages to stderr (0=off,1=default,2=more)\n"
 "  -c path/to/cc   set path to c compiler (default: sdcc in $PATH)\n"
 "  -t path/to/dir  set path to temp dir for c compiler (default: output dir)"
@@ -116,6 +119,10 @@ int main( int argc, cstr argv[] )
 	uint outputstyle = 'b';	// 0=none, 'b'=binary, 'x'=intel hex, 's'=motorola s-records
 	uint liststyle   = 1;	// 0=none, 1=plain, 2=with objcode, 4=with label listing, 6=both, 8=clock cycles
 	bool clean		 = no;
+	bool ixcb_r2	 = no;
+	bool ixcb_xh	 = no;
+	bool i8080		 = no;
+	bool hd64180	 = no;
 // filepaths:
 	cstr inputfile  = NULL;
 	cstr outputfile = NULL;	// or dir
@@ -148,6 +155,10 @@ int main( int argc, cstr argv[] )
 			if(eq(s,"--opcodes")) { liststyle |= 2; continue; }
 			if(eq(s,"--labels"))  { liststyle |= 4; continue; }
 			if(eq(s,"--cycles"))  { liststyle |= 8; continue; }
+			if(eq(s,"--ixcb=r2")) { ixcb_r2=1; continue; }
+			if(eq(s,"--ixcb=xh")) { ixcb_xh=1; continue; }
+			if(eq(s,"--8080"))    { i8080=1; continue; }
+			if(eq(s,"--hd64180")) { hd64180=1; continue; }
 			goto h;
 		}
 
@@ -177,6 +188,38 @@ int main( int argc, cstr argv[] )
 			case 't': if(tempdir    || i==argc) goto h; else tempdir    = argv[i++]; continue;
 			default:  goto h;
 			}
+		}
+	}
+
+// check ixcb options:
+#ifdef NDEBUG
+	if(ixcb_r2 && ixcb_xh)
+	{
+		fprintf(stderr, "%s\n%s\n%s\n%s\n",
+			"--> --ixcb=r2 and --ixcb=xh are mutually exclusive:",
+			"    don't use them if you don't know what you are doing!",
+			"    they behave different on some Z80 models!",
+			"zasm: 1 error");
+		return 1;
+	}
+#endif
+
+// check target cpu options:
+	if(i8080)
+	{
+		if(hd64180)
+		{
+			fprintf(stderr,"%s\n%s\n",
+				"--> i8080 and hd64180 are mutually exclusive.",
+				"zasm: 1 error");
+			return 1;
+		}
+		if(ixcb_r2 || ixcb_xh)
+		{
+			fprintf(stderr,"%s\n%s\n",
+				"--> the 8080 has no CBh instructions, hence no IXCB illegals.",
+				"zasm: 1 error");
+			return 1;
 		}
 	}
 
@@ -291,6 +334,10 @@ int main( int argc, cstr argv[] )
 // DO IT!
 	Z80Assembler ass;
 	ass.verbose = verbose;
+	ass.enable_illegal_ixcb_r2_instructions = ixcb_r2;
+	ass.enable_illegal_ixcb_xh_instructions = ixcb_xh;
+	ass.target_8080 = i8080;
+	ass.target_hd64180 = hd64180;
 	if(c_includes) ass.c_includes = c_includes;
 	if(libraries) ass.stdlib_dir = libraries;
 	if(c_compiler) ass.c_compiler = c_compiler;

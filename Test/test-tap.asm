@@ -198,7 +198,7 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 ; --callee-saves-bc
 ; --nostdinc
 ;
-#cflags $CFLAGS --nostdinc -I../sdcc/include --reserve-regs-iy
+#cflags $CFLAGS --nostdinc -I../sdcc/include --reserve-regs-iy --std-c99
 
 
 ; include .c and other source files:

@@ -77,7 +77,7 @@ public:
 // cond. assembly:
 	uint32		cond_off;		// effective final on/off state of conditions nested:
 								// 0 = assemble; !0 => assembly off
-	char		cond[32];		// cond. state for up to 32 nested conditional blocks
+	uint8		cond[32];		// cond. state for up to 32 nested conditional blocks
 	enum 	{	no_cond=0, 		// no conditional assembly
 				cond_if,		// #if or #elif pending and no path 'on' up to now
 				cond_if_dis,	// #if or #elif pending and 'on' path currently or already processed
@@ -103,6 +103,14 @@ public:
 // more:
 	CharMap*	charset;
 
+// options:
+	bool		enable_illegal_ixcb_r2_instructions;	// 	e.g. bit b,(ix+d),r2
+	bool		enable_illegal_ixcb_xh_instructions;	// 	e.g. bit b,xh
+	bool		target_hd64180;
+	bool		target_8080;
+	bool		syntax_8080;
+	bool		allow_non8080regs_as_label_names;				// for target_8080: allow ix, xh, i, r etc.
+
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) TAE;
 	void	asmLabel		(SourceLine&)				TAE;
@@ -124,10 +132,19 @@ private:
 	void	asmCharset		(SourceLine&)				TAE;
 	cstr	compileFile		(cstr, cstr tempdir)		TAE;
 
-	void	storeOpcode     (int n)						TAE	{ current_segment().store(n); }
-	void 	storeWord		(int n)						TAE	{ current_segment().storeWord(n); }
-	void	storeBlock		(cstr blk, int n)			TAE	{ current_segment().storeBlock(blk,n); }
-	void	storeHexbytes	(cstr hex, int n)			TAE	{ current_segment().storeHexBytes(hex,n); }
+	void	store			(int n)						TAE { current_segment_ptr->store(n); }
+	void	store			(int n, int m)				TAE { current_segment_ptr->store(n,m); }
+	void	store			(int n, int m, int u)		TAE { current_segment_ptr->store(n,m,u); }
+	void	store			(int a, int b, int c, int d)TAE { current_segment_ptr->store(a,b,c,d); }
+//	void	storeCBopcode	(int n)						TAE { store(0xCB,n); }
+//	void	storeIXopcode	(int n)						TAE { store(0xDD,n); }
+	void	storeEDopcode	(int n)						TAE;
+//	void	storeIYopcode	(int n)						TAE { store(0xFD,n); }
+
+//	void	storeOpcode     (int n)						TAE	{ current_segment_ptr->store(n); }
+	void 	storeWord		(int n)						TAE	{ current_segment_ptr->storeWord(n); }
+	void	storeBlock		(cstr blk, int n)			TAE	{ current_segment_ptr->storeBlock(blk,n); }
+	void	storeHexbytes	(cstr hex, int n)			TAE	{ current_segment_ptr->storeHexBytes(hex,n); }
 
 	void	storeByte 		(int n, bool valid)			TAE;
 	void	storeOffset 	(int n, bool valid)			TAE;
@@ -144,8 +161,8 @@ private:
 	int32	realAddress		()							{ return current_segment().physicalAddress(); }
 	bool	realAddressValid()							{ return current_segment().physicalAddressValid(); }
 
-	int		getCondition	(cstr w)					throw(syntax_error);
-	int		getRegister		(SourceLine&);
+	uint	getCondition	(SourceLine&, bool expect_comma)				throw(syntax_error);
+	uint	getRegister		(SourceLine&, int32&, bool&)throw(syntax_error);
 
 	void	setError		(any_error&);				// set error for current file, line & column
 	void	addError		(cstr text);				// add error without source line

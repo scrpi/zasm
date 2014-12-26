@@ -277,6 +277,7 @@ OTHER_FILES += \
     ../Test/test.asm \
     ../Test/test.lst \
     ../Test/test-opcodes.asm \
+    ../Test/test-opcodes.lst \
     ../Test/test-tap.asm \
     ../Test/test-tap.lst \
     ../Test/zx82_rom.asm \

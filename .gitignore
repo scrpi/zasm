@@ -19,7 +19,7 @@ Test/*.tap
 Test/rem.c
 Test/crc.c
 Test/sdcpp
-Test/zx82_rom.asm
+Test/zx82rom.asm
 
 
 
