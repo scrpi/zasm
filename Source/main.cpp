@@ -92,8 +92,10 @@ static cstr help =
 "  -z  --clean     clear intermediate files, e.g. compiled c files\n"
 "  -o0             don't write output file\n"
 "  -l0             don't write list file\n"
-"  --ixcb=r2|xh    enable ill. instructions like 'bit b,(ix+d),r' or 'bit b,xh'\n"
-"  --8080          limit instruction set to Intel 8080 cpu\n"
+"  --ixcbr2 | …xh  enable ill. instructions like 'set b,(ix+d),r' or 'set b,xh'\n"
+"  --8080          limit instruction set to Intel 8080 cpu; use z80 asm syntax\n"
+"  --8080regs      limit instruction set and reserved register names\n"
+"  --8080asm       use 8080 assembler syntax (TODO)\n"
 "  --hd64180       enable Hitachi HD64180 instructions\n"
 "  -v[0,1,2]       verbosity of messages to stderr (0=off,1=default,2=more)\n"
 "  -c path/to/cc   set path to c compiler (default: sdcc in $PATH)\n"
@@ -121,8 +123,10 @@ int main( int argc, cstr argv[] )
 	bool clean		 = no;
 	bool ixcb_r2	 = no;
 	bool ixcb_xh	 = no;
-	bool i8080		 = no;
-	bool hd64180	 = no;
+	bool target8080	 = no;
+	bool target64180 = no;
+	bool regs8080	 = no;
+	bool syntax8080	 = no;
 // filepaths:
 	cstr inputfile  = NULL;
 	cstr outputfile = NULL;	// or dir
@@ -148,17 +152,19 @@ int main( int argc, cstr argv[] )
 
 		if(s[1]=='-')
 		{
-			if(eq(s,"--clean"))   { clean=yes; continue; }
-			if(eq(s,"--bin"))	  { outputstyle='b'; continue; }
-			if(eq(s,"--hex"))	  { outputstyle='x'; continue; }
-			if(eq(s,"--s19"))	  { outputstyle='s'; continue; }
-			if(eq(s,"--opcodes")) { liststyle |= 2; continue; }
-			if(eq(s,"--labels"))  { liststyle |= 4; continue; }
-			if(eq(s,"--cycles"))  { liststyle |= 8; continue; }
-			if(eq(s,"--ixcb=r2")) { ixcb_r2=1; continue; }
-			if(eq(s,"--ixcb=xh")) { ixcb_xh=1; continue; }
-			if(eq(s,"--8080"))    { i8080=1; continue; }
-			if(eq(s,"--hd64180")) { hd64180=1; continue; }
+			if(eq(s,"--clean"))    { clean=yes; continue; }
+			if(eq(s,"--bin"))	   { outputstyle='b'; continue; }
+			if(eq(s,"--hex"))	   { outputstyle='x'; continue; }
+			if(eq(s,"--s19"))	   { outputstyle='s'; continue; }
+			if(eq(s,"--opcodes"))  { liststyle |= 2; continue; }
+			if(eq(s,"--labels"))   { liststyle |= 4; continue; }
+			if(eq(s,"--cycles"))   { liststyle |= 8; continue; }
+			if(eq(s,"--ixcbr2"))   { ixcb_r2=1; continue; }
+			if(eq(s,"--ixcbxh"))   { ixcb_xh=1; continue; }
+			if(eq(s,"--8080"))     { target8080=1; continue; }
+			if(eq(s,"--8080regs")) { regs8080=target8080=1; continue; }
+			if(eq(s,"--8080asm"))  { syntax8080=regs8080=target8080=1; continue; }
+			if(eq(s,"--hd64180"))  { target64180=1; continue; }
 			goto h;
 		}
 
@@ -192,7 +198,6 @@ int main( int argc, cstr argv[] )
 	}
 
 // check ixcb options:
-#ifdef NDEBUG
 	if(ixcb_r2 && ixcb_xh)
 	{
 		fprintf(stderr, "%s\n%s\n%s\n%s\n",
@@ -202,12 +207,11 @@ int main( int argc, cstr argv[] )
 			"zasm: 1 error");
 		return 1;
 	}
-#endif
 
 // check target cpu options:
-	if(i8080)
+	if(target8080)
 	{
-		if(hd64180)
+		if(target64180)
 		{
 			fprintf(stderr,"%s\n%s\n",
 				"--> i8080 and hd64180 are mutually exclusive.",
@@ -219,6 +223,13 @@ int main( int argc, cstr argv[] )
 			fprintf(stderr,"%s\n%s\n",
 				"--> the 8080 has no CBh instructions, hence no IXCB illegals.",
 				"zasm: 1 error");
+			return 1;
+		}
+
+		// TODO:
+		if(syntax8080)
+		{
+			fprintf(stderr,"--> 8080 assembler syntax not yet implemented\nzasm: 1 error\n");
 			return 1;
 		}
 	}
@@ -334,10 +345,12 @@ int main( int argc, cstr argv[] )
 // DO IT!
 	Z80Assembler ass;
 	ass.verbose = verbose;
-	ass.enable_illegal_ixcb_r2_instructions = ixcb_r2;
-	ass.enable_illegal_ixcb_xh_instructions = ixcb_xh;
-	ass.target_8080 = i8080;
-	ass.target_hd64180 = hd64180;
+	ass.ixcbr2_enabled = ixcb_r2;
+	ass.ixcbxh_enabled = ixcb_xh;
+	ass.target_8080 = target8080;
+	ass.target_hd64180 = target64180;
+	ass.registers_8080 = regs8080;
+	ass.syntax_8080 = syntax8080;
 	if(c_includes) ass.c_includes = c_includes;
 	if(libraries) ass.stdlib_dir = libraries;
 	if(c_compiler) ass.c_compiler = c_compiler;

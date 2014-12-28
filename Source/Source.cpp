@@ -174,8 +174,6 @@ cstr SourceLine::nextWord()
 	case '~':	return "~";
 	case '(':	return "(";
 	case ')':	return ")";
-	case '&':	return "&";
-	case '|':	return "|";
 	case ',':	return ",";
 	case '.':	return ".";
 	case '=':	return "=";
@@ -212,6 +210,16 @@ cstr SourceLine::nextWord()
 		if (c=='>') return ">>";
 		if (c=='=') return ">=";
 		p--;		return "<";
+
+	case '&':
+		c = *p++;
+		if(c=='&')	return "&&";
+		p--;		return "&";
+
+	case '|':
+		c = *p++;
+		if(c=='&')	return "||";
+		p--;		return "|";
 
 	default:			 		// name, decimal number, garbage
 		if (is_idf(c)) while (is_idf(*p)) p++;

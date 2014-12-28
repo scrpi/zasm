@@ -33,6 +33,7 @@
 #include "unix/tempmem.h"
 #include "helpers.h"
 #include "Libraries/Z80/z80_clock_cycles.h"
+#include "Z80/z80_opcode_length.h"
 
 
 /*	Helper: write one line with address, code and text to log file
@@ -52,11 +53,23 @@
 	1234: 12345678	sourceline
 */
 static
-uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uint offset, cstr text)
+uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uint offset, bool is_data, cstr text)
 {
 	address += offset;
 	bytes   += offset;
 	count   -= offset;
+
+	// special handling for compound opcodes:
+	// limit number of bytes to 4; break on opcode boundary
+	if(count>4 && !is_data)
+	{
+		for(count=0;;)
+		{
+			uint n = z80_opcode_length(bytes+count);
+			if(count+n>4) break;
+			count += n;
+		}
+	}
 
 	switch(count)
 	{
@@ -134,6 +147,31 @@ static cstr cc_str(uint8* bytes, uint count, uint32& cc, bool is_data)
 	}
 }
 
+/*	calculate string with accumulated cpu clock cycles for compound instruction
+	same as cc_str() but for compound instructions
+	assumes no branching opcodes (and no LDIR etc.)
+*/
+static cstr compound_cc_str(uint8* bytes, uint count, uint32& cc)
+{
+	while(count)
+	{
+		uint8 op1 = bytes[0];
+		uint8 op2 = count>=2 ? bytes[1] : 0;
+		uint8 op4 = count>=4 ? bytes[3] : 0;
+
+		cc += z80_clock_cycles(op1,op2,op4);
+
+		uint len = z80_opcode_length(bytes);
+		XXXASSERT(len<=count);
+		bytes += len;
+		count -= len;
+	}
+
+	str s = usingstr("[%2u]     ", cc);
+	s[9] = 0;
+	return s;
+}
+
 /*
 	format:
 	1234: 12345678 [234|235]sourceline
@@ -142,12 +180,42 @@ static
 uint write_line_with_objcode_and_cycles( FD& fd, uint address, uint8* bytes, uint count, uint offset,
 										 uint32& cc, bool is_data, cstr text )
 {
-	XXXASSERT(offset==0 || is_data);
+//	XXXASSERT(offset==0 || is_data);
 
 	address += offset;
 	bytes   += offset;
 	count   -= offset;
 
+	// special handling for compound opcodes:
+	if(count>1 && !is_data && count>z80_opcode_length(bytes))
+	{
+		if(count>4)	// limit number of accounted bytes to 4; break on opcode boundary:
+		{
+			for(count=0;;)
+			{
+				uint n = z80_opcode_length(bytes+count);
+				if(count+n>4) break;
+				count += n;
+				//if(n>=2 && z80_opcode_can_branch(bytes[0],bytes[1])) break;			denk...
+			}
+		}
+
+		switch(count)
+		{
+		case 2:
+			fd.write_fmt("%04X: %04X     %s%s\n", address, peek2X(bytes), compound_cc_str(bytes,count,cc), text);
+			return 2;
+		case 3:
+			fd.write_fmt("%04X: %06X   %s%s\n",   address, peek3X(bytes), compound_cc_str(bytes,count,cc), text);
+			return 3;
+		case 4:
+			fd.write_fmt("%04X: %08X %s%s\n",     address, peek4X(bytes), compound_cc_str(bytes,count,cc), text);
+			return 4;
+		}
+		IERR();
+	}
+
+	// normal opcodes or data:
 	switch(count)
 	{
 	case 0:
@@ -166,7 +234,7 @@ uint write_line_with_objcode_and_cycles( FD& fd, uint address, uint8* bytes, uin
 		fd.write_fmt("%04X: %08X %s%s\n",    address, peek4X(bytes), cc_str(bytes,count,cc,is_data), text);
 		return 4;
 	default:
-		XXXASSERT(is_data || count==6);		// compound opcode ld rr,(ix+dis) TODO: cycles
+		XXXASSERT(is_data);
 		// wenn zuletzt 4 gleiche Bytes geloggt wurden
 		// und noch mehr als 4 Bytes folgen
 		// und nur noch diese Bytes folgen
@@ -278,7 +346,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 	FD fd(listpath,'w');
 	TempMemPool tempmempool;	// be nice in case zasm is included in another project
-	uint si=0,ei=0;	// source[] index, errors[] index
+	uint si=0,ei=0;				// source[] index, errors[] index
 
 	if(style&6)
 	{
@@ -329,16 +397,11 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 			// print line with address, up to 4 opcode bytes and source line:
 			// note: real z80 opcodes have max. 4 bytes
-			if(style&8)
-			{
-				if(sourceline.is_label) cc = 0;
-				bool is_data = sourceline.is_data;
-				offset = write_line_with_objcode_and_cycles(fd, address, bytes, count, 0, cc, is_data, sourceline.text);
-			}
-			else
-			{
-				offset = write_line_with_objcode(fd, address, bytes, count, 0, sourceline.text);
-			}
+			if(sourceline.is_label) cc = 0;				// reset cc at labels
+			bool is_data = sourceline.is_data;
+			offset = style&8 ?
+				write_line_with_objcode_and_cycles(fd, address, bytes, count, 0, cc, is_data, sourceline.text)
+			  : write_line_with_objcode(fd, address, bytes, count, 0, is_data, sourceline.text);
 
 			// print errors and suppress printing of further opcode bytes:
 			while( ei<errors.count() && errors[ei].sourceline == &sourceline )
@@ -352,10 +415,12 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 			// print remaining opcode bytes
 			// note: real z80 opcodes have max. 4 bytes
-			// but some pseudo opcodes like 'defm' or 'defs' may have more:
+			// but some compound opcodes and pseudo opcodes like 'defm' or 'defs' may have more:
 			while(offset<count)
 			{
-				offset += write_line_with_objcode(fd, address, bytes, count, offset, "");
+				offset += style&8 ?
+					write_line_with_objcode_and_cycles(fd, address, bytes, count, offset, cc, is_data, "")
+				  : write_line_with_objcode(fd, address, bytes, count, offset, is_data, "");
 			}
 		}
 	}

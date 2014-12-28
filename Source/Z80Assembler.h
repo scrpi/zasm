@@ -96,7 +96,8 @@ public:
 	cstr		c_compiler;		// -c: fqn to sdcc or similar or NULL
 	cstr		c_includes;		// -I: fqn to custom include dir or NULL
 	cstr		stdlib_dir;		// -L: fqn to custom library dir or NULL (not only c but any .globl)
-	Array<cstr>	c_flags;
+	cstr		c_tempdir;		// fqn of sub directory in temp_directory acc. to c_flags for .s files
+	CstrArray	c_flags;
 	int			c_qi;			// index of source file in cc_argv[] or -1
 	int			c_zi;			// index of output file in cc_argv[] or -1
 
@@ -104,15 +105,16 @@ public:
 	CharMap*	charset;
 
 // options:
-	bool		enable_illegal_ixcb_r2_instructions;	// 	e.g. bit b,(ix+d),r2
-	bool		enable_illegal_ixcb_xh_instructions;	// 	e.g. bit b,xh
-	bool		target_hd64180;
-	bool		target_8080;
-	bool		syntax_8080;
-	bool		allow_non8080regs_as_label_names;				// for target_8080: allow ix, xh, i, r etc.
+	bool		ixcbr2_enabled;		// enable ixcb illegals: e.g. set b,(ix+d),r2
+	bool		ixcbxh_enabled;		// enable ixcb illegals: e.g. bit b,xh
+	bool		target_hd64180;		// enable hd64180 opcodes
+	bool		target_8080;		// limit instruction set to 8080 opcodes
+	bool		syntax_8080;		// use 8080 assembler syntax (TODO)
+	bool		registers_8080;		// limit known register names to 8080 registers => allow others for label names
 
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) TAE;
+	void	skip_expression	(SourceLine&, int prio)		TAE;
 	void	asmLabel		(SourceLine&)				TAE;
 	void	asmDirect		(SourceLine&)				throw(fatal_error);		// #directives
 	void	asmIf			(SourceLine&)				TAE;
@@ -130,7 +132,7 @@ private:
 	void	asmInstr		(SourceLine&)				TAE;
 	void	asmAssert		(SourceLine&)				TAE;
 	void	asmCharset		(SourceLine&)				TAE;
-	cstr	compileFile		(cstr, cstr tempdir)		TAE;
+	cstr	compileFile		(cstr)						TAE;
 
 	void	store			(int n)						TAE { current_segment_ptr->store(n); }
 	void	store			(int n, int m)				TAE { current_segment_ptr->store(n,m); }
@@ -167,6 +169,7 @@ private:
 	void	setError		(any_error&);				// set error for current file, line & column
 	void	addError		(cstr text);				// add error without source line
 	void	init_c_flags	();
+	void	init_c_tempdir	()							THF;
 
 public:
 			Z80Assembler	();

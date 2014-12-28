@@ -194,7 +194,6 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 ; -Iheaderpath
 ; -Dname
 ; -Dname=value
-; --auto-stack			not for Z80?
 ; --callee-saves-bc
 ; --nostdinc
 ;

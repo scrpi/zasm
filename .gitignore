@@ -19,8 +19,8 @@ Test/*.tap
 Test/rem.c
 Test/crc.c
 Test/sdcpp
-Test/zx82rom.asm
-
+Test/test-zx82rom/
+Test/test-opcodes/
 
 
 

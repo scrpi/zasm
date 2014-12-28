@@ -46,6 +46,7 @@ SOURCES += \
     Libraries/unix/files.cpp \
     Libraries/Z80/z80_clock_cycles.cpp \
     Libraries/Z80/z80_major_opcode.cpp \
+    Libraries/Z80/z80_opcode_length.cpp \
 
 HEADERS += \
     Source/Error.h \
@@ -76,7 +77,9 @@ HEADERS += \
     Libraries/Z80/z80_clock_cycles.h \
     Libraries/Z80/z80_major_opcode.h \
     Libraries/Z80/z80_major_opcode_tables.h \
+    Libraries/Z80/z80_opcode_length.h \
     Libraries/Z80/Z80opcodes.h \
+    Libraries/hash/sdbm_hash.h
 
 OTHER_FILES += \
     ../.gitignore \
@@ -276,8 +279,10 @@ OTHER_FILES += \
     ../Test/test-cc.lst \
     ../Test/test.asm \
     ../Test/test.lst \
-    ../Test/test-opcodes.asm \
-    ../Test/test-opcodes.lst \
+    ../Test/test-opcodes/test-opcodes.asm \
+    ../Test/test-opcodes/test-opcodes.lst \
+    ../Test/test-zx82rom/zx82rom.asm \
+    ../Test/test-zx82rom/zx82rom.lst \
     ../Test/test-tap.asm \
     ../Test/test-tap.lst \
     ../Test/zx82_rom.asm \
