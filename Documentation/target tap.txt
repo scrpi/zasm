@@ -1,0 +1,150 @@
+
+
+
+h3	#target tape
+	tap
+
+p	A ZX Spectrum tape file. This file may and should contain several code segments. Any time a #code segment is finished, it is appended to the tape file.
+
+pre	#target		tape
+	#code		<start>,<len>,<flag>
+		...
+	#end
+
+p	The tape file format represents programs and data saved to a music compact cassette by the original ZX Spectrum tape saving routines.
+
+p	Each code segment defines a block on the tape. the flag argument defines the type of block, which is typically $00 for a header block and $FF for the subsequent data block.
+
+p	The code segments are never padded but always truncated. the blocks are written to the file in the uncompressed TAP format.
+
+p	Any kind of data is typically saved in two blocks: a header block, containing information about the following data, and a data block, containing data as described by the preceding header.
+
+p	A complete game is typically saved in two parts: a basic loader, which consists of a header and a data block and the machine code part, which consists of a header and data block too.
+
+p	All blocks in the .tap file start with two bytes specifying how many bytes will follow. Then raw tape data follows, starting with the flag byte and ending with the checksum byte. A tape file is a simple sequence of any number of these blocks.
+
+h5	Layout of a block in a tape file:
+
+pre	defw 	<length>
+	defb 	<flag>
+	defm 	<data>
+	defb 	<checksum>
+
+h5	<length>
+
+p	This is the number of bytes that follow: including the <flag>, <data> and <checksum>; not counting the <length> itself. Byte order is little endian, this means, the low byte is first. The ZX Spectrum save routine cannot save 0 bytes or more than $ff00 bytes, thus the minimum <length> is 3, which means 1 byte flag + 1 byte data + 1 byte checksum.
+
+h5	<flag>
+
+p	This is the value of the A register when the ZX Spectrum save routine was called. A value of $00 normally indicates, that this is a header block, a value of $FF indicates, that this is a data block, which contents are described by the preceding header block.
+
+h5	<data>
+
+p	Contains a header (if <flag>==$00 and <length>==19) or data. These are the bytes which will be loaded into RAM.
+
+h5	<checksum>
+
+p	this is the bitwise XOR of all bytes including the flag byte.
+
+
+p	To create a program which consists of a basic loader and a machine code part as described above, write an assembler program which consist of 4 code segments:
+
+ul
+li	a 'program' header block for the basic loader
+li	the data block containing the basic program
+li	a 'code' header block for the binary data
+li	the data block containing the machine code
+
+p	A header block is always 17 bytes long.
+p	The headers for a basic program and for binary data are layed out as follows:
+
+h5	Header for basic program:
+
+pre	defb	0		; this indicates a basic program
+	defm	name	; the 'file' name, 10 bytes long
+	defw	length	; length of block, that is basic program plus variables
+	defw	auto	; line number for auto-start, $8000 if none
+	defw	proglen	; length of the basic program without variables
+
+h5	Header for binary data:
+
+pre	defb	3		; this indicates binary data
+	defm	name	; the 'file' name, 10 bytes long
+	defw	length	; length of data block which follows
+	defw	origin	; original location from where the binary data was saved
+	defw	0		; unused
+
+
+h5	A sample framework for a tape file assembler source:
+
+
+pre	;******	TAPE FILE ASSEMBLER SOURCE SAMPLE ************************************
+	headerflag:     equ 0
+	dataflag:       equ $ff
+
+	tCLEAR  equ     $FD             ; token CLEAR
+	tLOAD   equ     $EF             ; token LOAD
+	tCODE   equ     $AF             ; token CODE
+	tPRINT  equ     $F5             ; token PRINT
+	tUSR    equ     $C0             ; token USR
+
+	#target tap
+
+	;------ PROGRAM HEADER -------------------------------------------------------
+	#code   0,17,headerflag
+			defb    0               ; program
+			defm    "testloader"    ; make sure these are 10 bytes!
+			defw    programsize     ; length of basic program and variables
+			defw    10              ; line number for auto start
+			defw    programsize     ; length of basic program without variables
+
+
+	;------ PROGRAM DATA ---------------------------------------------------------
+	#code   0,$100,dataflag         ; size is truncated as required
+
+	; 10 CLEAR 24000
+			defb    0,10                    ; line number
+			defb    end10-($+1)             ; line length
+			defb    0                       ; statement number
+			defb    tCLEAR                  ; token CLEAR
+			defm    '24000',$0e0000c05d00   ; number 24000, ascii & internal format
+	end10:  defb    $0d                     ; line end marker
+
+	; 20 LOAD "" CODE 24000
+			defb    0,20                    ; line number
+			defb    end20-($+1)             ; line length
+			defb    0                       ; statement number
+			defb    tLOAD,'"','"',tCODE     ; token LOAD, 2 quotes, token CODE
+			defm    '24000',$0e0000c05d00   ; number 24000, ascii & internal format
+	end20:  defb    $0d                     ; line end marker
+
+	; 30 PRINT USR 24000
+			defb    0,30                    ; line number
+			defb    end30-($+1)             ; line length
+			defb    0                       ; statement number
+			defb    tPRINT,tUSR             ; token PRINT, token USR
+			defm    '24000',$0e0000c05d00   ; number 24000, ascii & internal format
+	end30:  defb    $0d                     ; line end marker
+	programsize     equ     $
+
+
+	;------ CODE HEADER ----------------------------------------------------------
+	#code   0,17,headerflag
+
+			defb    3               ; code
+			defm    "samplecode"    ; make sure these are 10 bytes!
+			defw    codeend-24000   ; length of data block
+			defw    24000           ; original position
+			defw    0               ; unused
+
+
+	;------ CODE DATA ------------------------------------------------------------
+	#code   24000,40000,dataflag
+
+			ret                     ; insert your machine code here
+
+	codeend:
+	#end
+	;****** END OF CODE SAMPLE ***************************************************
+
+

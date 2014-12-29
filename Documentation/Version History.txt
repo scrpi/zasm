@@ -1,0 +1,24 @@
+
+// zasm
+
+h1	Version history
+
+pre	1.0.0  1996: First version for private use. Mac OS 7.0. No public release.
+	2.0.0  2000: Total rework with new libraries.
+	2.0.7  2002: started port of MacOS classic version to unix
+	3.0.0  2002: MacOS X command line version released
+	3.0.2        .tap and .sna support implemented
+	3.0.13 2005: #code statement now also sets the physical address for intel hex files
+	3.0.14       #target, #end and #code now optional. default target = rom
+	3.0.15       added illegals with XL,XH,YL,YH to: cp, or, ld, and, xor, sub, sbc, adc
+	4.0.0  2014: rewrite with more C++ inside
+	4.0.0  2014: .tap .sna .z80 .o .p .ace 
+	4.0.0  2014: c compiler support
+	4.0.0  2014: rework of segment handling
+	4.0.0  2014: #local #endlocal
+	4.0.0  2014: #charset
+	4.0.0  2014: #assert and directive '!' for self test
+	4.0.0  2014: 8080 and HD64180 support
+	4.0.0  2014: list accumulated cpu cycles
+	4.0.1  2014: write Motorola S-Record files
+

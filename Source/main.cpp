@@ -46,7 +46,7 @@
 
 
 cstr appl_name = "zasm";
-cstr version   = "4.0α";
+cstr version   = "4.0β";
 
 
 /* helper: get the compile date in preferred format "yyyy-mm-dd":
@@ -69,7 +69,8 @@ static cstr compiledatestr()
 static cstr help =
 "–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\n"
 "  zasm - z80 assembler (c) 1994-2014 Günter Woigk.\n"
-"  version %s, %s, for %s.\n"								// version, date, platform
+"  version %s, %s, for %s.\n"										// version, date, platform
+"  homepage: k1.spdns.de/Develop/Projects/zasm/\n"
 "  send bug reports to: kio@little-bat.de\n\n"
 
 "syntax:\n"
@@ -80,7 +81,7 @@ static cstr help =
 
 "examples:\n"
 "  zasm speccirom.asm\n"
-"  zasm -uwy speccirom.src rom_v2.0.1.rom\n\n"
+"  zasm -uwy emuf_rom.asm rom_v2.0.1.rom\n\n"
 
 "options:\n"
 "  -u  --opcodes   include object code in list file\n"
@@ -95,11 +96,11 @@ static cstr help =
 "  --ixcbr2 | …xh  enable ill. instructions like 'set b,(ix+d),r' or 'set b,xh'\n"
 "  --8080          limit instruction set to Intel 8080 cpu; use z80 asm syntax\n"
 "  --8080regs      limit instruction set and reserved register names\n"
-"  --8080asm       use 8080 assembler syntax (TODO)\n"
+//"  --8080asm       use 8080 assembler syntax (TODO)\n"
 "  --hd64180       enable Hitachi HD64180 instructions\n"
 "  -v[0,1,2]       verbosity of messages to stderr (0=off,1=default,2=more)\n"
 "  -c path/to/cc   set path to c compiler (default: sdcc in $PATH)\n"
-"  -t path/to/dir  set path to temp dir for c compiler (default: output dir)"
+"  -t path/to/dir  set path to temp dir for c compiler (default: output dir)\n"
 "  -I path/to/dir  set path to c system header dir (default: sdcc default)\n"
 "  -L path/to/dir  set path to standard library dir (default: none)\n\n"
 

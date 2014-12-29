@@ -1,0 +1,45 @@
+
+
+//	-----------------------------------------------------------------
+h1	Command Line Options
+	options
+
+p	When invoking zasm you can append options to it on the command line, most notably the name of the source file.
+
+pre	zasm [options] [-i] inputfile [[-l] listfile|dir] [[-o] outfile|dir]
+
+
+
+p.b	Typical invocations
+pre	zasm -uwy emuf_rom.asm
+
+p.b	Options
+
+pre	default output dir = source dir
+	default list dir   = output dir
+	 
+	-u  --opcodes   include object code in list file
+  	-w  --labels    append label listing to list file
+  	-y  --cycles    include cpu clock cycles in list file
+  	-b  --bin       write output to binary file (default)
+  	-x  --hex       write output in intel hex format
+  	-s  --s19       write output in motorola s-record format
+  	-z  --clean     clear intermediate files, e.g. cached compiled c files
+  	-o0             don't write output file
+  	-l0             don't write list file
+  	--ixcbr2        enable illegal instructions like 'set b,(ix+d),r' 
+  	--ixcbxh        enable illegal instructions like 'set b,xh'
+  	--8080          limit instruction set to Intel 8080 cpu; use z80 asm syntax
+  	--8080regs      limit instruction set and reserved register names
+	                this allows to use z80 register names like ix or xh to be used as label names.
+  	--hd64180       enable Hitachi HD64180 added instructions
+  	-v[0,1,2]       verbosity of messages to stderr (0=off,1=default,2=more)
+  	-c path/to/cc   set path to c compiler               default: sdcc in $PATH
+  	-t path/to/dir  set path to temp dir for c compiler  default: output dir
+  	-I path/to/dir  set path to c system header dir      default: sdcc default
+  	-L path/to/dir  set path to standard library dir     default: none
+	
+
+
+
+

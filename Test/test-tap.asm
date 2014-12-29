@@ -244,7 +244,20 @@ code_end		 = $			; note: segment _INITIALIZER is the last code segment
 
 
 
+#end
 
+And here we'll add some funny comments to discuss the major problems of the world.
+
+Please add your suggestion here:
+
+	__________________________________
+	__________________________________
+	__________________________________
+	__________________________________
+	__________________________________
+
+
+						and ignore it.
 
 
 

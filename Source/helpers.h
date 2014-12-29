@@ -33,13 +33,22 @@ class Segment;
 class FD;
 
 
-EXT uint32 compressed_page_size_z80( uint8 const* q, uint qsize );
+enum S19Type				// type ids for S-Records:
+{
+	S19_InfoHeader	= '0',	// 0 .. 64 bytes arbitrary ascii text
+	S19_Data        = '1',	// 0 .. 64 bytes data stored at address
+	S19_RecordCount = '5',	// address = number of s-records transmitted (~ written to file)
+	S19_BlockEnd    = '9'	// block end marker; address = 0 or program start address
+};
 
-EXT void write_compressed_page_z80	( FD&, int page_id, uint8 const* q, uint32 qsize ) throw(file_error);
-EXT void write_intel_hex			( FD&, uint32 addr, uint8 const* q, uint32 sz ) throw(file_error);
-EXT void write_compressed_page_ace	( FD&, uint8 const* q, uint qsize ) throw(file_error);
+
+EXT uint32 compressed_page_size_z80	( uint8 const* data, uint size );
+EXT void write_compressed_page_z80	( FD&, int page_id, uint8 const* data, uint32 size ) throw(file_error);
+EXT void write_intel_hex			( FD&, uint32 address, uint8 const* data, uint32 size ) throw(file_error);
+EXT uint write_motorola_s19			( FD&, uint32 address, uint8 const* data, uint32 size ) throw(file_error);
+EXT void write_srecord				( FD&, S19Type, uint32 address, uint8 const* data, uint size ) throw(file_error);
+EXT void write_compressed_page_ace	( FD&, uint8 const* data, uint size ) throw(file_error);
 EXT double now();
-
 
 
 #endif // helpers_h

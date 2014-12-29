@@ -193,6 +193,81 @@ void write_intel_hex( FD& fd, uint32 addr, uint8 const* bu, uint32 sz ) throw(fi
 }
 
 
+/*	write block of data in motorola r-record file format
+	format of one line:
+		ttllaaaaddd…cc\r\n
+	where
+		tt = 'S0' -> data = module_name + version + revision + comment  (recommended)
+		tt = 'S1' -> 2-byte address + data
+		tt = 'S2' -> 3-byte address + data
+		tt = 'S3' -> 4-byte address + data
+		tt = 'S5' -> 2-byte address = number of S1/2/3 lines transmitted before this record
+		tt = 'S6' -> 3-byte address = number of S1/2/3 lines transmitted before this record (inofficial?)
+		tt = 'S7' -> end of block marker: 4-byte address = 0 or program entry address
+		tt = 'S8' -> end of block marker: 3-byte address = 0 or program entry address
+		tt = 'S9' -> end of block marker: 2-byte address = 0 or program entry address
+
+		ll = number of bytes following (address + data + checksum)
+			 note: number of hexchars following = ll*2
+
+		aa = 2, 3 or 4 byte address (4, 6 or 8 hexchars) acc. to type tt
+		dd = data, at most 64 bytes (128 hexchars)
+		cc = 1 byte (2 chars) checksum = 0xFF ^ SUM(llaaaaddd…)
+		\r\n line end
+
+	return: the number of s-records written: required by caller for the final S5-record
+*/
+uint write_motorola_s19( FD& fd, uint32 address, uint8 const* data, uint32 count ) throw(file_error)
+{
+	uint cnt = 0;
+
+	while(count)
+	{
+		uint n = min(count,64u);
+		write_srecord(fd,S19_Data,address,data,n);
+		data    += n;
+		address += n;
+		count   -= n;
+		cnt     += 1;
+	}
+
+	return cnt;
+}
+
+/*	write one line into a s-record file:
+	type = S19_InfoHeader  = 0 -> info header: S0 record
+	type = S19_Data        = 1 -> data block: S1 or S2 record
+	type = S19_RecordCount = 5 -> records written: S5 record
+	type = S19_BlockEnd    = 9 -> block end: S9 or S8 record
+*/
+void write_srecord( FD& fd, S19Type type, uint32 address, uint8 const* data, uint count ) throw(file_error)
+{
+	XXXASSERT(type==S19_InfoHeader || type==S19_Data || type==S19_RecordCount || type==S19_BlockEnd);
+	XXXASSERT(address<=0xffffff);
+	XXXASSERT(type<=S19_Data ? count<=64 : count==0);
+
+	uint checksum = 0;
+
+	if(address>0xffff)
+	{
+		char c = type==S19_BlockEnd ? type-1 : type+1;
+		fd.write_fmt("S%c%02X%06X", c, count+4, address);
+		checksum = count+4 + address + (address>>8) + (address>>16);
+	}
+	else
+	{
+		fd.write_fmt("S%c%02X%04X", type, count+3, address);
+		checksum = count+3 + address + (address>>8);
+	}
+
+	uint8 bu[128], *z = bu;
+	uint8 const *q = data, *e = data+count;
+	while(q<e) { *z++ = hexchar(*q/16); *z++ = hexchar(*q); checksum += *q++; }
+	fd.write_bytes(bu,count*2);
+	fd.write_fmt("%02X\r\n", ~checksum & 0xff);		// write 1's complement of checksum
+}
+
+
 /*	write compressed data in .ace format
 
 		compression scheme:

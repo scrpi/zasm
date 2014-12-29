@@ -178,6 +178,12 @@ void Z80Assembler::assembleFile(cstr sourcefile, cstr destpath, cstr listpath, c
 	XXXASSERT(is_dir(temp_directory));
 	if(clean && is_dir(catstr(temp_directory,"s/"))) delete_dir(catstr(temp_directory,"s/"),yes);
 
+	if(!stdlib_dir && c_includes && endswith(c_includes,"/include/"))	// try to guess missing libdir
+	{
+		cstr libdir = catstr(leftstr(c_includes,strlen(c_includes)-9),"/lib/");
+		if(is_dir(libdir)) stdlib_dir = libdir;
+	}
+
 	StrArray source;
 	source.append( catstr("#include ", quotedstr(sourcefile)) );
 	assemble(source);
@@ -380,7 +386,7 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 	{
 		return;
 	}
-#ifndef NDEBUG					// test suite:
+//#ifndef NDEBUG   				// test suite:
 	else if(q.test_char('!'))	// test suite: this line must fail:
 	{
 		try
@@ -397,7 +403,7 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 		}
 		throw syntax_error("instruction did not fail!");	// did not throw!
 	}
-#endif
+//#endif
 	else						// [label:] + opcode
 	{
 		if((uint8)q[0] > ' ' && q[0]!=';' && q[0]!='.') asmLabel(q);	// label definition
@@ -1144,6 +1150,11 @@ void Z80Assembler::init_c_tempdir() THF
 void Z80Assembler::asmEnd(SourceLine&) throw(any_error)
 {
 	end = true;
+
+	// assign default segment to all remaining source lines
+	// to keep writeListfile() happy:
+	if(pass>1) return;
+	for(uint i=current_sourceline_index+1; i<source.count();i++) { source[i].segment = &segments[0]; }
 }
 
 
@@ -1332,6 +1343,7 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 
 		MyFileInfoArray files;
 		read_dir(fqn, files, yes);
+		files.sort();					// make loading of library files predictable
 
 		for(uint i=0;i<files.count();i++)
 		{
@@ -1373,7 +1385,7 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 		cstr fqn = q.nextWord();
 		if(fqn[0]!='"') throw syntax_error("quoted filename expected");
 		fqn = unquotedstr(fqn);
-		if(fqn[0]!='/') fqn = catstr(source_directory,fqn);
+		if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
 
 		if(endswith(fqn,".c"))
 		{

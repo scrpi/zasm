@@ -1,0 +1,16 @@
+
+h3	#target 80 / #target o
+
+p	This creates a tape file for use with an ZX80 emulator. There is only one #code segment allowed, which is not padded but truncated. The tape file will allways be loaded to ram start at address $4000.
+
+pre	#target	80
+	#code	<start>,<len>
+		...
+	#end
+	
+p	"o" can be used instead of "80". This will create a target file with extension "o" or "80" respectively, which are fully identical.
+
+p	The tape data is always loaded to $4000, so this is the only choice for the <start> address in the #code directive. The <size> may be any value up to a maximum of $C000, but note that most ZX80 had maximum 16 kB ram if extended with an external memory expansion, only 1 kB if none.
+
+p	The ram starts with system variables from $4000 to $4028, which must be set to proper values. The variable E_LINE at $400A, which contains the end of ram address, is set by the assembler. You need not to calculate it, just skip it with "defs 2" or "defw 0".
+

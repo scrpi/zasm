@@ -19,7 +19,7 @@ var ROBOTS = «index,nofollow»
 var MAIN = 
 «
 h4	Source of 'zasm' - z80 assembler
-p.center Documentation is in <a href="doc">doc/</a> and tarballs are in <a href="../zasm/distributions">distributions/</a>.
+p.center Documentation is in <a href="Documentation/">Documentation/</a> and tarballs are in <a href="Distributions/">Distributions/</a>.
 		Source can also be checked out from <a href="/Git/">the Git</a>.
 		A cgi interface for online assembling is at <a href="/cgi-bin/zasm.cgi">/cgi-bin/zasm.cgi</a>.
 »

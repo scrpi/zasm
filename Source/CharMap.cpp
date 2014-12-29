@@ -113,7 +113,10 @@ CharMap::CharMap(CharSet charset)
 			//	charmap[8]  = 8;		// cursor left
 			//	charmap[12] = 9;		// cursor right
 				addMappings("£",96);
-				addMappings("© ▝▘▀▗▐▚▜▖▞▌▛▄▟▙█",127);
+				addMappings("©",127);
+				add(0xA0,128);			// non-breaking space -> all-white block graphics char
+										// note: Qt Creator silently replaces nbsp with space :-(
+				addMappings("▝▘▀▗▐▚▜▖▞▌▛▄▟▙█",129);
 				break;
 	case JUPITER:
 				for(int c=32;c<127;c++) charmap[c] = c;
@@ -121,7 +124,9 @@ CharMap::CharMap(CharSet charset)
 				addMappings("█▙▟▄▛▌▞▖",16);
 				addMappings("£",96);
 				addMappings("©",127);
-				addMappings(" ▝▘▀▗▐▚▜",144);
+				add(0xA0,144);			// non-breaking space -> all-white block graphics char
+										// note: Qt Creator silently replaces nbsp with space :-(
+				addMappings("▝▘▀▗▐▚▜",145);
 				break;
 //	case ASCII:
 //	case NONE:

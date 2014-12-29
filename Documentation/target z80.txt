@@ -1,0 +1,76 @@
+
+h3	#target z80
+	z80
+
+p	Information on the ZX Spectrum file formats can be found in the ZX Spectrum FAQ which can be found on WOS:  <http://www.worldofspectrum.org/faq/>.
+
+
+p	This ZX Spectrum snapshot format may contain a snapshot for the ZX Spectrum or the ZX 128. It contains all of the .sna file's information and optionally some more. It is preferred over the .sna format by some people, because it does not store the instruction pointer pc on the Z80 machine stack. The .z80 file may also contain one or two roms and data for the paged ram of the ZX 128.
+
+pre	#target z80
+	#head	<size>	    ; vs.201 = 55;  vs.300 = 86;  xzx = 87
+	#code	<start>,<len>
+		...
+	#page	<index>
+		...
+	#end
+
+p	The z80 format describes a ZX Spectrum 16k, 48k, 128k or, in versions written by the warajewo and xzx emulator, a Timex 2068, a ZX Spectrum +3, a Pentagon or a Scorpion.
+
+p	The object code from the code segments is written to the paged-in RAM according to the value stored for the paging control register at address $1FFD. start should be $4000, len should be $4000 or $C000. at least, this is how it get's loaded later.
+
+p	Note:  $4000 = bank 5;   $8000 = bank 2;   $C000 = bank 0 after reset.
+
+p	The #page directive defines a RAM page in which the following object code is stored. it set's start to $C000 and len to $4000. this directive is only allowed for models which are capable of paging.
+
+p	The RAM contents are written to the file in the compressed Z80 format.
+
+h5	Default values for header data:
+
+pre		defb	0,0	        ; a,f
+		defw	0,0	        ; bc,hl
+		defw	0	        ; flag idicating vs.201 header or later
+		defw	0,0	        ; sp
+		defb	$3f	        ; i
+		defb	0	        ; r & 0x7f
+		defb	(7<<1)	    ; (r>>7) + (border_color<<1)
+		defw	0,0,0,0	    ; de,bc',de',hl'
+		defb	0,0	        ; a',f'
+		defw	0,0	        ; iy,ix
+		defb	1	        ; iff1: 0=di, 1=ei
+		defb	1	        ; iff2
+		defb	1+(1<<6)	; (irpt_mode) + (issue_2<<2) + (joystick_emu<<6)
+	// vs.201 header:
+		defw	headsize-32	; size of header extension; should be 23 or 54
+		defw	0	        ; pc
+		defb	0	        ; ZX Spectrum model		1)
+		defb	0	        ; 128k: last out to $7ffd (bank switching)	2)
+		defb	0	        ; if1 paged in?		2)
+		defb	7	        ; proper r and ldir emulation, 48k ay emulation	3)
+		defb	0	        ; last out to $fffd (ay register select)
+		defs	16,$ff	    ; ay registers
+	// vs.300 header:
+		defb	0,0,0	    ; T state counters
+		defb	0	        ; misc.
+		defb	0,0,$ff,$ff	; MGT/Multiface/SamRam paging
+		defs	20,0	    ; keyboard mapping for joystick emulation
+		defb	0,0,0	    ; Disciple flags
+	// xzx header extension:
+		defb	0	        ; +3: last out to $1ffd (bank switching)	3)
+
+	1)	0   = 48k
+		3   = 128k in vs.201
+		4   = 128k in vs.300
+		128 = Timex 2068		(warajewo)
+		7   = +3				(xzx)
+		9   = pentagon			(xzx)
+		10  = scorpion			(xzx)	16 ram pages!
+
+	2)	Timex 2068:
+		last out to 244
+		last out to 255
+
+	3)	Bit 2: enable ay emulation even in 48k mode (xzx)
+
+
+

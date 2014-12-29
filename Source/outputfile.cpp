@@ -31,6 +31,7 @@
 #include "Z80Assembler.h"
 #include "Z80Header.h"
 #include "helpers.h"
+#include "unix/files.h"
 
 
 
@@ -48,6 +49,7 @@ void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
 	if(target==NULL) target="ROM";
 	cstr ext = lowerstr(target);
 	if(style=='x' && (eq(ext,"rom") || eq(ext,"bin"))) ext = "hex";
+	if(style=='s' && (eq(ext,"rom") || eq(ext,"bin"))) ext = "s19";
 
 	if(endswith(dname,".$")) dname = catstr(leftstr(dname,strlen(dname)-1),ext);
 	target_filepath = dname;
@@ -55,6 +57,7 @@ void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
 
 	if(eq(ext,"rom") || eq(ext,"bin")) writeBinFile(fd);
 	else if(eq(ext,"hex")) writeHexFile(fd);
+	else if(eq(ext,"s19")) writeS19File(fd);
 	else if(eq(ext,"sna")) writeSnaFile(fd);
 	else if(eq(ext,"z80")) writeZ80File(fd);
 	else if(eq(ext,"ace")) writeAceFile(fd);
@@ -121,6 +124,37 @@ void Z80Assembler::writeHexFile(FD& fd) throw(any_error)	// no error checking!
 
 	// eof marker:
 	fd.write_str(":00000001FF\r\n");
+}
+
+void Z80Assembler::writeS19File(FD& fd) throw(any_error)	// no error checking!
+{
+	cstr info = catstr(basename_from_path(source_filename)," ",datestr(timestamp));
+	write_srecord(fd,S19_InfoHeader,0,(uchar*)info,min((uint)strlen(info),64u));
+
+	// store data from segments into S-Record file starting at address 0 with no gaps
+	//	 ignoring segment addresses!
+	// trailing fillbytes in each segment are omitted from the file
+	//	 but accounted for the address of the following segment
+	//	 this is just to save space in the file and may be used
+	//	 to skip over areas of not yet erased contents in eproms
+	uint32 address = 0;
+	uint   srcount = 0;
+	for(uint i=0; i<segments.count() && segments[i].isCode(); i++)
+	{
+		Segment& s = segments[i];
+
+		uint8  fillbyte = s.fillbyte;
+		uint8* data = s.getData();
+		uint32 len  = s.size;
+		while(len>0 && data[len-1]==fillbyte) { len--; }
+
+		srcount += write_motorola_s19(fd, address, data, len);
+		address += s.size;
+	}
+
+	// eof marker:
+	write_srecord(fd,S19_RecordCount,srcount,NULL,0);
+	write_srecord(fd,S19_BlockEnd,0,NULL,0);
 }
 
 

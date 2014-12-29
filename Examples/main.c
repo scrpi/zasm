@@ -10,8 +10,8 @@ void main()
 {
 	int a;
 	int b;
-	
+
 	a=100;
 	b=200;
-	c=a*b;
+	c=a*b + (c+1)*c;
 }

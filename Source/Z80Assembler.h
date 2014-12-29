@@ -190,6 +190,7 @@ public:
 	void	writeTargetfile	(cstr filepath, int style) TAE;
 	void	writeBinFile	(FD&)	TAE;
 	void	writeHexFile	(FD&)	TAE;
+	void	writeS19File	(FD&)	TAE;
 	void	writeTapFile	(FD&)	TAE;
 	void	writeZ80File	(FD&)	TAE;
 	void	writeSnaFile	(FD&)	TAE;

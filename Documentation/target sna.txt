@@ -1,0 +1,36 @@
+ 
+
+
+
+h3	#target sna
+	sna
+
+p	Information on the ZX Spectrum file formats can be found in the ZX Spectrum FAQ which can be found on WOS:  <http://www.worldofspectrum.org/faq/>.
+
+p	A ZX Spectrum snapshot file. This consists of a ram dump from location $4000 to $FFFF. Snapshot files also contain information about the machine state, most namely the Z80 registers. The #head assembler directive is required to set interrupt mode and all Z80 registers.
+
+pre	#target	sna
+	#head	27
+		...
+	#code	<start>,<len>
+		...
+	#end
+
+p	The SNA snapshot file describes a ZX Spectrum 16k or 48k serving an nmi request.
+
+p	<start> should be $4000 and <len> should be $4000 or $C000. at least later it's loaded that way. when #end is reached, the file is padded with $00 to $4000 bytes (if possible) or $C000 bytes, which implicitely defines a ZX Spectrum 16k or ZX Spectrum 48k.
+
+p	The RAM contents are written to the file in the uncompressed SNA format. the SNA file format is an NMI snapshot. the instruction pointer PC is not stored in the header section but on the return stack in RAM.
+
+
+h5	Default values for header data:
+
+pre	defb	$3f	        ; i
+	defw	0,0,0,0	    ; hl',de',bc',af'
+	defw	0,0,0,0,0	; hl,de,bc,iy,ix
+	defb	$04	        ; bit 2 = iff2 (iff1 before nmi) 0=di, 1=ei
+	defb	0,0,0	    ; r,f,a
+	defw	0	        ; sp
+	defb	1	        ; irpt mode
+	defb	7	        ; border color: 0=black ... 7=white
+

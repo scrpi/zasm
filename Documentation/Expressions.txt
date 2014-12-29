@@ -1,0 +1,37 @@
+
+
+h2	Expressions
+
+
+p	The assembler has an expression evaluator which supports various formats for numbers and operations with priority order. You may also use brackets, but don't start an expression for an immediate value with an opening bracket. The assembler thinks that an expression which starts with an opening bracket indicates direct memory addressing. If you really need to start an immediate value expression with brackets, precede it with the '+' monadic operator.
+
+
+h3	$ (dollar sign)
+	dollar
+
+p	The dollar sign '$' refers to the logical address of the first byte of the current instruction. The logical address may differ from the physical location if you have used the org pseudo instruction to move the logical origin.
+
+
+h3	Number literals
+
+pre	12345    decimal number
+	$1234    hexadecimal number
+	1234h    hexadecimal number
+	%1010    binary number
+	1010b    binary number
+	'ab'     note: 'b' goes to the lower address, 'a' to the higher
+
+
+h3	Operators
+	operator priority, priority
+
+p	The following operators are recognized and listed in order of precedence:
+
+pre	brackets            ( ... )
+	monadic operators   + - ~       	plus sign, minus sign, 2's complement
+	shifting            << >>       	shift left or right; left operand is target
+	boolean             & | ^			bitwise and, or, xor
+	mult/div            * / \ %     	multiply, divide, remainder, remainder
+	add/sub             + -         	add, subtract
+	comparisions        > < >= <= = <>	greater than etc.; result is $0000 or $FFFF
+						== !=			<i>equal</i> and <i>not equal</i> (since v.3.0.15).

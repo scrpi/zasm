@@ -65,7 +65,7 @@ uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uin
 	{
 		for(count=0;;)
 		{
-			uint n = z80_opcode_length(bytes+count);
+			uint n = z80_opcode_length(bytes+count,isaHD64180);	// use HD64180 in case HD64180 opcodes are used
 			if(count+n>4) break;
 			count += n;
 		}
@@ -187,13 +187,13 @@ uint write_line_with_objcode_and_cycles( FD& fd, uint address, uint8* bytes, uin
 	count   -= offset;
 
 	// special handling for compound opcodes:
-	if(count>1 && !is_data && count>z80_opcode_length(bytes))
+	if(count>1 && !is_data && count>z80_opcode_length(bytes,isaHD64180))	// use HD64180
 	{
 		if(count>4)	// limit number of accounted bytes to 4; break on opcode boundary:
 		{
 			for(count=0;;)
 			{
-				uint n = z80_opcode_length(bytes+count);
+				uint n = z80_opcode_length(bytes+count,isaHD64180);	// use HD64180 in case HD64180 opcodes are used
 				if(count+n>4) break;
 				count += n;
 				//if(n>=2 && z80_opcode_can_branch(bytes[0],bytes[1])) break;			denk...
@@ -369,7 +369,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 			SourceLine& sourceline = source[si++];
 
 			Segment& segment = *sourceline.segment;
-			if(&segment==NULL) break;		// after '#end'
+			XXXASSERT(&segment); // if(&segment==NULL) break;		// after '#end'
 
 			XXXASSERT(!segment.size_valid || sourceline.bytecount<=0x10000);
 			XXXASSERT(!segment.size_valid || sourceline.byteptr+sourceline.bytecount <= segment.size);

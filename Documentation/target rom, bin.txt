@@ -1,0 +1,24 @@
+h3	#target rom
+	rom
+
+p	This file is a plain rom or eprom image.
+p	Segments are padded with $FF, except for the last code segment, which is not padded but truncated.
+
+pre	#target		rom
+	#code		<start>,<len>
+			...
+	#end
+
+
+
+h3	#target bin
+	bin
+
+p	Pretty the same as a rom file, but rather expected to be loaded somewhere into ram.
+p	Segments are padded with $00, except for the last code segment, which is not padded but truncated.
+
+pre	#target		bin
+	#code		<start>,<len>
+			...
+	#end
+

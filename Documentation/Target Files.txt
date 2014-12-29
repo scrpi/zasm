@@ -1,0 +1,96 @@
+
+
+
+h1	Target files
+	destination file, output file
+
+
+
+
+h3	General rules
+
+p	The target file format must be set with the #target assembler directive.
+
+pre	#target <extension>
+
+
+p	#target defines extension and format of the target file. There must be only one #target section per assembler source.
+
+p	This does not define whether the generated data should be written as a plain binary file or in intel hex file format. This must be selected be the '-b' or '-x' command line option. The assembler always defaults to binary except if the output is written to a terminal.
+
+p	Up to version 0.3.13 the #target assembler directive is required. 
+
+p	Since version 0.3.14 the #target assembler directive may be omitted. Then the default target format is <b>rom</b>.
+
+
+pre	#head		<size>
+
+p	Target files which store registers and similar information start with a #head segment. The data within the #head segment are set using 'defb' and similar instructions. If portions of the #head segment are not set or 'defs' is used with no fill pattern then default values will be filled in which vary depending on the omitted data's purpose.
+
+pre	#code		<start>,<size>
+
+p	This directive defines an object code segment and set's the initial logical code origin to <start> and defines a maximum segment size <size>. 
+
+p	<start> does not neccessarily define the physical position of the code segment in the rom. Binary output does not contain address information, just the pure data. In contrast Intel hex files contain address information. Starting with <i>version 3.0.13</i> addresses in hex files are biased to <start>. The 'org' assembler pseudo instruction does not affect the hex file addresses.
+
+p	Multiple code segments are possible and are simply concatenated. Code segments are either padded at the end to the declared maximum segment size or they are truncated, depending on the #target format.
+
+p	Up to version 0.3.13 the #code assembler directive is required.
+
+p	Since version 0.3.14 the #code assembler directive may be omitted. Then the used default values are <b>start=0</b> and <b>size=$10000</b>.
+
+
+h5	Intel hex file format
+
+p	If the file is saved in the intel hex file format, then the unused space at the end of all code segments is never saved (truncated). When reading these files you can decide what to do with the missing data. e.g. an eprom burner will simply skip over the gaps, leaving the data as is, probably $FF for erased cells.
+
+p	As stated above, Intel hex files contain address information at which to physically store the generated code. Starting with <i>zasm version 3.0.13</i> this address is also set to <start>. 
+
+h5	Binary files
+
+p	All code segments are padded with $00 to the declared maximum size, except:
+
+ul
+li 	ROM: all code segments are padded with $FF
+li	ROM: the last code segment is truncated
+li	BIN: the last code segment is truncated
+li	TAP: all code segments are truncated
+li	80:  the last code segment is truncated
+		 same applies to "81", "o" and "p"
+
+p	If you want to prevent that a code segment is truncated then you can simply add 'defs' to fill it up to the last byte.
+
+p	Binary files do not contain information about the address where they should be loaded. Where they are loaded purely depends on the application used to load the file into a simulator or eprom.
+
+
+
+
+
+//	--- H3 ---
++	target rom, bin.txt
++	target sna.txt
++	target z80.txt
++	target tap.txt
++	target 80.txt
++	target 81.txt
++	target ace.txt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

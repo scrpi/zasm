@@ -26,7 +26,7 @@ _min_heap_size::	equ	0x1000
 #code 	_GSFINAL,*,0		; referenced but never (?) actually used by sdcc
 #code 	_INITIALIZER		; initializer for initialized data in ram
 #code	_ROM_PADDING		; pad rom file up to rom end
-		defs  _rom_end-$$	
+		defs  _rom_end-$$
 
 
 ; ================================================================
@@ -41,14 +41,14 @@ _min_heap_size::	equ	0x1000
 
 #data 	_HEAP				; heap:
 __sdcc_heap_start:	 		; --> sdcc _malloc.c
-		ds	min_heap_size	; minimum required size
-		ds	ram_end-$-1		; add all unused memory to the heap
+		ds	_min_heap_size	; minimum required size
+		ds	_ram_end-$-1		; add all unused memory to the heap
 __sdcc_heap_end: 			; --> sdcc _malloc.c
 		ds 	1
 
 
 ; ================================================================
-; 	_HEADER segment: 
+; 	_HEADER segment:
 ; 	starts at 0x0000
 ; ================================================================
 
@@ -62,16 +62,16 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 ; reset vector
 RST0::	di
 		ld		sp,_ram_end
-		jp		init		
+		jp		init
 		defs	0x08-$
 
 RST1::	reti
-		defs	0x10-$		
+		defs	0x10-$
 
 RST2::	reti
 		defs	0x18-$
 
-RST3::	reti		
+RST3::	reti
 		defs	0x20-$
 
 RST4::	reti
@@ -84,7 +84,7 @@ RST6::	reti
 		defs	0x38-$
 
 ; maskable interrupt handler in interrupt mode 1:
-RST7::	jp		_int_handler
+RST7::	RETI						; add INT handler here
 
 
 ; init:
@@ -97,7 +97,7 @@ init:	ld	bc,_INITIALIZER_len		; length of segment _INITIALIZER
 		ld	a,b
 		or	c
 		jr	z,$+4
-		ldir		
+		ldir
 
 		call    _GSINIT				; Initialise global variables
 		call	_main				; execute main()
@@ -113,18 +113,17 @@ _exit::	di
 ; non maskable interrupt:
 ; e.g. call debugger and on exit resume.
 
-		defs   	0x66-$		
-NMI::	jp		_nmi_handler
+		defs   	0x66-$
+NMI::	RETN						; add NMI handler here
 
 
 ; ================================================================
 ; the payload:
 ; ================================================================
 
-#INCLUDE "globls.s"							; .globls which sdcc misses to declare
-#CFLAGS  $CFLAGS --nostdinc -Isdcc/include	; add some flags for sdcc
-#INCLUDE "main.c"							; compile & include file "main.c"
-#INCLUDE LIBRARY "sdcc/libs/"				; resolve missing global labels
+#CFLAGS  $CFLAGS --nostdinc -I../sdcc/include	; add some flags for sdcc
+#INCLUDE "main.c"								; compile & include file "main.c"
+#INCLUDE LIBRARY "../sdcc/lib/"					; resolve missing global labels
 
 
 ; ================================================================
