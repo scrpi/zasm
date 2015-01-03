@@ -1,6 +1,6 @@
 ; ================================================================
 ;	Example tape file with c code for ZX Spectrum
-;	Copyright  (c)	Günter Woigk 1994 - 2014
+;	Copyright  (c)	Günter Woigk 1994 - 2015
 ;					mailto:kio@little-bat.de
 ; ================================================================
 

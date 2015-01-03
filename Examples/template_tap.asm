@@ -1,7 +1,7 @@
 ; ================================================================
 ;	Example source for target 'tap'
 ;	Tape file for ZX Spectrum and Jupiter ACE
-;	Copyright  (c)	Günter Woigk 1994 - 2014
+;	Copyright  (c)	Günter Woigk 1994 - 2015
 ;					mailto:kio@little-bat.de
 ; ================================================================
 

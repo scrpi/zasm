@@ -281,13 +281,16 @@ OTHER_FILES += \
     ../Test/test.lst \
     ../Test/test-opcodes/test-opcodes.asm \
     ../Test/test-opcodes/test-opcodes.lst \
+    ../Test/test-opcodes/test-opcodes-8080.asm \
+    ../Test/test-opcodes/test-opcodes-8080.lst \
     ../Test/test-zx82rom/zx82rom.asm \
     ../Test/test-zx82rom/zx82rom.lst \
     ../Test/test-tap.asm \
     ../Test/test-tap.lst \
     ../Test/zx82_rom.asm \
     ../Test/zx82_rom.lst \
-
+	../Test/8080/Altair8800_Monitor_8.4_2k.lst \
+	../Test/8080/Altair8800_Monitor_8.4_2k.asm \
 
 
 

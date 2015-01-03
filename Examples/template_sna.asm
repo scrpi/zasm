@@ -1,7 +1,7 @@
 ; ================================================================
 ;	Example file with target 'sna'
 ;	NMI snapshot for ZX Spectrum 16k or 48k
-;	Copyright  (c)	Günter Woigk 1994 - 2014
+;	Copyright  (c)	Günter Woigk 1994 - 2015
 ;					mailto:kio@little-bat.de
 ; ================================================================
 

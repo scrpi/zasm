@@ -1,7 +1,7 @@
 ; ================================================================
 ;	Example source with target 'o' or '80'
 ;	ZX80 tape file / snapshot
-;	Copyright  (c)	Günter Woigk 1994 - 2014
+;	Copyright  (c)	Günter Woigk 1994 - 2015
 ;					mailto:kio@little-bat.de
 ; ================================================================
 

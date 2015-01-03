@@ -1,7 +1,7 @@
 ; ================================================================
 ;	Example file for target 'z80'
 ;	Emulator snapshot format for Sinclair computers
-;	Copyright  (c)	Günter Woigk 1994 - 2014
+;	Copyright  (c)	Günter Woigk 1994 - 2015
 ;					mailto:kio@little-bat.de
 ; ================================================================
 

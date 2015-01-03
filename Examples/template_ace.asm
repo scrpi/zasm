@@ -1,7 +1,7 @@
 ; ================================================================
 ;	Example source for target 'ace'
 ;	Emulator snapshot format for Jupiter ACE
-;	Copyright  (c)	Günter Woigk 1994 - 2014
+;	Copyright  (c)	Günter Woigk 1994 - 2015
 ;					mailto:kio@little-bat.de
 ; ================================================================
 

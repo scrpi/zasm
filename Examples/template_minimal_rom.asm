@@ -1,6 +1,6 @@
 ; ================================================================
 ;	Example source with implicit target 'rom'
-;	Copyright  (c)	Günter Woigk 1994 - 2014
+;	Copyright  (c)	Günter Woigk 1994 - 2015
 ;					mailto:kio@little-bat.de
 ; ================================================================
 
