@@ -4,7 +4,7 @@
 
 
 var TITLE	 = «zasm - z80 assembler - download page»
-var KEYWORDS = «zasm, z80 assembler, z80, asm, ZX Spectrum, kio, Assembler, download, source, binary, appl»
+var KEYWORDS = «zasm, z80 assembler, 8080 assembler, z80, 8080, ZX Spectrum, CP/M, kio, Assembler, download, sdcc»
 var ROBOTS	 = «index,nofollow»
 
 var DESCRIPTION =
@@ -19,21 +19,37 @@ zasm can include c source files which are compiled with the help of sdcc.»
 var MAIN = 
 «
 h2	Welcome to the zasm download page
-p	zasm is a command-line z80 assembler. it is available as source, which should compile on many unix-style operating systems, and as pre-compiled binary. Choose a version from the list below. Archive names indicate version, date and build host. Select a binary which matches your OS best. If it fails to run then use the source.
+p	zasm is a command-line assembler for the Zilog Z80 cpu. it is available as source, which should compile on many unix-style operating systems, and as pre-compiled binary. Choose a version from the list below. Archive names indicate version, date and build host. Select a binary which matches your OS best. If it fails to run then use the source.
 
 h4	Overview
-p	zasm supports assembling code for the <span class=blue>Intel 8080</span> using Z80 syntax. 
-	<i>Support for the weird 8080 syntax will come soon.</i>
-	It also supports the additional opcodes for the <span class=blue>Hitachi HD64180</span>.
+p	zasm is a <span class=blue>Z80 assembler</span>.
+	zasm can assemble code extended for the <span class=blue>Hitachi HD64180</span>.	
+	zasm can assemble code limited to the <span class=blue>Intel 8080</span> e.g. for CP/M. 
+	zasm can also assemble native 8080 assembler source.
+	zasm can compile and <span class=blue>include c source files</span>. (choose the version with sdcc below)
 	zasm can generate <span class=blue>binary files</span> or <span class=blue>Intel Hex</span> or <span class=blue>Motorola S19</span> files.
-	zasm supports generating various specialized files for <span class=blue>Sinclair</span> and <span class=blue>Jupiter Ace</span>.
-	The list file can include the <span class=blue>generated opcodes</span> and <span class=blue>accumulated cpu cycles</span>.
-	zasm supports various historically used syntax variants and the syntax emitted by sdcc.
+	zasm supports generating various special files for <span class=blue>Sinclair</span> and <span class=blue>Jupiter Ace</span> emulators.
 	zasm supports <span class=blue>character set conversion</span>, e.g. for the ZX80 and ZX81.
+	The list file can include the <span class=blue>generated opcodes</span> and <span class=blue>accumulated cpu cycles</span> and a list of all labels.
+	zasm supports various historically used syntax variants and the syntax emitted by sdcc.
+	zasm supports multiple code and data segments, nested conditional assembly and nested local scopes.
+
+h4	Typical invocations
+pre	# assemble file into myrom.bin and create plain list file 
+	> <b>zasm myrom.asm	</b>
+	# assemble file into myrom.bin and create list file with opcodes, cpu cycles and labels list
+	> <b>zasm -uwy myrom.asm </b>
+	# assemble source for the Intel 8080 cpu using Z80 syntax
+	> <b>zasm --8080 myrom.asm </b>
+	# assemble native 8080 assembler source
+	> <b>zasm --asm8080 myrom.asm </b>
+	# create Intel hex output
+	> <b>zasm -x myrom.asm </b>
+	
 
 h4	What's new
-p	<b>4.0</b> started a new branch, added a <a href="/Git/">Git repository</a>.
-    <b>2014-12-28</b>: Version 4.0.0 released.
+p	<b>2015-01-01</b>: Version 4.0.2: support for native 8080 assembler source added.
+	<b>2015-01-01</b>: Version 4.0.3: more support for alternate/various/weird syntax added
 
 h4 Git Repository
 p	You can checkout the source from my Git repository:

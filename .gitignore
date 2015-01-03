@@ -24,6 +24,11 @@ Test/crc.c
 Test/sdcpp
 Test/test-zx82rom/
 Test/test-opcodes/
+Test/8080/
+Test/8086 oder so/
+Test/Z80/
 Documentation/*.htm
 Documentation/*.html
 Documentation/00000.txt
+Documentation/Buch.txt
+syntax seen.txt

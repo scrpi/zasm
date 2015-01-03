@@ -2,6 +2,7 @@
 h1	Source files
 
 // 	--- H2 ---
++	8080 Assembler.txt
 +	Source Format.txt
 +	Directives.txt
 +	Labels.txt
