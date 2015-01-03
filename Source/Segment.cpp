@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -290,7 +290,11 @@ void Segment::storeSpace( int sz, bool sz_valid ) throw(syntax_error)
 	storeSpace(sz, sz_valid, fillbyte);
 }
 
-
+void Segment::storeSpaceUpToAddress(int addr, bool addr_valid ) throw(syntax_error)
+{
+	storeSpace(addr-logicalAddress(), addr_valid && logicalAddressValid(), fillbyte);
+	org_valid = addr_valid;
+}
 
 
 

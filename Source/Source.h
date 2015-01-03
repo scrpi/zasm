@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -61,10 +61,10 @@ public:
 	uint	byteptr;			// index of object code in segment
 	uint	bytecount;			// of bytes[]
 
-	bool	is_label;			// if a label is defined in this line
+	Label*	label;				// if a label is defined in this line
 	bool	is_data;			// if generated data is no executable code
 
-	cptr	p;					// for source parser
+	cptr	p;					// current position of source parser
 
 public:
 	SourceLine(cstr sourcefile, uint linenumber, cstr text);

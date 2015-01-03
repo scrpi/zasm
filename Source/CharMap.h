@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -29,6 +29,7 @@
 #define CHARMAP_H
 
 #include "Templates/HashMap.h"
+#include "SyntaxError.h"
 
 typedef uint16		UCS2Char;
 typedef uint32		UCS4Char;
@@ -54,6 +55,7 @@ public:
 	void	remove		(UCS2Char);
 	void	removeMappings (cUTF8Str) throw(data_error);
 	uchar	get			(UCS2Char, uchar dflt) const;
+	uchar	get			(UCS2Char) const throw(syntax_error);
 	uchar	operator[]	(UCS2Char) const throw(index_error);
 	pstr	translate	(cUTF8Str) throw(data_error);
 };

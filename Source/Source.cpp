@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -52,11 +52,14 @@ void Source::includeFile(cstr filename_fqn, uint sourceAE_index) throw(fatal_err
 		FD fd(filename_fqn,'r');
 		off_t sz = fd.file_size();
 		if(sz>=3 && fd.read_int24_x() != 0x00efbbbf) fd.rewind_file();				// skip BOM
-		if(sz>10000000) throw any_error("source file exceeds 10,000,000 bytes");		// sanity
+		if(sz>10000000) throw any_error("source file exceeds 10,000,000 bytes");	// sanity
 
 		ObjArray<SourceLine> zsource;
-		for(cstr s = fd.read_str(); s!=NULL; s = fd.read_str())
+		for(;;)
 		{
+			cstr s = fd.read_str();
+			if(s==NULL) break;			// file end
+			if(*s==0x1A) break;			// CP/M file padding
 			zsource.append(new SourceLine(filename_fqn, zsource.count(), s));
 		}
 
@@ -85,7 +88,7 @@ SourceLine::SourceLine(cstr sourcefile, uint linenumber, cstr text)
 	segment(NULL),
 	byteptr(0),
 	bytecount(0),
-	is_label(no),
+	label(NULL),
 	is_data(no),
 	p(text)
 {}
@@ -175,7 +178,6 @@ cstr SourceLine::nextWord()
 	case '(':	return "(";
 	case ')':	return ")";
 	case ',':	return ",";
-	case '.':	return ".";
 	case '=':	return "=";
 
 	case '"':								// "abcd"
@@ -221,8 +223,13 @@ cstr SourceLine::nextWord()
 		if(c=='&')	return "||";
 		p--;		return "|";
 
+	case '.':
+		if(is_letter(*p)) goto idf;		// allow dot names, e.g. ".org"
+		else return ".";
+
 	default:			 		// name, decimal number, garbage
-		if (is_idf(c)) while (is_idf(*p)) p++;
+		if (is_idf(c))
+idf:		while (is_idf(*p)) p++;
 		break;
 	}
 

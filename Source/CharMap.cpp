@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -113,10 +113,8 @@ CharMap::CharMap(CharSet charset)
 			//	charmap[8]  = 8;		// cursor left
 			//	charmap[12] = 9;		// cursor right
 				addMappings("£",96);
-				addMappings("©",127);
-				add(0xA0,128);			// non-breaking space -> all-white block graphics char
-										// note: Qt Creator silently replaces nbsp with space :-(
-				addMappings("▝▘▀▗▐▚▜▖▞▌▛▄▟▙█",129);
+				addMappings("©\u00A0▝▘▀▗▐▚▜▖▞▌▛▄▟▙█",127);	// \u00A0 = nbsp
+															// note: Qt Creator silently replaces nbsp with space :-(
 				break;
 	case JUPITER:
 				for(int c=32;c<127;c++) charmap[c] = c;
@@ -124,9 +122,8 @@ CharMap::CharMap(CharSet charset)
 				addMappings("█▙▟▄▛▌▞▖",16);
 				addMappings("£",96);
 				addMappings("©",127);
-				add(0xA0,144);			// non-breaking space -> all-white block graphics char
-										// note: Qt Creator silently replaces nbsp with space :-(
-				addMappings("▝▘▀▗▐▚▜",145);
+				addMappings("\u00A0▝▘▀▗▐▚▜",144);	// \u00A0 = nbsp
+													// note: Qt Creator silently replaces nbsp with space :-(
 				break;
 //	case ASCII:
 //	case NONE:
@@ -195,6 +192,16 @@ uchar CharMap::get(UCS2Char key, uchar dflt) const
 {
 	if(key<128 && charmap[key]!=NC) return charmap[key];
 	return HashMap::get(key,dflt);
+}
+
+uchar CharMap::get(UCS2Char key) const throw(syntax_error)
+{
+	if(key<128 && charmap[key]!=NC) return charmap[key];
+	uchar c = HashMap::get(key,0); if(c) return c;
+	static_assert(NC!=0,"const NC must be non-zero here");
+
+	cstr fmt = key>=' ' && key<=0x7F ? "'%c'" : "0x%04X";
+	throw syntax_error(usingstr(fmt,key));
 }
 
 uchar CharMap::operator[](UCS2Char key) const throw(index_error)

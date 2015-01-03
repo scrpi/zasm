@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -78,6 +78,7 @@ public:			Segment			(cstr name, bool is_data, uint8 fillbyte, bool relocatable, 
 	void		skipExistingData(int sz)						throw(syntax_error);
 	void		storeSpace		(int sz, bool sz_valid, int c)	throw(syntax_error);
 	void		storeSpace		(int sz, bool sz_valid)			throw(syntax_error);
+	void		storeSpaceUpToAddress(int addr, bool addr_valid ) throw(syntax_error);
 	void		storeHexBytes	(cptr data, int n)				throw(syntax_error);
 	void		setOrigin		(int32 a, bool a_valid)			throw(syntax_error);
 

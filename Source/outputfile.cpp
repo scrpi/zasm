@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -166,8 +166,7 @@ void Z80Assembler::writeTapFile(FD& fd) throw(any_error)	// no error checking!
 	//		ds	data			; from segment(s)
 	//		db	checksum		; simple xor of blocktype + data bytes
 
-	XXASSERT(segments[0].size==0);		// default code segment is not used
-	uint i0=1; while(i0<segments.count() && segments[i0].size==0 && !segments[i0].has_flag) { i0++; }
+	uint i0=0; while(i0<segments.count() && segments[i0].size==0 && !segments[i0].has_flag) { i0++; }
 	XXXASSERT(segments[i0].has_flag);
 	uint i,j;
 
@@ -224,8 +223,7 @@ void Z80Assembler::writeTapFile(FD& fd) throw(any_error)	// no error checking!
 
 void Z80Assembler::writeZ80File(FD& fd) throw(any_error)	// no error checking!
 {
-	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	const uint i0 = 0;
 
 	// first segment is the z80 file header and written as-is
 	// subsequent segments are written as compressed memory pages
@@ -286,11 +284,6 @@ void Z80Assembler::checkTargetfile() throw(any_error)
 			kio::swap(*(segments.getData()+j),*(segments.getData()+(j+1)));
 	}
 
-	// remove empty DEFAULT_CODE_SEGMENT:			ähh... da zeigen noch Label drauf. und da kommen wir nie wieder dran.
-//	XXXASSERT(segments[0].isCode());
-//	XXXASSERT(segments[0].size>0 || (segments.count()>1 && segments[0].name==DEFAULT_CODE_SEGMENT));
-//	if(segments[0].size==0) segments.remove((uint)0);
-
 	if(target==NULL) target="ROM";
 	if(eq(target,"ROM") || eq(target,"BIN")) checkBinFile();
 	else if(eq(target,"SNA")) checkSnaFile();
@@ -312,8 +305,7 @@ void Z80Assembler::checkTargetfile() throw(any_error)
 */
 void Z80Assembler::checkTapFile() throw(any_error)
 {
-	XXASSERT(segments[0].size==0);
-	uint i0=1; while(i0<segments.count() && segments[i0].size==0 && !segments[i0].has_flag) { i0++; }
+	uint i0=0; while(i0<segments.count() && segments[i0].size==0 && !segments[i0].has_flag) { i0++; }
 
 	for(uint i=i0; i<segments.count() && segments[i].isCode(); )
 	{
@@ -366,8 +358,7 @@ void Z80Assembler::checkSnaFile() throw(any_error)
 	};
 	static_assert(sizeof(SnaHead)==27,"sizeof(SnaHead) wrong!");
 
-	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	const uint i0 = 0;
 
 	segments.checkNoFlagsSet();
 
@@ -422,8 +413,7 @@ void Z80Assembler::checkAceFile() throw(any_error)
 	};
 	static_assert(sizeof(AceHead)==0x400,"sizeof(AceHead) wrong!");
 
-	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	const uint i0 = 0;
 
 	segments.checkNoFlagsSet();
 	uint32 ramsize = segments.totalCodeSize();
@@ -546,8 +536,7 @@ void Z80Assembler::checkZX80File() throw(any_error)
 
 	static_assert(sizeof(ZX80Head)==0x28,"sizeof(ZX80Head) wrong!");
 
-	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	const uint i0 = 0;
 
 	segments.checkNoFlagsSet();
 	uint32 ramsize = segments.totalCodeSize();
@@ -641,8 +630,7 @@ void Z80Assembler::checkZX81File() throw(any_error)
 
 	static_assert(sizeof(ZX81Head)==125 -9 -65, "sizeof(ZX81Head) wrong!");		// 125 == 0x7D
 
-	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	const uint i0 = 0;
 
 	segments.checkNoFlagsSet();
 	uint32 ramsize = segments.totalCodeSize() +9;
@@ -714,8 +702,7 @@ void Z80Assembler::checkZ80File() throw(any_error)
 	// assert header and at least one ram page:
 	if(seg_cnt<2) throw syntax_error("no ram pages found");
 
-	XXASSERT(segments[0].size==0);
-	const uint i0 = 1;
+	const uint i0 = 0;
 
 	// verify that first block is the header:
 	Segment& hs = segments[i0];

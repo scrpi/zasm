@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 1994 - 2014
+/*	Copyright  (c)	Günter Woigk 1994 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -103,14 +103,18 @@ public:
 
 // more:
 	CharMap*	charset;
+//	bool		seg0_org_set;	// cleared before each pass, set by ORG
 
 // options:
 	bool		ixcbr2_enabled;		// enable ixcb illegals: e.g. set b,(ix+d),r2
 	bool		ixcbxh_enabled;		// enable ixcb illegals: e.g. bit b,xh
 	bool		target_hd64180;		// enable hd64180 opcodes
 	bool		target_8080;		// limit instruction set to 8080 opcodes
-	bool		syntax_8080;		// use 8080 assembler syntax (TODO)
-	bool		registers_8080;		// limit known register names to 8080 registers => allow others for label names
+	bool		syntax_8080;		// use 8080 assembler syntax
+	bool		target_z80;			// target_z80 == !target_8080  => at least a Zilog Z80
+	bool		allow_dotnames;		// allow label names starting with a dot '.'
+	bool		require_colon;		// program labels must be followed by a colon ':'
+	bool		casefold_labels;	// label names are not case sensitive
 
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) TAE;
@@ -130,8 +134,11 @@ private:
 	void	asmEndLocal		(SourceLine&)				TAE;
 	void	asmEnd			(SourceLine&)				TAE;
 	void	asmInstr		(SourceLine&)				TAE;
+	void	asmInstr8080	(SourceLine&)				TAE;
 	void	asmAssert		(SourceLine&)				TAE;
+	void	asmDefine		(SourceLine&)				TAE;
 	void	asmCharset		(SourceLine&)				TAE;
+	void	asmOrg			(SourceLine&)				TAE;
 	cstr	compileFile		(cstr)						TAE;
 
 	void	store			(int n)						TAE { current_segment_ptr->store(n); }
@@ -148,12 +155,12 @@ private:
 	void	storeBlock		(cstr blk, int n)			TAE	{ current_segment_ptr->storeBlock(blk,n); }
 	void	storeHexbytes	(cstr hex, int n)			TAE	{ current_segment_ptr->storeHexBytes(hex,n); }
 
-	void	storeByte 		(int n, bool valid)			TAE;
+	void	storeByte 		(int n)						TAE;
 	void	storeOffset 	(int n, bool valid)			TAE;
 	void	storeSpace		(int n, bool valid, int c)	TAE	{ current_segment().storeSpace(n,valid,c); }
 	void	storeSpace		(int n, bool valid)			TAE	{ current_segment().storeSpace(n,valid); }
-	void	store_XYCB_op	(int pfx, int op, int dis, bool valid)	TAE;
-	void	store_XY_byte_op(int pfx, int op, int dis, bool valid)	TAE;
+	void	store_XYCB_op	(int pfx, int op, int dis)	TAE;
+	void	store_XY_byte_op(int pfx, int op, int dis)	TAE;
 	uint8	popLastByte		()							{ return current_segment().popLastByte(); }
 
 	uint32	currentPosition	()							{ return current_segment().currentPosition(); }
@@ -165,8 +172,10 @@ private:
 
 	uint	getCondition	(SourceLine&, bool expect_comma)				throw(syntax_error);
 	uint	getRegister		(SourceLine&, int32&, bool&)throw(syntax_error);
+	uint	get8080Register	(SourceLine& q) throw(syntax_error);
+	uint	get8080WordRegister	(SourceLine& q, uint) throw(syntax_error);
 
-	void	setError		(any_error&);				// set error for current file, line & column
+	void	setError		(const any_error &);				// set error for current file, line & column
 	void	addError		(cstr text);				// add error without source line
 	void	init_c_flags	();
 	void	init_c_tempdir	()							THF;

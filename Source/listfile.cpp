@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2014
+/*	Copyright  (c)	Günter Woigk 2014 - 2015
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -339,6 +339,8 @@ cstr u5str(uint n, bool valid)
 ============================================================== */
 
 
+/*	style: 0=none, 1=plain, 2=w/ocode, 4=w/labels, 8=w/clkcycles
+*/
 void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 {
 	XXXASSERT(listpath && *listpath);
@@ -347,20 +349,26 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	FD fd(listpath,'w');
 	TempMemPool tempmempool;	// be nice in case zasm is included in another project
 	uint si=0,ei=0;				// source[] index, errors[] index
+	if(source.count() && eq(source[0].sourcefile,"") && startswith(lowerstr(source[0].text),"#include")) si=1;
 
-	if(style&6)
+	if(style&8) style |= 2;
+
+	// indentation string for lines without opcodes:
+	cstr indentstr = style&8 ? "                        " :	// format: 1234: 12345678 [234|235]sourceline
+					 style&2 ? "              \t" : "";		// format: 1234: 12345678\tsourceline
+
+	if(style>1)
 	{
-		cstr pfx = style&2 ? "              \t" : "";
-		fd.write_fmt("%s; --------------------------------------\n",pfx);
-		fd.write_fmt("%s; zasm: assemble \"%s\"\n",pfx,source_filename);
-		fd.write_fmt("%s; date: %s\n",pfx,datetimestr(timestamp));
-		fd.write_fmt("%s; --------------------------------------\n\n\n",pfx);
+		fd.write_fmt("%s; --------------------------------------\n",	indentstr);
+		fd.write_fmt("%s; zasm: assemble \"%s\"\n",						indentstr, source_filename);
+		fd.write_fmt("%s; date: %s\n",									indentstr, datetimestr(timestamp));
+		fd.write_fmt("%s; --------------------------------------\n\n\n",indentstr);
 	}
 
 	// Listing with object code:
-	// lines after #end are not included in the list file!
+//	// lines after #end are not included in the list file!
 	//
-	if(style&2)
+	if(style&2)	// with opcodes:
 	{
 		uint32 cc = 0;
 
@@ -368,40 +376,44 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 		{
 			SourceLine& sourceline = source[si++];
 
-			Segment& segment = *sourceline.segment;
-			XXXASSERT(&segment); // if(&segment==NULL) break;		// after '#end'
+			Segment* segment = sourceline.segment;
+//			if(segment==NULL) break;		// after #END or final error or before ORG
 
-			XXXASSERT(!segment.size_valid || sourceline.bytecount<=0x10000);
-			XXXASSERT(!segment.size_valid || sourceline.byteptr+sourceline.bytecount <= segment.size);
+			XXXASSERT(!segment || !segment->size_valid || sourceline.bytecount<=0x10000);
+			XXXASSERT(!segment || !segment->size_valid || sourceline.byteptr+sourceline.bytecount <= segment->size);
 
 			uint count   = sourceline.bytecount;			// bytes to print
 			uint offset  = sourceline.byteptr;				// offset from segment start
-			uint8* bytes = segment.core.getData() + offset;	// ptr -> opcode
-			uint address = segment.address + offset;		// "physical" address of opcode
+			uint8* bytes = segment ? segment->core.getData() + offset : NULL;	// ptr -> opcode
+			uint address = segment ? segment->address + offset : 0;				// "physical" address of opcode
+			bool is_data = sourceline.is_data;
+			Label* label = sourceline.label;
+			bool is_defl = label && !count && (uint16)label->value != (uint16)address && label->is_valid;
 
-			// if line contains a label which is defined with 'equ' then print label value instead of address
-			if(count==0 && sourceline[0]>='A')				// no space, '#' or '.' => label
+			// line contains a label?
+			if(label)
 			{
-				sourceline.rewind();
-				cstr lname = sourceline.nextWord();
-				sourceline.testChar(':'); sourceline.testChar(':');
-				if(sourceline.testWord("equ") || sourceline.testWord("defl") || sourceline.testChar('='))
-				{
-					for(uint i=0;i<labels.count();i++)
-					{
-						Label& label = labels[i].find(lname);
-						if(&label!=NULL && label.sourceline==si-1) { address=label.value; break; }
-					}
-				}
+				if(is_defl)								// for labels defined with EQU
+					address=sourceline.label->value;	// print label value instead of address
+				else									// at program labels
+					cc = 0;								// reset cc
 			}
 
-			// print line with address, up to 4 opcode bytes and source line:
-			// note: real z80 opcodes have max. 4 bytes
-			if(sourceline.is_label) cc = 0;				// reset cc at labels
-			bool is_data = sourceline.is_data;
-			offset = style&8 ?
-				write_line_with_objcode_and_cycles(fd, address, bytes, count, 0, cc, is_data, sourceline.text)
-			  : write_line_with_objcode(fd, address, bytes, count, 0, is_data, sourceline.text);
+			if(!count && !label)
+			{
+				// no code generated and no label defined?
+				offset = 0;
+				fd.write_fmt("%s%s\n", indentstr, sourceline.text);
+			}
+			else
+			{
+				// print line with address, up to 4 opcode bytes and source line:
+				// note: real z80 opcodes have max. 4 bytes
+				offset = style&8 ?
+					write_line_with_objcode_and_cycles(fd, address, bytes, count, 0, cc, is_data, sourceline.text)
+				  : write_line_with_objcode(fd, address, bytes, count, 0, is_data, sourceline.text);
+			}
+
 
 			// print errors and suppress printing of further opcode bytes:
 			while( ei<errors.count() && errors[ei].sourceline == &sourceline )
@@ -428,9 +440,9 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	// Plain listing without object code:
 	// all lines are included in the list file
 	//
-	else
+	else	// without opcodes:
 	{
-		while( si<source.count() )
+		while(si<source.count())
 		{
 			SourceLine& sourceline = source[si++];
 
@@ -461,7 +473,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	//		 Segment + Name
 	//		 File
 	//
-	if(style&4)
+	if(style&4)	// with label listing:
 	{
 		cstr spadding = calc_padding(segments);
 
@@ -472,6 +484,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 		for(uint i=0; i<segments.count(); i++)
 		{
 			Segment& s = segments[i];
+			if(i==0 && s.size==0 && segments.count()>1) continue;
 			if(s.has_flag)
 				fd.write_fmt("#%s %s:%s start=%s len=%s flag=%i\n",
 					s.isCode()?"CODE":"DATA",
@@ -493,10 +506,10 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 
 			Array<Label*> labels = this->labels[i].getItems().copy();
 			labels.sort(&gt_by_name);							// sort by name
-			XXASSERT(i||labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(DEFAULT)" should be first => exclude from listing
+//			XXASSERT(i||labels[0]->name==DEFAULT_CODE_SEGMENT);	// "(DEFAULT)" should be first => exclude from listing
 			cstr lpadding = calc_padding(labels);
 
-			for(uint j=i?0:1; j<labels.count(); j++)
+			for(uint j=0; j<labels.count(); j++)
 			{
 				Label* l = labels[j];
 				if(i&&l->is_global) continue;		// don't list .globl labels in locals[]
@@ -504,13 +517,15 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				bool		is_used = l->is_used;
 				if(!is_valid&&!is_used) continue;
 				cstr		name = l->name;
-				Segment*	segment = l->segment; if(!segment) segment = &segments[0];
+							if(name==DEFAULT_CODE_SEGMENT) continue;	// Vergleich der Adresse!
+				Segment*	segment = l->segment; //if(!segment) segment = &segments[0];
 				int			value = l->value;
 			//	uint		sourcelinenumber = l->sourceline;
 				SourceLine&	sourceline = source[l->sourceline];
 			//	cstr		text = sourceline.text;
 				cstr		sourcefile = filename_from_path(sourceline.sourcefile);
 				uint		linenumber = sourceline.sourcelinenumber;
+				cstr		segmentname = segment?segment->name : "";
 
 				fd.write_fmt("%s%s = ", name, lpadding+strlen(name));
 
@@ -518,11 +533,11 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 					fd.write_str("***UNDEFINED***");
 				else if(!l->is_valid)
 					fd.write_fmt("  ***VOID***    %s%s %s:%u",
-						segment->name, spadding+strlen(segment->name), sourcefile, linenumber+1);
+						segmentname, spadding+strlen(segmentname), sourcefile, linenumber+1);
 				else
 					fd.write_fmt("$%04X = %6i  %s%s %s:%u",
 						value&0xffff, value,
-						segment->name, spadding+strlen(segment->name), sourcefile, linenumber+1);
+						segmentname, spadding+strlen(segmentname), sourcefile, linenumber+1);
 
 				fd.write_str(l->is_used?"\n":" (unused)\n");
 			}
