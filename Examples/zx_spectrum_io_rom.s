@@ -92,7 +92,7 @@ _putchar::
 		cp	  a,10				; '\n' ?
 		jr	  nz,1$
 		ld	  a,13				; replace 10 with 13
-1$		rst	  2
+1$:		rst	  2
 		ret
 
 

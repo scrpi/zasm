@@ -48,8 +48,10 @@ pre	# assemble file into myrom.bin and create plain list file
 	
 
 h4	What's new
-p	<b>2015-01-01</b>: Version 4.0.2: support for native 8080 assembler source added.
-	<b>2015-01-01</b>: Version 4.0.3: more support for alternate/various/weird syntax added
+p	<b>2015-01-01</b>: Version 4.0.2: added support for native 8080 assembler source
+	<b>2015-01-01</b>: Version 4.0.3: added more support for alternate/various/weird syntax 
+	<b>2015-01-04</b>: Version 4.0.4: added macro and rept, .phase and .dephase
+	<b>2015-01-08</b>: Version 4.0.5: #define, test suite, --flatops, Linux version
 
 h4 Git Repository
 p	You can checkout the source from my Git repository:

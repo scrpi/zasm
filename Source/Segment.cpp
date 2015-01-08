@@ -185,7 +185,7 @@ void Segment::setOrigin( int32 new_address, bool valid ) throw(syntax_error)
 {
 	XXXASSERT(valid || !org_valid);		// darf nicht wieder invalid werden
 
-	if(valid && new_address<-0x8000 !=(int16)new_address && new_address!=(uint16)new_address)
+	if(valid && new_address!=(int16)new_address && new_address!=(uint16)new_address)
 		throw syntax_error("address out of range");
 
 	org_base_address = new_address - dpos;

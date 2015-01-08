@@ -65,7 +65,7 @@ uint write_line_with_objcode(FD& fd, uint address, uint8* bytes, uint count, uin
 	{
 		for(count=0;;)
 		{
-			uint n = z80_opcode_length(bytes+count,isaHD64180);	// use HD64180 in case HD64180 opcodes are used
+			uint n = z80_opcode_length(bytes+count,isaZ180);	// use Z180 in case Z180 opcodes are used
 			if(count+n>4) break;
 			count += n;
 		}
@@ -187,13 +187,13 @@ uint write_line_with_objcode_and_cycles( FD& fd, uint address, uint8* bytes, uin
 	count   -= offset;
 
 	// special handling for compound opcodes:
-	if(count>1 && !is_data && count>z80_opcode_length(bytes,isaHD64180))	// use HD64180
+	if(count>1 && !is_data && count>z80_opcode_length(bytes,isaZ180))	// use Z180
 	{
 		if(count>4)	// limit number of accounted bytes to 4; break on opcode boundary:
 		{
 			for(count=0;;)
 			{
-				uint n = z80_opcode_length(bytes+count,isaHD64180);	// use HD64180 in case HD64180 opcodes are used
+				uint n = z80_opcode_length(bytes+count,isaZ180);	// use Z180 in case Z180 opcodes are used
 				if(count+n>4) break;
 				count += n;
 				//if(n>=2 && z80_opcode_can_branch(bytes[0],bytes[1])) break;			denk...
@@ -361,6 +361,20 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 	{
 		fd.write_fmt("%s; --------------------------------------\n",	indentstr);
 		fd.write_fmt("%s; zasm: assemble \"%s\"\n",						indentstr, source_filename);
+
+		if( allow_dotnames||!require_colon||syntax_8080||casefold_labels||
+			target_z180||ixcbr2_enabled||ixcbxh_enabled )
+		{
+			fd.write_fmt("%s; opts:%s%s%s%s%s%s\n", indentstr,
+				syntax_8080?" --asm8080":"",
+				casefold_labels&&!syntax_8080?" --casefold":"",
+				allow_dotnames?" --dotnames":"",
+				require_colon?"":" --nocolon",
+				target_z180?" --z180":"",
+				ixcbr2_enabled?" --ixcbr2":"",
+				ixcbxh_enabled?" --ixcbxh":"");
+		}
+
 		fd.write_fmt("%s; date: %s\n",									indentstr, datetimestr(timestamp));
 		fd.write_fmt("%s; --------------------------------------\n\n\n",indentstr);
 	}
@@ -380,7 +394,8 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 //			if(segment==NULL) break;		// after #END or final error or before ORG
 
 			XXXASSERT(!segment || !segment->size_valid || sourceline.bytecount<=0x10000);
-			XXXASSERT(!segment || !segment->size_valid || sourceline.byteptr+sourceline.bytecount <= segment->size);
+			XXXASSERT(!segment || !segment->size_valid || sourceline.byteptr+sourceline.bytecount <= segment->size
+					|| sourceline.bytecount==0);
 
 			uint count   = sourceline.bytecount;			// bytes to print
 			uint offset  = sourceline.byteptr;				// offset from segment start

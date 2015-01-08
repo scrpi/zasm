@@ -37,6 +37,7 @@ SOURCES += \
     Source/outputfile.cpp \
     Source/listfile.cpp \
     Source/Z80Header.cpp \
+    Source/Macro.cpp \
     Libraries/cstrings/cstrings.cpp \
     Libraries/kio/abort.cpp \
     Libraries/kio/errors.cpp \
@@ -60,6 +61,7 @@ HEADERS += \
 	Source/CharMap.h \
     Source/helpers.h \
     Source/Z80Header.h \
+    Source/Macro.h \
     config.h \
     Libraries/cstrings/base85.h \
     Libraries/cstrings/cstrings.h \
@@ -79,7 +81,7 @@ HEADERS += \
     Libraries/Z80/z80_major_opcode_tables.h \
     Libraries/Z80/z80_opcode_length.h \
     Libraries/Z80/Z80opcodes.h \
-    Libraries/hash/sdbm_hash.h
+    Libraries/hash/sdbm_hash.h \
 
 OTHER_FILES += \
     ../.gitignore \
@@ -289,8 +291,8 @@ OTHER_FILES += \
     ../Test/test-tap.lst \
     ../Test/zx82_rom.asm \
     ../Test/zx82_rom.lst \
-	../Test/8080/Altair8800_Monitor_8.4_2k.lst \
-	../Test/8080/Altair8800_Monitor_8.4_2k.asm \
+	../Test/8080/Altair8800_Monitor.lst \
+	../Test/8080/Altair8800_Monitor.asm \
 
 
 

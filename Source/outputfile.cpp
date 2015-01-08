@@ -38,9 +38,11 @@
 /* ==============================================================
 		write segments[] to output file
 		no error checking
+		if name ends with ".$" then the caller's dname is updated
+			to the actually used name (unprotected tempstr)
 ============================================================== */
 
-void Z80Assembler::writeTargetfile(cstr dname, int style) throw(any_error)
+void Z80Assembler::writeTargetfile(cstr& dname, int style) throw(any_error)
 {
 	XXXASSERT(errors.count()==0);
 	XXXASSERT(dname!=NULL);

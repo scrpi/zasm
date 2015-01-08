@@ -126,6 +126,21 @@ bool SourceLine::testWord(cstr z )
 	p = q; return yes;				// hit! => skip word and return true
 }
 
+/*	test for and skip next word
+	test is case insensitive
+	the word may optionally start with a dot
+*/
+bool SourceLine::testDotWord(cstr z )
+{
+	skip_spaces();
+	cptr q = p;
+	q += *q=='.';
+	while(*z && to_lower(*z)==to_lower(*q)) { z++; q++; }
+	if(*z) return no;				// character mismatch
+	if(is_idf(*q)) return no;		// word in this.text longer than tested word
+	p = q; return yes;				// hit! => skip word and return true
+}
+
 /*	test for logical end of line
 	which may be physical end of line or start of a comment
 */
@@ -164,8 +179,8 @@ cstr SourceLine::nextWord()
 	if(*p==';') skip_to_eol();
 	if(*p==0)   return "";					// endofline
 
-	cstr word = p++;
-	char c    = *word;
+	cstr word = p;
+	char c    = *p++;
 
 	switch(c)
 	{
@@ -180,8 +195,9 @@ cstr SourceLine::nextWord()
 	case ',':	return ",";
 	case '=':	return "=";
 
-	case '"':								// "abcd"
-	case '\'':								// 'abcd'
+	case '\'':								// 'abcd' ''' or ''
+		if(*p==c) { p++; if(*p!=c) return "''"; p++; return "'''"; }	// special test for '''
+	case '"':								// "abcd" or ""
 		while( *p!=c && *p ) p++;
 		if (*p==c) p++;
 		break;
@@ -223,13 +239,16 @@ cstr SourceLine::nextWord()
 		if(c=='&')	return "||";
 		p--;		return "|";
 
-	case '.':
-		if(is_letter(*p)) goto idf;		// allow dot names, e.g. ".org"
-		else return ".";
+//	case '.':
+//		if(is_letter(*p)) goto idf;		// allow dot names, e.g. ".org"
+//		else return ".";
 
 	default:			 		// name, decimal number, garbage
-		if (is_idf(c))
-idf:		while (is_idf(*p)) p++;
+		if (is_idf(c)||c=='.')
+		{
+//idf:
+			while (is_idf(*p)||*p=='.') p++;
+		}
 		break;
 	}
 

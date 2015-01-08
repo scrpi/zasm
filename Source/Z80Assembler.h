@@ -35,6 +35,7 @@
 #include "Segment.h"
 #include "Error.h"
 #include "SyntaxError.h"
+#include "Macro.h"
 
 
 
@@ -74,6 +75,9 @@ public:
 	uint		local_blocks_count;
 	cstr		reusable_label_basename;	// name of last normal label
 
+// Macros:
+	Macros		macros;
+
 // cond. assembly:
 	uint32		cond_off;		// effective final on/off state of conditions nested:
 								// 0 = assemble; !0 => assembly off
@@ -108,13 +112,15 @@ public:
 // options:
 	bool		ixcbr2_enabled;		// enable ixcb illegals: e.g. set b,(ix+d),r2
 	bool		ixcbxh_enabled;		// enable ixcb illegals: e.g. bit b,xh
-	bool		target_hd64180;		// enable hd64180 opcodes
+	bool		target_z180;		// enable Z180/hd64180 opcodes
 	bool		target_8080;		// limit instruction set to 8080 opcodes
 	bool		syntax_8080;		// use 8080 assembler syntax
 	bool		target_z80;			// target_z80 == !target_8080  => at least a Zilog Z80
 	bool		allow_dotnames;		// allow label names starting with a dot '.'
 	bool		require_colon;		// program labels must be followed by a colon ':'
 	bool		casefold_labels;	// label names are not case sensitive
+	bool		flat_operators;		// no operator precedence: evaluate strictly from left to right
+	bool		compare_to_old;		// compare own output file to existing reference file
 
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) TAE;
@@ -138,7 +144,10 @@ private:
 	void	asmAssert		(SourceLine&)				TAE;
 	void	asmDefine		(SourceLine&)				TAE;
 	void	asmCharset		(SourceLine&)				TAE;
-	void	asmOrg			(SourceLine&)				TAE;
+	void	asmFirstOrg		(SourceLine&)				TAE;
+	void	asmRept			(SourceLine&)				TAE;
+	void	asmMacro		(SourceLine&, cstr name, char tag)	TAE;
+	void	asmMacroCall	(SourceLine&, Macro&)		TAE;
 	cstr	compileFile		(cstr)						TAE;
 
 	void	store			(int n)						TAE { current_segment_ptr->store(n); }
@@ -180,6 +189,9 @@ private:
 	void	init_c_flags	();
 	void	init_c_tempdir	()							THF;
 
+	bool	is_name			(cstr w)					{ return is_letter(*w)||*w=='_'||(allow_dotnames&&*w=='.'); }
+	cstr	unquotedstr		(cstr);
+
 public:
 			Z80Assembler	();
 			~Z80Assembler	();
@@ -188,7 +200,7 @@ public:
 							 cstr listpath=NULL,		// dflt = dest direcory, may be dir or filename
 							 cstr temppath=NULL,		// dflt = dest dir, must be dir
 							 int  liststyle=1,			// 0=none, 1=plain, 2=w/ocode, 4=w/labels, 8=w/clkcycles
-							 int  deststyle='b',		// 0=none, 'b'=bin, 'x'=intel hex, 's'=moto s19
+							 int  deststyle='b',		// 0=none, 'b'=bin, 'x'=intel hex, 's'=motorola s19
 							 bool clean=no)			throw();
 	void	assemble		(StrArray& sourcelines)	throw();
 	void	assembleLine	(SourceLine&)			TAE;
@@ -196,7 +208,7 @@ public:
 
 	void	checkTargetfile	()		TAE;
 	void	writeListfile	(cstr filepath, int style) TAE;
-	void	writeTargetfile	(cstr filepath, int style) TAE;
+	void	writeTargetfile	(cstr &filepath, int style) TAE;
 	void	writeBinFile	(FD&)	TAE;
 	void	writeHexFile	(FD&)	TAE;
 	void	writeS19File	(FD&)	TAE;

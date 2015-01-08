@@ -1,6 +1,7 @@
 .DS_Store
 zasm.pro.user*
 build-*
+*.webloc
 Distributions/old versions/
 Distributions/*.bz2
 Distributions/*.zip
@@ -10,8 +11,11 @@ Examples/*.rom
 Info/
 sdcc/lib/OTHER
 sdcc/bin
-Test/Zeug*
-Test/z80 test/
+Documentation/*.htm
+Documentation/*.html
+Documentation/00000.txt
+Documentation/Buch.txt
+
 Test/zxsp test files/
 Test/s/
 Test/*.bin
@@ -22,13 +26,16 @@ Test/*.tap
 Test/rem.c
 Test/crc.c
 Test/sdcpp
-Test/test-zx82rom/
-Test/test-opcodes/
-Test/8080/
+
+Test/Z80/*.lst
+Test/Z80/*.rom
+Test/Z180/*.lst
+Test/Z180/*.rom
+Test/8080/*.lst
+Test/8080/*.rom
 Test/8086 oder so/
-Test/Z80/
-Documentation/*.htm
-Documentation/*.html
-Documentation/00000.txt
-Documentation/Buch.txt
+
+Test/Z80/pacalpaca/
+
 syntax seen.txt
+pitfalls.txt

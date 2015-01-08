@@ -86,6 +86,7 @@ public:
 	char	peekChar	();
 	bool	testChar	(char);
 	bool	testWord	(cstr);
+	bool	testDotWord	(cstr);
 	bool	testComma	()			{ return testChar(','); }
 	bool	testEol		();
 

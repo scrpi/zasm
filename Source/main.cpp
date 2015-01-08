@@ -36,7 +36,7 @@
 
 #include	"config.h"
 #include	<stdlib.h>
-#include	<dirent.h>
+//#include	<dirent.h>
 #include	"unix/FD.h"
 #include	"unix/files.h"
 #include	"kio/kio.h"
@@ -46,7 +46,7 @@
 
 
 cstr appl_name = "zasm";
-cstr version   = "4.0.4";
+cstr version   = "4.0.5";
 
 
 /* helper: get the compile date in preferred format "yyyy-mm-dd":
@@ -91,18 +91,22 @@ static cstr help =
 "  -x  --hex       write output in intel hex format\n"
 "  -s  --s19       write output in motorola s-record format\n"
 "  -z  --clean     clear intermediate files, e.g. compiled c files\n"
+"  -e  --compare   compare own output to existing output file\n"
+"  -T  --test      run self test (requires developer source tree)\n"
+"  --maxerrors=NN  set maximum for reported errors (default=30, max=999)\n"
 "  -o0             don't write output file\n"
 "  -l0             don't write list file\n"
 "  --z80           target Zilog Z80 (default)\n"
-"  --hd64180       target Hitachi HD64180: enable additional instructions\n"
+"  --z180          target Z180 / HD64180: enable additional instructions\n"
 "  --8080          target Intel 8080: limit registers and instructions to 8080\n"
 "  --asm8080       target Intel 8080: use 8080 assembler syntax\n"
 "  -v[0,1,2]       verbosity of messages to stderr (0=off,1=default,2=more)\n"
 "  --ixcbr2 | …xh  enable ill. instructions like 'set b,(ix+d),r' or 'set b,xh'\n"
 "  --dotnames      allow label names starting with a dot '.'\n"
-"  --nocolon       colons ':' after program label def. may be omitted\n"
-"                  => label defs. must and instructions must not start in col. 1\n"
-"  --casefold      label names are case blind (asm8080: implied)\n"
+"  --reqcolon      colon ':' after program label definitions required\n"
+"                  => label definitions and instructions may start in any column\n"
+"  --casefold      label names are case insensitive (asm8080: implied)\n"
+"  --flatops       no operator precedence: evaluate strictly from left to right\n"
 "  -c path/to/cc   set path to c compiler (default: sdcc in $PATH)\n"
 "  -t path/to/dir  set path to temp dir for c compiler (default: output dir)\n"
 "  -I path/to/dir  set path to c system header dir (default: sdcc default)\n"
@@ -130,11 +134,15 @@ int main( int argc, cstr argv[] )
 	bool ixcbxh		 = no;
 	bool targetZ80	 = no;
 	bool target8080	 = no;
-	bool target64180 = no;
+	bool targetZ180  = no;
 	bool asm8080	 = no;
 	bool dotnames    = no;
-	bool nocolon     = no;	// note: complement meaning of ass.require_colon!
+	bool reqcolon    = no;
 	bool casefold    = no;
+	bool flatops	 = no;
+	bool compare     = no;
+	bool selftest    = no;
+	uint maxerrors   = 30;
 // filepaths:
 	cstr inputfile  = NULL;
 	cstr outputfile = NULL;	// or dir
@@ -172,11 +180,19 @@ int main( int argc, cstr argv[] )
 			if(eq(s,"--z80"))      { targetZ80 = 1;   continue; }
 			if(eq(s,"--8080"))     { target8080 = 1;  continue; }
 			if(eq(s,"--asm8080"))  { asm8080 = 1;     continue; }
-			if(eq(s,"--hd64180"))  { target64180 = 1; continue; }
+			if(eq(s,"--z180"))     { targetZ180 = 1;  continue; }
 			if(eq(s,"--dotnames")) { dotnames = 1;    continue; }
-			if(eq(s,"--nocolon"))  { nocolon = 1;      continue; }
-			if(eq(s,"--caseblind")){ casefold = 1;    continue; }
+			if(eq(s,"--reqcolon")) { reqcolon = 1;    continue; }
 			if(eq(s,"--casefold")) { casefold = 1;    continue; }
+			if(eq(s,"--flatops"))  { flatops = 1;     continue; }
+			if(eq(s,"--compare"))  { compare = 1;     continue; }
+			if(eq(s,"--test"))     { selftest = 1;    continue; }
+			if(startswith(s,"--maxerrors="))
+				{
+					char* ep; ulong n = strtoul(s+12,&ep,10);
+					if(*ep||n==0||n>999) goto h;
+					maxerrors = (uint)n; continue;
+				}
 			goto h;
 		}
 
@@ -184,6 +200,8 @@ int main( int argc, cstr argv[] )
 		{
 			switch(c)
 			{
+			case 'e': compare = 1; continue;
+			case 'T': selftest = 1; continue;
 			case 'u': liststyle |= 2; continue;
 			case 'w': liststyle |= 4; continue;
 			case 'y': liststyle |= 8; continue;
@@ -209,13 +227,150 @@ int main( int argc, cstr argv[] )
 		}
 	}
 
+	if(selftest)
+	{
+		// assemble a bunch of sources from the Test/ directory
+		// and compares them to old versions found in the original/ subdirectories.
+		// if no path to the Test/ directory is given,
+		// then a default path relative to the zasm executable is used: "$ZASM/../Test/"
+		// all expected sources and original output files must be in place and match.
+
+		cstr zasm = argv[0];
+		cstr testdir = fullpath( inputfile ? inputfile : outputfile ? outputfile :
+					   catstr(directory_from_path(zasm),"../Test/") );
+		if(errno==ok && lastchar(testdir)!='/') errno = ENOTDIR;
+		if(errno)
+		{
+			if(verbose) fprintf(stderr, "--> %s: %s\nzasm: 1 error\n", testdir, strerror(errno));
+			return 1;
+		}
+
+		uint errors = 0;
+		char opt[] = "-v0e"; opt[2] += verbose;
+
+		change_working_dir(catstr(testdir,"Z80/"));
+		{
+		cstr a[] = { zasm, opt, "ZX Spectrum Rom/zx82.asm", "original/" };
+		errors += main(NELEM(a),a);
+
+		cstr c[] = { zasm,  opt, "--casefold", "CAMEL80-12/camel80.asm", "original/" };
+		errors += main(NELEM(c),c);
+
+		cstr d[] = { zasm, opt, "monitor_32k.asm", "original/" };
+		errors += main(NELEM(d),d);
+
+		cstr e[] = { zasm, opt, "allsrc.asm", "original/" };
+		errors += main(NELEM(e),e);
+
+		cstr f[] = { zasm, opt, "basic.asm", "original/" };
+		errors += main(NELEM(f),f);
+
+		cstr g[] = { zasm, opt, "MS-Basic.asm", "original/" };
+		errors += main(NELEM(g),g);
+
+		cstr h[] = { zasm, opt, "--reqcolon", "5bsort018.asm", "original/" };
+		errors += main(NELEM(h),h);
+
+		cstr i[] = { zasm, opt, "64#4+016.asm", "original/" };
+		errors += main(NELEM(i),i);
+
+		cstr j[] = { zasm, opt, "--8080", "CPM22.asm", "original/" };
+		errors += main(NELEM(j),j);
+
+		cstr k[] = { zasm, opt, "EMUF/EMUF.asm", "original/" };
+		errors += main(NELEM(k),k);
+
+		cstr l[] = { zasm, opt, "G007_MON_source_recreation.asm", "original/" };
+		errors += main(NELEM(l),l);
+
+		cstr n[] = { zasm, opt, "--reqcolon", "Hello World.asm", "original/" };
+		errors += main(NELEM(n),n);
+
+		cstr o[] = { zasm, opt, "--8080", "m80b.asm", "original/" };
+		errors += main(NELEM(o),o);
+
+		cstr p[] = { zasm, opt, "monitor_32k.asm", "original/" };
+		errors += main(NELEM(p),p);
+
+		cstr q[] = { zasm, opt, "MS-Basic.asm", "original/" };
+		errors += main(NELEM(q),q);
+
+		cstr r[] = { zasm, opt, "mybios4_mod.asm", "original/" };
+		errors += main(NELEM(r),r);
+
+		cstr s[] = { zasm, opt, "--dotnames", "--reqcolon", "OpenSE Basic/opense.asm", "original/" };
+		errors += main(NELEM(s),s);
+
+		cstr b[] = { zasm, opt, "ZX Spectrum Rom/sc178.asm", "original/" };
+		errors += main(NELEM(b),b);
+
+		cstr m[] = { zasm, opt, "test z80 cpu - prelim.asm", "original/" };
+		errors += main(NELEM(m),m);
+
+		cstr t[] = { zasm, opt, "--reqcolon", "VZ200 RS232 Terminal/VZ RS232.asm", "original/" };
+		errors += main(NELEM(t),t);
+
+		cstr u[] = { zasm, opt, "wmfw/wmfw2_5_orig.asm", "original/" };
+		errors += main(NELEM(u),u);
+
+		cstr v[] = { zasm, opt, "z80mon.asm", "original/" };
+		errors += main(NELEM(v),v);
+
+		cstr w[] = { zasm, opt, "z80sourc.asm", "original/" };
+		errors += main(NELEM(w),w);
+
+		cstr x[] = { zasm, opt, "--reqcolon", "zx81v2.asm", "original/" };
+		errors += main(NELEM(x),x);
+
+		cstr y[] = { zasm, opt, "--ixcbr2", "zasm-test-opcodes.asm", "original/" };
+		errors += main(NELEM(y),y);
+		}
+
+		change_working_dir(catstr(testdir,"8080/"));
+		{
+		cstr a[] = { zasm, opt, "--asm8080", "--reqcolon", "Altair8800_Monitor.asm", "original/" };
+		errors += main(NELEM(a),a);
+
+		cstr b[] = { zasm, opt, "8080PRE.asm", "original/" };
+		errors += main(NELEM(b),b);
+
+		cstr y[] = { zasm, opt, "zasm-test-opcodes.asm", "original/" };
+		errors += main(NELEM(y),y);
+		}
+
+		change_working_dir(catstr(testdir,"Z180/"));
+		{
+		cstr a[] = { zasm, opt, "--z180", "first.asm", "original/" };
+		errors += main(NELEM(a),a);
+
+		cstr b[] = { zasm, opt, "--z180", "counter master.asm", "original/" };
+		errors += main(NELEM(b),b);
+
+		cstr y[] = { zasm, opt, "zasm-test-opcodes.asm", "original/" };
+		errors += main(NELEM(y),y);
+		}
+
+		if(verbose)
+		{
+			fprintf(stderr, "total time: %3.4f sec.\n", now()-start);
+			if(errors>1) fprintf(stderr, "\nzasm: %u errors\n\n", errors);
+			else fprintf(stderr, errors ? "\nzasm: 1 error\n\n" : "zasm: no errors\n");
+		}
+		return errors>0;
+	}
 
 // check options:
-	if(asm8080 || target8080)
+	if(asm8080)
 	{
-		if(target64180 || targetZ80)
+		target8080 = yes;
+		casefold = yes;
+	}
+
+	if(target8080)
+	{
+		if(targetZ180 || targetZ80)
 		{
-			fprintf(stderr,"--> %s\nzasm: 1 error\n", "i8080 and z80|hd64180 are mutually exclusive.");
+			fprintf(stderr,"--> %s\nzasm: 1 error\n", "i8080 and z80|z180 are mutually exclusive.");
 			return 1;
 		}
 
@@ -224,11 +379,18 @@ int main( int argc, cstr argv[] )
 			fprintf(stderr,"--> %s\nzasm: 1 error\n", "i8080 has no prefix 0xCB instructions.");
 			return 1;
 		}
-
-		target8080 = yes;
-		if(asm8080) casefold = yes;
 	}
-	else // z80:
+	else if(targetZ180)
+	{
+		if(ixcbr2 || ixcbxh)
+		{
+			fprintf(stderr,"--> %s\nzasm: 1 error\n", "no --ixcb… allowed: the Z180 traps illegal instructions");
+			return 1;
+		}
+
+		targetZ80 = yes;		// implied
+	}
+	else // Z80
 	{
 		if(ixcbr2 && ixcbxh)
 		{
@@ -355,13 +517,16 @@ int main( int argc, cstr argv[] )
 	ass.ixcbxh_enabled = ixcbxh;
 	ass.target_8080    = target8080;
 	ass.target_z80     = targetZ80;
-	ass.target_hd64180 = target64180;
+	ass.target_z180    = targetZ180;
 	ass.syntax_8080    = asm8080;
-	ass.require_colon  = !nocolon;
+	ass.require_colon  = reqcolon;
 	ass.allow_dotnames = dotnames;
 	ass.casefold_labels= casefold;
+	ass.flat_operators = flatops;
+	ass.max_errors     = maxerrors;
+	ass.compare_to_old = compare;
 	if(c_includes) ass.c_includes = c_includes;
-	if(libraries) ass.stdlib_dir = libraries;
+	if(libraries) ass.stdlib_dir  = libraries;
 	if(c_compiler) ass.c_compiler = c_compiler;
 	ass.assembleFile( inputfile, outputfile, listfile, listfile, liststyle, outputstyle, clean );
 
@@ -370,7 +535,7 @@ int main( int argc, cstr argv[] )
 	if(verbose)		// show errors on stderr:
 	{
 		cstr current_file = NULL;
-		for(uint i=0; i<min(10u,errors); i++)
+		for(uint i=0; i<errors; i++)
 		{
 			Error const& e = ass.errors[i];
 			SourceLine* sourceline = e.sourceline;
