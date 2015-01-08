@@ -220,7 +220,7 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 ; print "Hello World"
 
 		ld		hl,3$		; "Hello World!"
-1$		ld		a,(hl)
+1$:		ld		a,(hl)
 		and		a
 		jr		z,2$
 		inc		hl
@@ -229,7 +229,7 @@ __sdcc_heap_end: 			; --> sdcc _malloc.c
 2$:
 
 #code _CODE
-3$		dm		13, "Hello World!", 13, 0
+3$:		dm		13, "Hello World!", 13, 0
 
 
 
