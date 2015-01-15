@@ -293,6 +293,67 @@ OTHER_FILES += \
     ../Test/zx82_rom.lst \
 	../Test/8080/Altair8800_Monitor.lst \
 	../Test/8080/Altair8800_Monitor.asm \
+	\
+    "../Documentation/ zasm.toc" \
+    "../Documentation/8080 assembler instructions.txt" \
+    "../Documentation/8080 Assembler.txt" \
+    "../Documentation/8080 instructions.txt" \
+    ../Documentation/align.txt \
+    ../Documentation/area.txt \
+    ../Documentation/asciz.txt \
+    ../Documentation/automate.vs \
+    "../Documentation/command line options for c compiler.txt" \
+    "../Documentation/Command Line Options.txt" \
+    "../Documentation/Compound instructions.txt" \
+    "../Documentation/defb db.txt" \
+    "../Documentation/defl set.txt" \
+    "../Documentation/defm dm.txt" \
+    "../Documentation/defs ds.txt" \
+    "../Documentation/defw dw.txt" \
+    ../Documentation/end.txt \
+    ../Documentation/equ.txt \
+    ../Documentation/globl.txt \
+    ../Documentation/if.txt \
+    ../Documentation/Illegals.txt \
+    ../Documentation/incbin.txt \
+    ../Documentation/include.txt \
+    "../Documentation/Including C Sources.txt" \
+    "../Documentation/Label definition.txt" \
+    "../Documentation/Legal Notes.txt" \
+    "../Documentation/List File.txt" \
+    ../Documentation/long.txt \
+    "../Documentation/macro endm.txt" \
+    "../Documentation/Numeric expressions.txt" \
+    ../Documentation/org.txt \
+    "../Documentation/phase dephase.txt" \
+    "../Documentation/Quick Overview.txt" \
+    "../Documentation/rept endm.txt" \
+    "../Documentation/String expressions.txt" \
+    "../Documentation/Syntax variants.txt" \
+    "../Documentation/target ace.txt" \
+    "../Documentation/target bin rom.txt" \
+    "../Documentation/Target files - Overview.txt" \
+    "../Documentation/target o 80.txt" \
+    "../Documentation/target p 81 p81.txt" \
+    "../Documentation/target sna.txt" \
+    "../Documentation/target tap.txt" \
+    "../Documentation/target z80.txt" \
+    "../Documentation/Version History.txt" \
+    "../Documentation/z80 instructions.txt" \
+    "../Documentation/z80 z180 8080.txt" \
+    "../Documentation/z180 instructions.txt" \
+    ../Documentation/hash_assert.txt \
+    ../Documentation/hash_cflags.txt \
+    ../Documentation/hash_charset.txt \
+    ../Documentation/hash_code.txt \
+    ../Documentation/hash_data.txt \
+    ../Documentation/hash_define.txt \
+    ../Documentation/hash_end.txt \
+    ../Documentation/hash_if.txt \
+    ../Documentation/hash_include.txt \
+    ../Documentation/hash_insert.txt \
+    ../Documentation/hash_local.txt \
+    ../Documentation/hash_target.txt
 
 
 

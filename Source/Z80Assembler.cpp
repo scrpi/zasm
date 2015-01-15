@@ -459,8 +459,8 @@ void Z80Assembler::assembleLine(SourceLine& q) throw(any_error)
 	{
 		if(q.testWord("endif")) { if(!q.testChar(':')) { asmEndif(q); q.expectEol(); } return; }
 		if(q.testWord("if"))    { if(!q.testChar(':')) { asmIf(q);    q.expectEol(); } return; }
-		if(q.testWord("elif"))  { if(!q.testChar(':')) { asmElif(q);  q.expectEol(); } return; }
-		if(q.testWord("else"))  { if(!q.testChar(':')) { asmElse(q);  q.expectEol(); } return; }
+//		if(q.testWord("elif"))  { if(!q.testChar(':')) { asmElif(q);  q.expectEol(); } return; }
+//		if(q.testWord("else"))  { if(!q.testChar(':')) { asmElse(q);  q.expectEol(); } return; }
 		return;
 	}
 //#ifndef NDEBUG   				// test suite:
@@ -795,6 +795,11 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 			if((*w|0x20)=='d' && *++w==0) goto op; // decimal number indicated by suffix --> source seen ...
 			goto syntax_error;
 		}
+	}
+
+	if(*w=='_' && eq(w,"__line__"))
+	{
+		n = q.sourcelinenumber; valid = yes; goto op;
 	}
 
 	if(q.test_char('('))		// test for built-in function
@@ -1486,9 +1491,10 @@ void Z80Assembler::asmRept( SourceLine& q ) throw(any_error)
 	}
 
 	bool v;
-	uint n = value(q,pAny,v=1);
+	int32 n = value(q,pAny,v=1);
 	if(!v) throw fatal_error("count must be evaluatable in pass 1");
 	if(n>0x8000) throw fatal_error("number of repetitions too high");
+	if(n<0) throw fatal_error("number of repetitions negative");
 	if(source.count() + n*(e-a-1) > 1000000) throw any_error("total source exceeds 1,000,000 lines");
 
 	ObjArray<SourceLine> zsource;
@@ -1592,23 +1598,37 @@ void Z80Assembler::asmMacroCall(SourceLine& q, Macro& m) TAE
 	CstrArray rpl;
 	if(!q.testEol()) do
 	{
-		q.skip_spaces();
-		cptr  aa = q.p;
-		cptr& ap = q.p;
-		uint  kl = 0;
-		char  c;
-		while((c=*ap) && c!=',' && c!=';')
+		if(q.testChar('<'))		// extended argument: < ... " ... ' ... , ... ; ... > [,;\n]
 		{
-			if(c>')') { ap++; continue; }
-			if(c=='(') { ap++; kl++; continue; }
-			if(c==')') { if(kl) { ap++; kl--; continue; } throw syntax_error("unexpected ')'"); }
-			if(c!='"'&&c!='\'') { ap++; continue; }
-			w = q.nextWord();
-			n = strlen(w);
-			if(n<2||w[n-1]!=c) throw syntax_error(usingstr("closing '%c' missing",c));
+			cptr aa = q.p;
+			cptr ae;
+			do
+			{
+				while(*q && *q!='>') ++q; if(*q==0) throw syntax_error("closing '>' missing");
+				ae = q.p;
+				++q;			// skip '>'
+			}
+			while(!q.testEol() && *q!=',');
+
+			// closing '>' found and skipped
+
+			rpl.append(substr(aa,ae));
 		}
-		if(kl) throw syntax_error("closing ')' missing");
-		rpl.append(substr(aa,ap));
+		else					// simple argument: '"' and ''' must be balanced,
+								// ',' and ';' can't occur in argument (except in char/string literal)
+		{						// '(' or ')' may be unbalanced
+			cptr  aa = q.p;
+			char  c;
+			while((c=*q.p) && c!=',' && c!=';')
+			{
+				if(c!='"'&&c!='\'') { q.p++; continue; }
+				w = q.nextWord();
+				n = strlen(w);
+				if(n<2||w[n-1]!=c) throw syntax_error(usingstr("closing '%c' missing",c));
+			}
+		//	if(aa==q.p) throw syntax_error("empty argument (use <>");		denk…
+			rpl.append(substr(aa,q.p));
+		}
 	}
 	while(q.testComma());
 
@@ -2242,7 +2262,7 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	if(!target) throw fatal_error("#target declaration missing");
 
 	cstr name = q.nextWord();
-	if(!is_letter(*name) && *name!='_' && !(allow_dotnames&&*name=='.')) throw fatal_error("segment name expected");
+	if(!is_name(name)) throw fatal_error("segment name expected");
 	Segment* segment = segments.find(name);
 	XXXASSERT(!segment || eq(segment->name,name));
 
@@ -2661,8 +2681,6 @@ void Z80Assembler::asmInstr(SourceLine& q) throw(any_error)
 		// jp NN
 		// jp rr	hl ix iy
 		// jp (rr)	hl ix iy
-		if(q.sourcelinenumber==183-1)
-			Log("");
 		r2 = getCondition(q,yes);
 		r  = getRegister(q,n,v);
 		if(r==NN) { store(r2==NIX ? JP : JP_NZ+(r2-NZ)*8); storeWord(n); return; }
@@ -3424,6 +3442,7 @@ sh:			if(n&1) throw syntax_error("even number of hex characters expected");
 			if(eq(w,"__date__")) { w = datestr(timestamp); w += *w==' ';  goto cb; }
 			if(eq(w,"__time__")) { w = timestr(timestamp); w += *w==' ';  goto cb; }
 			if(eq(w,"__file__")) { w = q.sourcefile; goto cb; }
+			if(eq(w,"__line__")) { w = numstr(q.sourcelinenumber); goto cb; }
 		}
 
 	// anything else:
@@ -3477,7 +3496,7 @@ misc:
 
 		q.is_data = yes;
 		w = q.nextWord();
-		if(w[0]!='"') throw syntax_error("quoted string expected");
+		if(w[0]!='"' && w[0]!='\'') throw syntax_error("quoted string expected");
 
 		n = strlen(w);
 		if(n<3 || w[n-1]!=w[0]) throw syntax_error("closing quotes expected");
@@ -3522,6 +3541,30 @@ misc:
 	if(eq(w,".text"))	goto dm;	// TASM
 	if(eq(w,".block"))	goto ds;	// TASM
 
+	if(eq(w,".long"))
+	{
+		// store long words:
+		// .long nn [,nn ..]
+		q.is_data = yes;
+		do { n = value(q,pAny,v=1); storeWord(n); storeWord(n>>16); } while(q.testComma());
+		return;
+	}
+
+//	if(eq(w,"float5"))	// floating point number in ZX Spectrum format
+//	{
+//		//	0 .. 65535:		00, 00, LO, HI, 00
+//		//	-65535 .. -1:	00, FF, LO, HI, 00	with LOHI = 0 - N
+//		//	other:			EE, HI, .., .., LO
+//		//					EE=80 => 0.5 ≤ N < 1
+//		//					HI.bit7 = VZ
+//		//					range: ±1e38 .. 4e-39
+//		//
+//		// TODO: we need float value() here…
+//	}
+
+//	if(eq(w,"float4"))	// floating point number in sdcc format
+//	{
+//	}
 
 
 // instructions below are also valid without #target / org:

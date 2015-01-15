@@ -270,6 +270,7 @@ void Segment::storeSpace( int sz, bool sz_valid, int c ) throw(syntax_error)
 	{
 		if(sz<0) throw syntax_error("gap size < 0");
 		if(sz>0x10000) throw syntax_error("gap size > 0x10000");
+//		if((uint8)c!=fillbyte && is_data) throw syntax_error("illegal fillbyte in data segment");		denk…
 
 		if(dpos<0x10000) memset(&core[dpos], c, min((uint)sz,0x10000-dpos));
 		if((dpos+=sz)>size && dpos_valid && size_valid)

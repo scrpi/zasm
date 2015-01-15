@@ -35,31 +35,45 @@ p	zasm is a <span class=blue>Z80 assembler</span>.
 	zasm supports multiple code and data segments, nested conditional assembly and nested local scopes.
 
 h4	Typical invocations
-pre	# assemble file into myrom.bin and create plain list file 
+pre.white	# assemble file into myrom.bin and create plain list file 
 	> <b>zasm myrom.asm	</b>
-	# assemble file into myrom.bin and create list file with opcodes, cpu cycles and labels list
+pre.bgltgrn	# assemble file into myrom.bin and create list file with opcodes, cpu cycles and labels list
 	> <b>zasm -uwy myrom.asm </b>
-	# assemble source for the Intel 8080 cpu using Z80 syntax
+pre.white	# assemble source for the Intel 8080 cpu using Z80 syntax
 	> <b>zasm --8080 myrom.asm </b>
-	# assemble native 8080 assembler source
+pre.bgltgrn	# assemble native 8080 assembler source
 	> <b>zasm --asm8080 myrom.asm </b>
-	# create Intel hex output
+pre.white	# create Intel hex output
 	> <b>zasm -x myrom.asm </b>
 	
+
+h4	Major changes from version 3.0 to version 4.0
+ul
+li	The command line options have changed: start <tt class=blue>zasm</tt> with no options to see a summary.
+li	zasm can include <span class=blue>c source files</span>, with the help of <tt class=blue>sdcc</tt>. (a trimmed version of sdcc is included in the OSX distro.)
+li	zasm can assemble native <span class=blue>8080 assembler</span> source files.
+li	syntax for <tt class=blue>#code</tt> and <tt class=blue>#data</tt> has changed: an additional first argument, the segment name, is now required.
+li	Alternately you can use just <tt class=blue>org</tt>, which will create and use a default code segment.
+li	Behavior of <tt class=blue>org</tt> (in subsequent code) has changed: now it <u>does</u> insert space.
+li	For the old behavior use <tt class=blue>.phase</tt> and <tt class=blue>.dephase</tt>.
+li	<span class=blue>Macros</span> and <tt class=blue>rept</tt> are now supported.
+li	The required source layouts for the various special output files (tape, sna, etc.) have changed. 
+li	A <span class=blue>character set conversion</span> for strings and character literals can be defined. 
 
 h4	What's new
 p	<b>2015-01-01</b>: Version 4.0.2: added support for native 8080 assembler source
 	<b>2015-01-01</b>: Version 4.0.3: added more support for alternate/various/weird syntax 
 	<b>2015-01-04</b>: Version 4.0.4: added macro and rept, .phase and .dephase
 	<b>2015-01-08</b>: Version 4.0.5: #define, test suite, --flatops, Linux version
+	<b>2015-01-15</b>: Version 4.0.7: "extended arguments" in macros with '<' … '>'
 
 h4 Git Repository
 p	You can checkout the source from my Git repository:
-	• git clone http://k1.spdns.de/Git/zasm.git
+	• git clone http://k1.spdns.de/Git/zasm-4.0.git
 	• git clone http://k1.spdns.de/Git/Libraries.git
 	
 h4	Online Assembler
-p	A cgi interface for online assembling is at <http:/cgi-bin/zasm.cgi>. It allows to assemble z80 assembler source files with up to 1 include file. It can generate binary or Intel hex output and a listing, which can optionally include the generated assembler source and a label listing. Don't assemble closed-source sources here. <b>;-)</b>
+p	A cgi interface for online assembling is at <a href="/cgi-bin/zasm.cgi">cgi-bin/zasm.cgi</a>. It allows to assemble z80 assembler source files with some include files. It can generate binary, Intel hex or Motorola S19 output and a listing, which can optionally include the generated assembler source, a label listing and accumulated cpu cycles. You can even include c source files here! Don't assemble closed-source sources here. <b>;-)</b>
 
 h4	Archive
 »

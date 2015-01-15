@@ -7,7 +7,7 @@
 
 
 ; fill byte is 0x00
-; #segment has an additional argument: the sync byte for the block.
+; #code has an additional argument: the sync byte for the block.
 ; The assembler calculates and appends checksum byte to each segment.
 ; Note: If a segment is appended without an explicite address, then the sync byte and the checksum byte
 ; of the preceding segment are not counted when calculating the start address of this segment.
@@ -113,6 +113,11 @@ variables_end:
 
 ; Z80 assembler code and data
 
+; set print channel to Screen:
+		ld		a,2
+		call	$1601
+
+; print a message:
 		ld		hl,msg
 1$		ld		a,(hl)
 		and		a

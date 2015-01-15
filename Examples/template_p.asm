@@ -93,6 +93,7 @@
 ;#target p
 ;#target 81
 #target p81
+#charset ZX81
 
 
 ; only if target p81:

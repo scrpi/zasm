@@ -1,0 +1,50 @@
+
+
+H1	Including C Source Files
+
+p	This is a summary page for all the c source related information otherwise spread over the zasm documentation.
+
+p	Related command line options
+
+pre	-c path/to/cc   	set path to c compiler (default: sdcc in $PATH)
+	-t path/to/dir  	set path to temp dir for c compiler (default: output dir)
+	-I path/to/dir  	set path to c system header dir (default: sdcc default)
+	-L path/to/dir  	set path to standard library dir (default: none)
+
+p	Related assembler directives 
+
+pre	#include
+	#include library
+	#cflags
+	#target, #code and #data
+	#local and #endlocal
+
+p	Example sources:
+
+pre	<a href="../Examples/template_rom_with_c_code.asm">Examples/template_rom_with_c_code.asm</a>
+	<a href="../Test/test-tap.asm">Test/test-tap.asm</a>
+
+p	include and lib directory
+	
+pre	<a href="../sdcc/include/">sdcc/include/</a>
+	<a href="../sdcc/lib/">sdcc/lib/</a>
+
+p	Interesting reading
+
+pre	<a href="../sdcc/sdcc_info.txt">sdcc_info.txt</a>
+	<a href="../sdcc/sdcc manual.pdf" target=images>sdcc manual.pdf</a>
+
+
+// ––––––––––––––––––––––––––––––––––––––––––
+h3	Command line options for C compiler
++	command line options for c compiler.txt
+
+
++	hash_include.txt
++	hash_cflags.txt
++	hash_target.txt
++	hash_code.txt
++	hash_data.txt
++	hash_local.txt
+
+

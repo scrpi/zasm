@@ -646,8 +646,8 @@ printinfo:	halt
 		ld	hl,printinfo
 		ld	(last_cmd),hl
 
-		rst	printmsg
-		defm	$0d0a,"eprom date = ",__date__,$00
+;		rst	printmsg
+;		defm	$0d0a,"eprom date = ",__date__,$00
 
 		rst	printmsg
 		defm	$0d0a,"cpu speed  = ",$00

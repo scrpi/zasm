@@ -39,6 +39,7 @@ ol	{ 				 padding-left:1.5em; list-style:outside decimal; }
 .u	{text-decoration:underline;}
 .strike {text-decoration:line-through;}
 .center	{text-align:center;}
+.small  {font-size:66%;}
 
 /* ---- HEAD ----
 */
@@ -65,18 +66,20 @@ p.foot		{ text-align:center; margin-top:4em;margin-bottom:400px; }
 
 /* ---- CROSS REFERENCES ----
 */
-.L			{ background:#ffffee; }
-.L span		{ background:#ffff88; visibility:hidden; position:absolute; z-index:50;
+.L			{ color:#333399; }
+.L span		{ background:white; visibility:hidden; position:absolute; z-index:50;
 			  padding:0.2em; line-height:1.1em; }
 
 
 /* ---- LINKS ----
 */
-a 			{ text-decoration:none; color:#000055; }
+a 			{ text-decoration:none; color:#333399; }
+.magenta a 	{ text-decoration:none; color:#cc00ff; }
+.magenta .L { text-decoration:none; color:#cc00ff; }
 pre a 		{ text-decoration:none; color:#0000bb; }
 h1 a 		{ text-decoration:none; color:#000000; }
 h2 a 		{ text-decoration:none; color:#000000; }
-p a			{ text-decoration:none; color:#000055; }
+p a			{ text-decoration:none; color:#333399; }
 a:link    	{ }
 a:visited 	{ }
 a:active  	{ }
@@ -89,12 +92,12 @@ a:hover	  	{ text-decoration:underline; }
 .left	{float:left;  margin-right:0.75em; margin-bottom:0.25em; }
 .right	{float:right; margin-left:0.5em;   margin-bottom:0.25em; }
 .clear	{clear:both; }		
-.red	{color:red;}
-.blue	{color:blue;}
+.red	{color:#cc3333;}
+.blue	{color:#3333cc;}
 .green	{color:green;}
 .orange	{color:#cc6600;}
 .cyan	{color:#00aaaa;}
 .magenta {color:#cc00cc;}
 .grey   {color:#888888;}
 .white  {background-color:#ffffff;}
-
+.bgltgrn {background-color:#ddffdd;}

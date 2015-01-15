@@ -16,6 +16,10 @@
 ;   Word names in upper case are from the ANS
 ;   Forth Core word set.  Names in lower case are
 ;   "internal" implementation words & extensions.
+;
+; kio 2015-01-15:
+; modifications in some macro calls for zasm
+;
 ; ===============================================
 
 ; SYSTEM VARIABLES & CONSTANTS ==================
@@ -333,21 +337,21 @@ TYP5:   DW EXIT
 
 ;Z (S")     -- c-addr u   run-time code for S"
 ;   R> COUNT 2DUP + ALIGNED >R  ;
-    headstr XSQUOTE,4,'(S")',docolon
+    head XSQUOTE,4,<(S")>,docolon
         DW RFROM,COUNT,TWODUP,PLUS,ALIGNED,TOR
         DW EXIT
 
 ;C S"       --         compile in-line string
 ;   COMPILE (S")  [ HEX ]
 ;   22 WORD C@ 1+ ALIGNED ALLOT ; IMMEDIATE
-    immedstr SQUOTE,2,'S"',docolon
+    immed SQUOTE,2,<S">,docolon
         DW LIT,XSQUOTE,COMMAXT
         DW LIT,22H,WORD,CFETCH,ONEPLUS
         DW ALIGNED,ALLOT,EXIT
 
 ;C ."       --         compile string to print
 ;   POSTPONE S"  POSTPONE TYPE ; IMMEDIATE
-    immedstr DOTQUOTE,2,'."',docolon
+    immed DOTQUOTE,2,<.">,docolon
         DW SQUOTE
         DW LIT,TYPE,COMMAXT
         DW EXIT
@@ -379,7 +383,7 @@ TYP5:   DW EXIT
 
 ;C <#    --             begin numeric conversion
 ;   PAD HP ! ;          (initialize Hold Pointer)
-    head LESSNUM,2,<#,docolon
+    head LESSNUM,2,<<#>,docolon
         DW PAD,HP,STORE,EXIT
 
 ;Z >digit   n -- c      convert to 0..9A..Z
@@ -419,7 +423,7 @@ SIGN1:  DW EXIT
 
 ;C .     n --           display n signed
 ;   <# DUP ABS 0 #S ROT SIGN #> TYPE SPACE ;
-    headstr DOT,1,'.',docolon
+    head DOT,1,.,docolon
         DW LESSNUM,DUP,ABS,LIT,0,NUMS
         DW ROT,SIGN,NUMGREATER,TYPE,SPACE,EXIT
 
@@ -450,12 +454,12 @@ SIGN1:  DW EXIT
 
 ;C ,    x --           append cell to dict
 ;   HERE ! 1 CELLS ALLOT ;
-    headstr COMMA,1,',',docolon
+    head COMMA,1,<,>,docolon
         dw HERE,STORE,lit,1,CELLS,ALLOT,EXIT
 
 ;C C,   char --        append char to dict
 ;   HERE C! 1 CHARS ALLOT ;
-    headstr CCOMMA,2,'C,',docolon
+    head CCOMMA,2,<C,>,docolon
         dw HERE,CSTORE,lit,1,CHARS,ALLOT,EXIT
 
 ; INTERPRETER ===================================
@@ -686,7 +690,7 @@ QABO1:  DW TWODROP,EXIT
 ;C ABORT"  i*x 0  -- i*x   R: j*x -- j*x  x1=0
 ;C         i*x x1 --       R: j*x --      x1<>0
 ;   POSTPONE S" POSTPONE ?ABORT ; IMMEDIATE
-    immedstr ABORTQUOTE,6,'ABORT"',docolon
+    immed ABORTQUOTE,6,<ABORT">,docolon
         DW SQUOTE
         DW LIT,QABORT,COMMAXT
         DW EXIT
@@ -718,7 +722,7 @@ TICK:   call docolon
 
 ;C (    --                     skip input until )
 ;   [ HEX ] 29 WORD DROP ; IMMEDIATE
-    immedstr PAREN,1,'(',docolon
+    immed PAREN,1,(,docolon
         DW LIT,29H,WORD,DROP,EXIT
 
 ; COMPILER ======================================
@@ -792,7 +796,7 @@ TICK:   call docolon
 ;C ;
 ;   REVEAL  ,EXIT
 ;   POSTPONE [  ; IMMEDIATE
-    immedstr SEMICOLON,1,';',docolon
+    immed SEMICOLON,1,<;>,docolon
         DW REVEAL,CEXIT
         DW LEFTBRACKET,EXIT
 

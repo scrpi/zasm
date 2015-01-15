@@ -28,7 +28,7 @@
 z80v1len	equ	30
 z80v2len    equ	55
 z80v3len    equ	86
-z80maxlen   z80v3len+3
+z80maxlen   equ z80v3len+3
 
 ; first segment must be the header segment:
 ;
@@ -117,7 +117,7 @@ z80maxlen   z80v3len+3
 					; !=0 means: interface1 rom is paged in
 					; if timex ts2068: last out to port 255
 
-	db		-1		; rldiremu		Bit 0: 1 if R register emulation on
+	db		7		; rldiremu		Bit 0: 1 if R register emulation on
 					;				Bit 1: 1 if LDIR emulation on
 					;				Bit 2: AY sound in use, even on 48K machines
 					;	*zxsp*		Bit 3: SPECTRA interface present, can only add to 48k models
@@ -197,7 +197,7 @@ z80maxlen   z80v3len+3
 ;   In SamRam mode, pages 4 to 8 must be saved.
 ;   In 128 mode, all pages from 3 to 10 are saved.
 ;
-;   The 128 has a memory map like:   Rom [switchable];   Ram 5;   Ram 2;   Ram [switchable]
+;   The 128 has a memory map like:   Rom [switchable];   Ram 5;   Ram 2;   Ram [switchable, reset=0]
 ;
 ;	Some models (Russian) have more than 128k of ram. They can have ram page IDs from 3+0 up to 3+31 (up to 512k ram).
 ;

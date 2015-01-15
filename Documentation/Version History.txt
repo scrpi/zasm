@@ -1,7 +1,7 @@
 
 // zasm
 
-h1	Version history
+h4	Version history
 
 pre	1.0.0  1996: First version for private use. Mac OS 7.0. No public release.
 	2.0.0  2000: Total rework with new libraries.
@@ -21,4 +21,8 @@ pre	1.0.0  1996: First version for private use. Mac OS 7.0. No public release.
 	4.0.0  2014: 8080 and HD64180 support
 	4.0.0  2014: list accumulated cpu cycles
 	4.0.1  2014: write Motorola S-Record files
+	4.0.2  2015: added support for native 8080 assembler source
+	4.0.3  2015: added more support for alternate/various/weird syntax
+	4.0.4  2015: added macro and rept, .phase and .dephase
+	4.0.5  2015: #define, test suite, --flatops, Linux version
 

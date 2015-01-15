@@ -54,6 +54,9 @@
 #target o			; output file is saved with filename extension ".o"
 ;#target 80			; output file is saved with filename extension ".80"
 
+#charset ZX80		; enable character set translation for strings and character literals
+
+
 
 ; ---------------------------------------------------------------
 ; 					THE SYSTEM VARIABLES
@@ -107,6 +110,9 @@ CH_ADD	 dw	$FFFF	; X2  16422 $4026 IY+$26	Address of next character to be interp
 #code BASIC_VARIABLES
 #code MCODE
 ;#code DFILE
+; The ZX80 stopped writing to tape at E_LINE (the edit line).
+; So neither the edit line nor the display file are stored in the tape file.
+
 
 
 ; TODO: add code for Basic loader

@@ -369,7 +369,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 				syntax_8080?" --asm8080":"",
 				casefold_labels&&!syntax_8080?" --casefold":"",
 				allow_dotnames?" --dotnames":"",
-				require_colon?"":" --nocolon",
+				require_colon?" --reqcolon":"",
 				target_z180?" --z180":"",
 				ixcbr2_enabled?" --ixcbr2":"",
 				ixcbxh_enabled?" --ixcbxh":"");

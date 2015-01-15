@@ -1,11 +1,6 @@
 
 
 
-
-
-
-
-
 //	-----------------------------------------------------------------
 h1	List File
 	listing
@@ -134,9 +129,36 @@ pre	; +++ segments +++
 
 h5	Errors
 
-p	Errors are marked with <tt><b>*** error ***</b></tt> in the list file. The assembler will abort if too many errors occur.
+p	Errors are marked with <tt><b>***ERROR***</b></tt> in the list file. The assembler will abort if too many errors occur.
 
-p	If you have only a single source file and you encounter only a few errors and you didn't enable additional fields in the list file then you can move the source into the trash, rename the list file and work on it as your new source file. You can easily find all the <tt><b>*** error ***</b></tt>s and correct them, then start over again. But be careful that the list file is not truncated before actually deleting it. 
+p	source file:
+pre	#target rom
+	#code ROM,*,1000
+		db	foo
+	#end
+	
+p	command line and output:
+pre	<b>$> zasm zzz.asm</b>
+	 
+	in file zzz.asm:
+	3: 	db	foo
+	   	  	   ^ label "foo" not found
+	assemble: 6 lines
+	time: 0.0015 sec.
+	 
+	zasm: 1 error	
+	 
+	<b>$></b>
+	
+p	list file:	
+pre	#target rom
+	#code ROM,*,1000
+		db	foo
+		  	   ^ ***ERROR*** label "foo" not found
+	#end
+
+
+p	If you have only a single source file and you encounter only a few errors and you didn't enable additional fields in the list file then you can move the source into the trash, rename the list file and work on it as your new source file. You can easily find all the <tt><b>***ERROR***</b></tt>s and correct them, then start over again. But be careful that the list file is not truncated before actually deleting it. 
 
 p	If you suspect the assembler is generating wrong object code, you can include the object code in the listing. Then you can easily verify the generated code. If there really is a bug, send a bug report to <A HREF="mailto:zasm@little-bat.de">Kio</A>.
 

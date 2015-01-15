@@ -25,7 +25,7 @@ Template.Page =
 <META http-equiv=Content-Type content="text/html; charset=UTF-8">
 <title>%%TITLE%%</title>
 <meta name="author"      content="kio@little-bat.de">
-<meta name="copyright"   content="1998-2007 Kio (Günter Woigk)">
+<meta name="copyright"   content="1998-2015 Kio (Günter Woigk)">
 <meta name="robots"      content="index,follow">
 <meta name="keywords"    content="%%KEYWORDS%%">
 <meta name="description" content="%%TITLE%%  ((online book))">
@@ -38,8 +38,8 @@ Template.Page =
 </head><body id="A">
 
 <table style="width:100%;background-color:#ffff55;"><tr>
-  <td> <a href="../"><img src="b/left.gif" style="border:hidden;" width=11 height=20 alt="&lt;--"></a> </td>
-  <td> &nbsp;<a href="../">back</a> </td>
+  <td> <a href="javascript:history.back()"><img src="b/left.gif" style="border:hidden;" width=11 height=20 alt="&lt;--"></a> </td>
+  <td> &nbsp;<a href="javascript:history.back()">back</a> </td>
   <td width="100%"> &nbsp; </td>
   <td style="white-space:nowrap;"> <i>Last regenerated: »#datestr(now)#« kio</i> </td>
 </tr></table>

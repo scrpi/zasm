@@ -31,6 +31,10 @@
 ;       for interpreter input; TIB at 82h.
 ;   02 Mar 95 v1.02  changed ALIGN to ALIGNED in
 ;       S" (S"); changed ,BRANCH to ,XT in DO.
+;
+; kio 2015-01-15:
+; modifications in some macro calls for zasm
+;
 ; ===============================================
 ; Macros to define Forth headers
 ; HEAD  label,length,name,action
@@ -57,35 +61,11 @@ link    DEFL $
         ENDIF
         ENDM
 
-; kio 2015-01-06: added as a workaround for the abusive macro argument usage in this source
-headstr	MACRO   #label,#length,#name,#action
-        DW link
-        DB 0
-link    DEFL $
-        DB #length,#name
-#label:
-        IF  !(#action=DOCODE)
-        call #action
-        ENDIF
-        ENDM
-
 immed   MACRO   #label,#length,#name,#action
         DW link
         DB 1
 link    DEFL $
         DB #length,'#name'
-#label:
-        IF  !(#action=DOCODE)
-        call #action
-        ENDIF
-        ENDM
-
-; kio 2015-01-06: added as a workaround for the abusive macro argument usage in this source
-immedstr MACRO   #label,#length,#name,#action
-        DW link
-        DB 1
-link    DEFL $
-        DB #length,#name
 #label:
         IF  !(#action=DOCODE)
         call #action
@@ -671,11 +651,11 @@ tosfalse: ld bc,0
         next
 
 ;X <>     x1 x2 -- flag    test not eq (not ANSI)
-    head NOTEQUAL,2,<>,docolon
+    head NOTEQUAL,2,<<>>,docolon	; "<<>>"  -->  "<>"
         DW EQUAL,ZEROEQUAL,EXIT
 
 ;C <      n1 n2 -- flag        test n1<n2, signed
-    head LESS,1,<,docode
+    head LESS,1,<<>,docode			; "<<>"  -->  "<"
         pop hl
         or a
         sbc hl,bc       ; n1-n2 in HL, SZVC valid

@@ -22,6 +22,10 @@
 ;   char size is    8 bits (1 byte)
 ;   address unit is 8 bits (1 byte), i.e.,
 ;       addresses are byte-aligned.
+;
+; kio 2015-01-15:
+; modifications in some macro calls for zasm
+;
 ; ===============================================
 
 ; ALIGNMENT AND PORTABILITY OPERATORS ===========
@@ -69,7 +73,7 @@ noop:   next
 ; it is defined in the ANSI standard as COMPILE,.
 ; On a DTC Forth this simply appends xt (like , )
 ; but on an STC Forth this must append 'CALL xt'.
-    headstr COMMAXT,8,'COMPILE,',docode
+    head COMMAXT,8,<COMPILE,>,docode
         jp COMMA
 
 ;Z !CF    adrs cfa --   set code action of a word
@@ -83,7 +87,7 @@ noop:   next
 
 ;Z ,CF    adrs --       append a code field
 ;   HERE !CF 3 ALLOT ;  Z80 VERSION (3 bytes)
-    headstr COMMACF,3,',CF',docolon
+    head COMMACF,3,<,CF>,docolon
         DW HERE,STORECF,LIT,3,ALLOT,EXIT
 
 ;Z !COLON   --      change code field to docolon
@@ -91,7 +95,7 @@ noop:   next
 ; This should be used immediately after CREATE.
 ; This is made a distinct word, because on an STC
 ; Forth, colon definitions have no code field.
-    headstr STORCOLON,6,'!COLON',docolon
+    head STORCOLON,6,!COLON,docolon
         DW LIT,-3,ALLOT
         DW LIT,docolon,COMMACF,EXIT
 
@@ -99,7 +103,7 @@ noop:   next
 ;   ['] EXIT ,XT ;
 ; This is made a distinct word, because on an STC
 ; Forth, it appends a RET instruction, not an xt.
-    headstr CEXIT,5,',EXIT',docolon
+    head CEXIT,5,<,EXIT>,docolon
         DW LIT,EXIT,COMMAXT,EXIT
 
 ; CONTROL STRUCTURES ============================
@@ -110,21 +114,21 @@ noop:   next
 ; xt is the branch operator to use, e.g. qbranch
 ; or (loop).  It does NOT append the destination
 ; address.  On the Z80 this is equivalent to ,XT.
-    headstr COMMABRANCH,7,',BRANCH',docode
+    head COMMABRANCH,7,<,BRANCH>,docode
         jp COMMA
 
 ;Z ,DEST   dest --        append a branch address
 ; This appends the given destination address to
 ; the branch instruction.  On the Z80 this is ','
 ; ...other CPUs may use relative addressing.
-    headstr COMMADEST,5,',DEST',docode
+    head COMMADEST,5,<,DEST>,docode
         jp COMMA
 
 ;Z !DEST   dest adrs --    change a branch dest'n
 ; Changes the destination address found at 'adrs'
 ; to the given 'dest'.  On the Z80 this is '!'
 ; ...other CPUs may need relative addressing.
-    headstr STOREDEST,5,'!DEST',docode
+    head STOREDEST,5,!DEST,docode
         jp STORE
 
 ; HEADER STRUCTURE ==============================

@@ -1,76 +1,86 @@
 
-h3	#target z80
+h3	#target Z80
 	z80
 
-p	Information on the ZX Spectrum file formats can be found in the ZX Spectrum FAQ which can be found on WOS:  <http://www.worldofspectrum.org/faq/>.
+p	A ZX Spectrum emulator snapshot.
+
+p	Information on the ZX Spectrum file formats can be found in the ZX Spectrum FAQ which can be found at <a target=_blank href="http://www.worldofspectrum.org/faq/">WOS</a>.
 
 
-p	This ZX Spectrum snapshot format may contain a snapshot for the ZX Spectrum or the ZX 128. It contains all of the .sna file's information and optionally some more. It is preferred over the .sna format by some people, because it does not store the instruction pointer pc on the Z80 machine stack. The .z80 file may also contain one or two roms and data for the paged ram of the ZX 128.
+p	A .z80 file may contain a snapshot for most ZX Spectrum models and, on some emulators, e.g. <a href="http://k1.spdns.de/Develop/Projects/zxsp-osx/Distributions/">zxsp for OSX</a>, for a bunch of clones, ZX80 and ZX81 variants and the Jupiter Ace as well.
+
+p	The .z80 file starts with a header section which is followed by multiple ram chunks. This is reproduced as one header segment and an appropriate number of appropriately sized segments with ram contents.
+
+p	The basic layout is like this:
 
 pre	#target z80
-	#head	<size>	    ; vs.201 = 55;  vs.300 = 86;  xzx = 87
-	#code	<start>,<len>
+	#code	_HEADER,0,size	    ; size depends on version
 		...
-	#page	<index>
+	#code	_RAM,0x4000,0xC000,<id>
 		...
-	#end
 
-p	The z80 format describes a ZX Spectrum 16k, 48k, 128k or, in versions written by the warajewo and xzx emulator, a Timex 2068, a ZX Spectrum +3, a Pentagon or a Scorpion.
+p	See the zxsp .z80 template file: <a target="image" href="../Examples/template_z80.asm">template_z80.asm</a> 
 
-p	The object code from the code segments is written to the paged-in RAM according to the value stored for the paging control register at address $1FFD. start should be $4000, len should be $4000 or $C000. at least, this is how it get's loaded later.
+h5	A version 1.45 snapshot
 
-p	Note:  $4000 = bank 5;   $8000 = bank 2;   $C000 = bank 0 after reset.
+p	The header size is 30 bytes and the ram chunk must be a single segment of 0xC000 bytes. Use of version 1.45 is discouraged.
+p	Note: unlike the other versions the version 1.45 ram segment has no ID flag.
 
-p	The #page directive defines a RAM page in which the following object code is stored. it set's start to $C000 and len to $4000. this directive is only allowed for models which are capable of paging.
+pre	#target z80
+	#code	_HEADER,0,30
+		...
+	#code	_RAM,0x4000,0xC000
+		...
 
-p	The RAM contents are written to the file in the compressed Z80 format.
+h5	A version 2.0.1 snapshot
 
-h5	Default values for header data:
+p	The header section contains additional information and the ram is saved in pages of 0x4000 bytes each. This has to be reproduced in the source file. Depending on the model declared in the header section, (see <a target="image" href="../Examples/template_z80.asm">template_z80.asm</a>) an appropriate number of correctly sized code segments must follow which must have an additional flag argument which defines the ID which is assigned to their ram chunk. 
+p	This would be appropriate for a ZX Spectrum 48k:
 
-pre		defb	0,0	        ; a,f
-		defw	0,0	        ; bc,hl
-		defw	0	        ; flag idicating vs.201 header or later
-		defw	0,0	        ; sp
-		defb	$3f	        ; i
-		defb	0	        ; r & 0x7f
-		defb	(7<<1)	    ; (r>>7) + (border_color<<1)
-		defw	0,0,0,0	    ; de,bc',de',hl'
-		defb	0,0	        ; a',f'
-		defw	0,0	        ; iy,ix
-		defb	1	        ; iff1: 0=di, 1=ei
-		defb	1	        ; iff2
-		defb	1+(1<<6)	; (irpt_mode) + (issue_2<<2) + (joystick_emu<<6)
-	// vs.201 header:
-		defw	headsize-32	; size of header extension; should be 23 or 54
-		defw	0	        ; pc
-		defb	0	        ; ZX Spectrum model		1)
-		defb	0	        ; 128k: last out to $7ffd (bank switching)	2)
-		defb	0	        ; if1 paged in?		2)
-		defb	7	        ; proper r and ldir emulation, 48k ay emulation	3)
-		defb	0	        ; last out to $fffd (ay register select)
-		defs	16,$ff	    ; ay registers
-	// vs.300 header:
-		defb	0,0,0	    ; T state counters
-		defb	0	        ; misc.
-		defb	0,0,$ff,$ff	; MGT/Multiface/SamRam paging
-		defs	20,0	    ; keyboard mapping for joystick emulation
-		defb	0,0,0	    ; Disciple flags
-	// xzx header extension:
-		defb	0	        ; +3: last out to $1ffd (bank switching)	3)
+pre	#target z80
+	#code	_HEADER,0,55
+		...
+	#code	_RAM1,0x4000,0x4000,8
+		...
+	#code	_RAM2,0x8000,0x4000,4
+		...
+	#code	_RAM3,0xC000,0x4000,5
+		...
 
-	1)	0   = 48k
-		3   = 128k in vs.201
-		4   = 128k in vs.300
-		128 = Timex 2068		(warajewo)
-		7   = +3				(xzx)
-		9   = pentagon			(xzx)
-		10  = scorpion			(xzx)	16 ram pages!
+p.magenta	<i>evtl. i will implement the 'varying blocksize' feature from the b&w models for zxsp and allow zasm to produce such files. this would allow one continuous segment to be used.</i>
 
-	2)	Timex 2068:
-		last out to 244
-		last out to 255
+h5	A version 3.0 file is very similar, except that some few model IDs have changed and more data is added to the header section.
+p	This would be appropriate for a ZX Spectrum 128k:
 
-	3)	Bit 2: enable ay emulation even in 48k mode (xzx)
+pre	#target z80
+	#code	_HEADER,0,86
+		...
+	#code	_RAM0,0xC000,0x4000,3	// ram mapped at 0xC000 after reset
+		...
+	#code	_RAM1,0xC000,0x4000,4	
+		...
+	#code	_RAM2,0x8000,0x4000,5	// ram at 0x8000
+		...
+	#code	_RAM3,0xC000,0x4000,6
+		...
+	#code	_RAM4,0xC000,0x4000,7
+		...
+	#code	_RAM5,0x4000,0x4000,8	// ram at 0x4000
+		...
+	#code	_RAM6,0xC000,0x4000,9
+		...
+	#code	_RAM7,0xC000,0x4000,10
+		...
+
+h5	black&white models 
+
+p	The b&w models have varying ram sizes from 1k to 64k or more. To allow storing of any arbitrary ram size the memory is chunked into blocks of 1k, 2k, 4k, 8k, 16, 32k and 64k. Currently each block must occur at most once. So 1k, 2k or 16k ram would be saved as 1 block while 48k would be saved as 2. The block IDs can be picked from <a target="image" href="../Examples/template_z80.asm">template_z80.asm</a>.
+
+pre	#code 	_HEADER 0,55
+		...
+	#code	_RAM,0x4000,0x0800,4	; looks like a TS1000 ;-)
+		...
+		
 
 
 

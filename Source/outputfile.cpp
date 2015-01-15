@@ -176,9 +176,9 @@ void Z80Assembler::writeTapFile(FD& fd) throw(any_error)	// no error checking!
 	// ZX Spectrum: yes;
 	// Jupiter ACE: no, except:
 	//		first header block (and segment!) must be 25 bytes long (Jupiter ACE header block size)
-	//		block type bytes must alternate  $ff - $00 - $ff - $00 etc.
+	//		block type bytes must alternate  $00 - $ff - $00 - $ff etc.
 	bool jupiterace = segments[i0].size==25;
-	int h = 0xff;
+	int h = 0x00;
 	for(i=i0; jupiterace && i<segments.count() && segments[i].isCode(); i++)
 	{ if(segments[i].has_flag) { jupiterace = segments[i].flag == h; h ^= 0xff; } }
 	bool writetypebyte = !jupiterace;

@@ -46,7 +46,7 @@
 
 
 cstr appl_name = "zasm";
-cstr version   = "4.0.5";
+cstr version   = "4.0.7";
 
 
 /* helper: get the compile date in preferred format "yyyy-mm-dd":
@@ -376,7 +376,7 @@ int main( int argc, cstr argv[] )
 
 		if(ixcbr2 || ixcbxh)
 		{
-			fprintf(stderr,"--> %s\nzasm: 1 error\n", "i8080 has no prefix 0xCB instructions.");
+			fprintf(stderr,"--> %s\nzasm: 1 error\n", "i8080 has no index registers and no prefix 0xCB instructions.");
 			return 1;
 		}
 	}
@@ -528,7 +528,7 @@ int main( int argc, cstr argv[] )
 	if(c_includes) ass.c_includes = c_includes;
 	if(libraries) ass.stdlib_dir  = libraries;
 	if(c_compiler) ass.c_compiler = c_compiler;
-	ass.assembleFile( inputfile, outputfile, listfile, listfile, liststyle, outputstyle, clean );
+	ass.assembleFile( inputfile, outputfile, listfile, tempdir, liststyle, outputstyle, clean );
 
 	uint errors = ass.errors.count();
 
