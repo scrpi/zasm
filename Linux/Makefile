@@ -9,7 +9,7 @@ CFLAGS        = -pipe -O2 -Wall -W -D_REENTRANT -fPIE $(DEFINES)
 CXXFLAGS      = -pipe -Wno-multichar -O2 -std=c++0x -Wall -W -D_REENTRANT -fPIE $(DEFINES)
 INCPATH       = -I. -I.. -I../Source -I../Libraries
 LINK          = g++
-LFLAGS        = -Wl
+LFLAGS        = 
 LIBS          = $(SUBLIBS) -lpthread 
 
 

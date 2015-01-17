@@ -34,6 +34,7 @@ Template.Page =
   var o="";
   function S(n) { H(); document.getElementById(n).style.visibility='visible'; o=n; }
   function H() { if(o!="") document.getElementById(o).style.visibility='hidden'; o=""; }
+  window.addEventListener('mouseup', function(event){H();});
 </script>
 </head><body id="A">
 
@@ -56,7 +57,7 @@ Template.Page =
 <p class="pglinks_u"><a href="%%PREV%%">[&lt;prev]</a> &nbsp; <a href="#A">[top]</a> &nbsp; <a href="%%NEXT%%">[next&gt;]</a></p>
 <p class="foot"><a href="http://validator.w3.org/check/referer">
 <img border=0 src="b/html401.png" alt="Valid HTML" height=31 width=88></a>
-&nbsp; <img border=0 src="b/css.png" alt="Valid CSS" height=31 width=88></p>
+&nbsp; <a href="http://jigsaw.w3.org/css-validator/check/referer"><img border=0 src="b/css.png" alt="Valid CSS" height=31 width=88></a></p>
 </body></html>
 »
 

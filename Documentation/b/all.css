@@ -1,10 +1,10 @@
-/* style sheet (c) 2003-2004 kio@little-bat.de */
+/* style sheet (c) 2003-2015 kio@little-bat.de */
 
 /* ---- CLEAN ----
 */
 body,iframe,object,
 p,pre,h1,h2,h3,h4,h5,h6,ul,ol,li,div,table,tr,td,th
-{	font-family:Geneva,Arial,sans-serif; font-weight:normal; font-size:11pt; line-height:1.2em;
+{	font-family:Arial,sans-serif; font-weight:normal; font-size:11pt; line-height:1.2em;
 	text-align:left; vertical-align:top; color:black;
 	padding:0px; margin:0px; border:0px none black; text-indent:0px; }
 
@@ -48,7 +48,8 @@ h1.head   	{ font-size:160%; margin:0em; padding:0.25em; border:none; background
 p.pglinks_o { text-align:center; margin:1em; }
 h2.head,
 h3.head   	{ font-size:140%; margin:0em; margin-bottom:1em; margin-top:1em; padding:0.25em; border:none; background-color:#ccffcc; }
-h4.head, h5.head,
+h4.head, 
+h5.head,
 h6.head  	{ font-size:120%; margin:0em; padding:0.5em;  border:none; background-color:transparent; }
 
 
@@ -66,24 +67,30 @@ p.foot		{ text-align:center; margin-top:4em;margin-bottom:400px; }
 
 /* ---- CROSS REFERENCES ----
 */
-.L			{ color:#333399; }
-.L span		{ background:white; visibility:hidden; position:absolute; z-index:50;
-			  padding:0.2em; line-height:1.1em; }
+.L			{ color:#333399; cursor:pointer; }
+.L:hover	{ text-decoration:underline; }
+
+.L span		{ cursor:auto; visibility:hidden; position:absolute; 
+		 	  background:white; color:white; text-decoration:underline; 
+			  padding:0.2em; line-height:1.2em; z-index:50; }
+
+
+
 
 
 /* ---- LINKS ----
 */
 a 			{ text-decoration:none; color:#333399; }
-.magenta a 	{ text-decoration:none; color:#cc00ff; }
-.magenta .L { text-decoration:none; color:#cc00ff; }
+.magenta .L { text-decoration:none; color:#aa00ff; }
+.magenta .L:hover 	{ text-decoration:underline; }
 pre a 		{ text-decoration:none; color:#0000bb; }
 h1 a 		{ text-decoration:none; color:#000000; }
 h2 a 		{ text-decoration:none; color:#000000; }
 p a			{ text-decoration:none; color:#333399; }
 a:link    	{ }
 a:visited 	{ }
-a:active  	{ }
 a:hover	  	{ text-decoration:underline; }
+a:active  	{ text-decoration:underline; color:#cc3333; }
 
 
 /* ---- COLORS ----

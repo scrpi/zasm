@@ -4,15 +4,15 @@
 
 
 var TITLE	 = «zasm - z80 assembler - download page»
-var KEYWORDS = «zasm, z80 assembler, 8080 assembler, z80, 8080, ZX Spectrum, CP/M, kio, Assembler, download, sdcc»
+var KEYWORDS = «zasm, z80, z180, 8080, ZX80, ZX81, Jupiter Ace, ZX Spectrum, CP/M, kio, Assembler, download, sdcc»
 var ROBOTS	 = «index,nofollow»
 
 var DESCRIPTION =
 «zasm - z80 assembler - download page.
 zasm is a command line z80 assembler for unix-style operating systems.
 it is available as source and some precompiled binaries, e.g. for Linux and MacOS X.
-it creates output in binary intel hex or motorola S19 file format and can create
-some special formats for ZX Spectrum emulators, e.g. ".TAP" and ".SNA" files.
+it can create output in binary intel hex or motorola S19 file format and can create some special formats 
+for ZX80, ZX81, ZX Spectrum and Jupiter Ace emulators, e.g. .TAP, .O, .P, .SNA, .Z80 and .ACE files.
 zasm can include c source files which are compiled with the help of sdcc.»
 
 
@@ -20,6 +20,7 @@ var MAIN =
 «
 h2	Welcome to the zasm download page
 p	zasm is a command-line assembler for the Zilog Z80 cpu. it is available as source, which should compile on many unix-style operating systems, and as pre-compiled binary. Choose a version from the list below. Archive names indicate version, date and build host. Select a binary which matches your OS best. If it fails to run then use the source.
+p.center	Quick links: <a href="../Documentation/">Documentation</a>, <a href="/cgi-bin/zasm.cgi">zasm online assembler</a>, <a href="/Git/zasm-4.0.git">Git repository</a>.
 
 h4	Overview
 p	zasm is a <span class=blue>Z80 assembler</span>.

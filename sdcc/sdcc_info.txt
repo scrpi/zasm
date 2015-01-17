@@ -6,6 +6,11 @@ Usage info for using c sources in zasm can be found in Examples/.
 This file contains additional notes for using sdcc.
 
 
+The 'library/' directory contained in this folder is recommended to be used with zasm. Use command line option '-I'.
+This 'lib/' dir must be used for '#include library' or '#include system library' to work. Use command line option '-L'.
+You may use the binaries in 'bin/', but any sdcc distro should work.
+For more information on how to include c sources in zasm see http://k1.spdns.de/Develop/Projects/zasm/Documentation/.
+
 
 Usage information for sdcc
 --------------------------

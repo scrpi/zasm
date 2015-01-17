@@ -1,6 +1,6 @@
 
 h3	8080 instructions
-
+ 
 p	These are the instructions which are common to the Z80 and the Intel 8080.
 	The 8080 lacks the index registers, the second register set and has no jump relative instructions. Also it has no 0xCB and 0xED prefixed commands.
 p	Note: for the 8080 assembler mnemonics see chapter '8080 assembler instructions'.

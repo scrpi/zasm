@@ -49,7 +49,10 @@ p	You can either try to resolve all missing labels, in which case you don't appe
 
 p	This is most conveniant to automatically resolve references arising from c source, but may be used with pure assembler source as well.
 
-p	Files in the library directory must follow certain naming conventions: they must be named according to the label they define. If a file defines label _foo, then the file must be named _foo.s or _foo.c, or more accurately any _foo.* will be included. If it ends with '.c' then it will be compiled first.
+
+h5	Naming convention for files in a library directory
+
+p	Files in the library directory must follow certain naming conventions: they must be named according to the label they define. If a file defines label _foo, then the file must be named _foo.s or _foo.c, or more accurately any _foo.* will be included. If it ends with '.c' then it will be compiled and then included. If a file defines more than one label then you can make symbolic links for the other names which point to this file.
 
 p	zasm adds directive #assert after the included file to verify, that the promissed label was actually defined:
 
