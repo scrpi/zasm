@@ -65,17 +65,10 @@ p.pglinks_u { text-align:center; margin:1em; }
 p.foot		{ text-align:center; margin-top:4em;margin-bottom:400px; }
 
 
-/* ---- CROSS REFERENCES ----
+/* ---- POPUP BOX WITH CROSS REFERENCES ----
 */
-.L			{ color:#333399; cursor:pointer; }
-.L:hover	{ text-decoration:underline; }
-
-.L span		{ cursor:auto; visibility:hidden; position:absolute; 
-		 	  background:white; color:white; text-decoration:underline; 
+.LL			{ visibility:hidden; position:absolute; background:white; font-style:italic;
 			  padding:0.2em; line-height:1.2em; z-index:50; }
-
-
-
 
 
 /* ---- LINKS ----

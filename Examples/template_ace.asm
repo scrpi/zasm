@@ -44,40 +44,41 @@ ramtop	equ	$3400+ramsize	; Ramtop: $4000 (3K), $8000(19K), $C000(35K)
 #code VRAM_COPY, $2000, $400
 
 ; Flag:
-	dw		$8001,0		; ?
+	.long	$8001		; ?
 
 ; ACE32 settings:
-	ds		$2080-$
-	dw		ramtop,0	; Ramtop
-	dw		0,0			; Debugger Data Address
-	dw		0,0			; Debugger Breakpoint Address
-	dw		3,0			; Frame Skip Rate (3)
-	dw		3,0			; Frames per TV Tick (3)
-	dw		$FDFD,0		; ?
-	dw		100,0		; Time emulator is running (probably in ms)
-	dw		0,0			; Emulator Colour: white on Black
+	org		$2080
+	.long		ramtop	; Ramtop
+	.long		0		; Debugger Data Address
+	.long		0		; Debugger Breakpoint Address
+	.long		3		; Frame Skip Rate (3)
+	.long		3		; Frames per TV Tick (3)
+	.long		$FDFD	; ?
+	.long		100		; Time emulator is running (probably in ms)
+	.long		0		; Emulator Colour: white on Black
+#assert $ == $20a0
 
 ; Z80 Registers:
-	ds		$2100-$
-	db		0,0,0,0		; AF
-	dw		0,0			; BC
-	dw		0,0			; DE
-	dw		0,0			; HL
-	dw		0,0			; IX
-	dw		0,0			; IY
-	dw		ramtop,0	; SP
-	dw		progstart,0	; PC
-	db		0,0,0,0		; A'F'
-	dw		0,0			; BC'
-	dw		0,0			; DE'
-	dw		0,0			; HL'
-	dw		1,0			; IM
-	dw		1,0			; IFF1
-	dw		1,0			; IFF1
-	dw		0,0			; I
-	dw		0,0			; R
-	dw		$80,0		; ?
-
+	org		$2100
+	db		1,2,0,0		; F, A
+	.long	$10			; BC
+	.long	$20			; DE
+	.long	$30			; HL
+	.long	$40			; IX
+	.long	$50			; IY
+	.long	ramtop		; SP
+	.long	progstart	; PC
+	db		3,4,0,0		; F', A'
+	.long	$60			; BC'
+	.long	$70			; DE'
+	.long	$80			; HL'
+	.long	1			; IM
+	.long	1			; IFF1
+	.long	1			; IFF1
+	.long	5			; I
+	.long	6			; R
+	.long	$80			; ?
+#assert $ == $2100 + 18*4
 
 ; ______________________________________________________________
 ; ram at $2400
@@ -102,7 +103,7 @@ ramtop	equ	$3400+ramsize	; Ramtop: $4000 (3K), $8000(19K), $C000(35K)
 ; 1k character ram
 
 #code CRAM, $2C00, $400
-#insert "Jupiter Ace Character Ram.bin"
+#insert "jupiter_ace_character_ram.bin"
 
 
 ; ______________________________________________________________

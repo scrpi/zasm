@@ -10,6 +10,7 @@ Examples/s/
 Examples/*.lst
 Examples/*.rom
 Examples/*.tap
+Examples/*.ace
 Info/
 sdcc/lib/OTHER
 sdcc/bin
@@ -48,3 +49,4 @@ pitfalls.txt
 zasm.cgi
 distributions
 sdcc/sdcc manual.pdf
+INFO_and_TODO.txt

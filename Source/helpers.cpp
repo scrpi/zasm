@@ -277,7 +277,8 @@ void write_compressed_page_ace (FD& fd, uint8 const* q, uint qsize) throw(file_e
 {
 	XLogIn("write_compressed_page_ace");
 
-	assert(qsize>=1 kB && qsize<=64 kB);
+	if(qsize==0) return;
+	assert(/*qsize>=1 kB &&*/ qsize<=64 kB);
 
 	uint8 zbu[qsize*2+8];				// worst case size: 2*qsize
 	uint8* z = zbu;						// dest. ptr

@@ -442,8 +442,8 @@ void Z80Assembler::checkAceFile() throw(any_error)
 			{
 				// check empty:
 				uint16 zbu[0x200]; memcpy(zbu,&s[offs],0x400);
-				for(uint i=0; i<8;  i++) zbu[0x41+2*i]=0;	// clear settings
-				for(uint i=0; i<18; i++) zbu[0x81+2*i]=0;	// clear registers
+				for(uint i=0; i<8;  i++) zbu[0x40+2*i]=0;	// clear settings
+				for(uint i=0; i<18; i++) zbu[0x80+2*i]=0;	// clear registers
 				bool empty=yes; for(int i=1; i<0x200 && empty; i++) { empty = zbu[i]==0; }
 				if(!empty) { addError(
 					usingstr("segment %s must be empty except for settings and registers", s.name)); break; }
@@ -480,6 +480,10 @@ void Z80Assembler::checkAceFile() throw(any_error)
 				break;
 			}
 
+			case 0x2400:	// VRAM
+			case 0x2C00:	// CRAM
+				break;
+
 			case 0x2800:	// CRAM mirror
 			case 0x3000:	// Prog RAM 1st mirror
 			case 0x3400:	// Prog RAM 2nd mirror
@@ -489,9 +493,8 @@ void Z80Assembler::checkAceFile() throw(any_error)
 				for(int i=0; i<0x100 && empty; i++) { empty = bu[i]==0; }
 				if(!s.isEmpty()) addError(
 					usingstr("segment %s: page 0x%04X-0x%04X must be empty", s.name, (uint)addr, (uint)addr+0x3ff));
+				else break;
 			}
-//			case 0x2400:	// VRAM
-//			case 0x2C00:	// CRAM
 			default:		// Prog RAM
 				XXXASSERT(addr==0x3C00);
 				throw syntax_error(

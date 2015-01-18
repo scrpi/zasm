@@ -67,6 +67,7 @@ p	<b>2015-01-01</b>: Version 4.0.2: added support for native 8080 assembler sour
 	<b>2015-01-04</b>: Version 4.0.4: added macro and rept, .phase and .dephase
 	<b>2015-01-08</b>: Version 4.0.5: #define, test suite, --flatops, Linux version
 	<b>2015-01-15</b>: Version 4.0.7: "extended arguments" in macros with '<' … '>'
+	<b>2015-01-18</b>: Version 4.0.8: fixed bug in .ACE file export
 
 h4 Git Repository
 p	You can checkout the source from my Git repository:
@@ -77,6 +78,7 @@ h4	Online Assembler
 p	A cgi interface for online assembling is at <a href="/cgi-bin/zasm.cgi">cgi-bin/zasm.cgi</a>. It allows to assemble z80 assembler source files with some include files. It can generate binary, Intel hex or Motorola S19 output and a listing, which can optionally include the generated assembler source, a label listing and accumulated cpu cycles. You can even include c source files here! Don't assemble closed-source sources here. <b>;-)</b>
 
 h4	Archive
+p	Here you find zasm and matched versions of sdcc for OSX/BSD and Linux. If you have sdcc already installed you still need "<span class=blue>sdcc for zasm (headers and libs).zip</span>" for the modified <tt>libs/</tt> folder.
 »
 
 
