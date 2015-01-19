@@ -24,6 +24,7 @@ pre	-u  --opcodes   include object code in list file
 	-z  --clean     clear intermediate files, e.g. compiled c files
 	-e  --compare   compare own output to existing output file
 	-T  --test      run self test (requires developer source tree)
+	-g  --cgi       prevent access to files outside the source dir
 	--maxerrors=NN  set maximum for reported errors (default=30, max=999)
 	-o0             don't write output file
 	-l0             don't write list file
@@ -159,6 +160,10 @@ H5	-T  --test
 p	Run zasm's built-in self test. This requires that you have the test directory at hand, because zasm will compile a bunch of source files and compare the output with the files present there. You can append the directory path to the command, else zasm will try the standard location relative to it's own path.
 
 pre	$> zasm -T ./Test
+
+H5	-g  --cgi
+p	Assemble potentially malicious sources, e.g. in a CGI script for a web site. 
+p	This option prevents #insert and #include to include files or directories from outside the source file's directory. Additionally option -I is rejected in #cflags. Traversal via symlinks to any location are possible, also paths in the command line arguments are not affected.
 
 H5	--maxerrors=NN  
 	maxerrors

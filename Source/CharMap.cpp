@@ -200,7 +200,9 @@ uchar CharMap::get(UCS2Char key) const throw(syntax_error)
 	uchar c = HashMap::get(key,0); if(c) return c;
 	static_assert(NC!=0,"const NC must be non-zero here");
 
-	cstr fmt = key>=' ' && key<=0x7F ? "'%c'" : "0x%04X";
+	cstr fmt = key>=' ' && key<=0x7F
+		? "Character '%c' is not in the target character set"
+		: "Character 0x%04X is not in the target character set";
 	throw syntax_error(usingstr(fmt,key));
 }
 

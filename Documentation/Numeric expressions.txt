@@ -47,6 +47,9 @@ p	<b>opcode(ld a,b)</b> gets the major byte of an opcode, in this case of opcode
 p	<b>defined(<name>)</b> results in 0 or 1 depending on whether the named label is already defined at this position in source.
 	<i>note: use of this function in a local context may malfunction if a local name of this name is defined after this test.</i>
 
+p	<b>target(NAME)</b>: tests whether the named #target is selected. Use this if you made it selectable for some reason in your source. Result is 0 or 1.
+
+p	<b>segment(NAME)</b>: tests whether the named segment is the currently selected #code or #data segment. Result is 0 or 1.
 
 	
 h4	Operators

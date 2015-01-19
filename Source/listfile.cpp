@@ -362,7 +362,7 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 		fd.write_fmt("%s; --------------------------------------\n",	indentstr);
 		fd.write_fmt("%s; zasm: assemble \"%s\"\n",						indentstr, source_filename);
 
-		if( allow_dotnames||!require_colon||syntax_8080||casefold_labels||
+		if( allow_dotnames||require_colon||syntax_8080||casefold_labels||
 			target_z180||ixcbr2_enabled||ixcbxh_enabled )
 		{
 			fd.write_fmt("%s; opts:%s%s%s%s%s%s\n", indentstr,

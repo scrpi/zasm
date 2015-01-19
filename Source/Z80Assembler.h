@@ -121,6 +121,7 @@ public:
 	bool		casefold_labels;	// label names are not case sensitive
 	bool		flat_operators;		// no operator precedence: evaluate strictly from left to right
 	bool		compare_to_old;		// compare own output file to existing reference file
+	bool		cgi_mode;			// disallow escaping from sourcefile's directory
 
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) TAE;
@@ -184,13 +185,15 @@ private:
 	uint	get8080Register	(SourceLine& q) throw(syntax_error);
 	uint	get8080WordRegister	(SourceLine& q, uint) throw(syntax_error);
 
-	void	setError		(const any_error &);				// set error for current file, line & column
+	void	setError		(const any_error&);			// set error for current file, line & column
 	void	addError		(cstr text);				// add error without source line
 	void	init_c_flags	();
 	void	init_c_tempdir	()							THF;
 
 	bool	is_name			(cstr w)					{ return is_letter(*w)||*w=='_'||(allow_dotnames&&*w=='.'); }
 	cstr	unquotedstr		(cstr);
+	cstr	get_filename	(SourceLine&, bool dir=no)	TAE;
+	cstr	get_directory	(SourceLine& q)				TAE		{ return get_filename(q,yes); }
 
 public:
 			Z80Assembler	();

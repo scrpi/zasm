@@ -6,7 +6,7 @@ p.magenta <i>this format is not yet well tested. If there are problems please se
 
 p	This creates a tape file for use with a ZX81 emulator. The tape file will be loaded to the ram start + 9 at address $4009. 
 
-p	"p" can be used instead of "81". This will create a target file with extension "p" or "81" respectively, which are fully identical. ".p81" files also include the program name. 
+p	"p" can be used instead of "81". This will create a target file with extension "p" or "81" respectively, which are fully identical. ".p81" files also include the program name which must be written using the ZX81 character set.
 
 p	Code may be stored in one or more #code segments. However, the first segment must be at least 0x403B - 0x4009 bytes long and contain the system variables. (except for the first 9 bytes which are not saved.)
 
@@ -22,7 +22,7 @@ p	or:
 pre	#target	p81
 	#charset ZX81
 	#code	_PROGNAME
-		dm	"progname" | $80		; character set conversion!
+		dm	"progname" | $80		; zasm converts the characters to charset ZX81!
 	#code 	_RAM, 0x4009, _ram_end - 0x4009
 		...
 

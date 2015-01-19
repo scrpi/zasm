@@ -100,6 +100,30 @@ cstr Z80Assembler::unquotedstr( cstr s0 )
 }
 
 
+/*	Helper:
+	read quoted filename from sourceline
+	in cgi_mode check for attempt to escape from source directory
+	note: it is still possible to use symlinks to other directories!
+*/
+cstr Z80Assembler::get_filename(SourceLine& q, bool dir) TAE
+{
+	cstr fqn = q.nextWord();
+	if(fqn[0]!='"') throw syntax_error(dir ? "quoted directory name expected" : "quoted filename expected");
+	fqn = unquotedstr(fqn);
+
+	if(cgi_mode && q.sourcelinenumber)
+	{
+		if(fqn[0]=='/' && stdlib_dir!=NULL && startswith(fqn,stdlib_dir)) {}
+		else if(fqn[0]=='/' || startswith(fqn,"~/") || startswith(fqn,"../") || contains(fqn,"/../"))
+		throw fatal_error("escape from Darthmoore castle");
+	}
+
+	if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+	return fqn;
+}
+
+
+
 // --------------------------------------------------
 //					Creator
 // --------------------------------------------------
@@ -139,7 +163,8 @@ Z80Assembler::Z80Assembler()
 	require_colon(yes),	// prog. label defs. require ':'  =>  label defs. and instructions may be indented at will
 	casefold_labels(no),
 	flat_operators(no),
-	compare_to_old(no)
+	compare_to_old(no),
+	cgi_mode(no)
 {}
 
 
@@ -809,7 +834,6 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 			w = q.nextWord();
 			if(!is_letter(*w) && *w!='_') throw fatal_error("label name expected");
 			bool global = q.testChar(':')&&q.testChar(':');
-			q.expect(')');
 
 			for(uint i=global?0:local_labels_index;;i=labels[i].outer_index)
 			{
@@ -820,35 +844,32 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 						 { n=1; break; }
 				if(i==0) { n=0; break; }						// not found / not defined
 			}
-			goto op;
+
+			goto kzop;
 		}
 		else if(eq(w,"lo"))
 		{
 lo:			n = uint8(value(q,pAny,valid));
-			q.expect(')');
-			goto op;
+			goto kzop;
 		}
 		else if(eq(w,"hi"))
 		{
 hi:			n = uint8(value(q,pAny,valid)>>8);
-			q.expect(')');
-			goto op;
+			goto kzop;
 		}
 		else if(eq(w,"min"))
 		{
 			n = value(q,pAny,valid);
 			q.expectComma();
 			n = min(n,value(q,pAny,valid));
-			q.expect(')');
-			goto op;
+			goto kzop;
 		}
 		else if(eq(w,"max"))
 		{
 			n = value(q,pAny,valid);
 			q.expectComma();
 			n = max(n,value(q,pAny,valid));
-			q.expect(')');
-			goto op;
+			goto kzop;
 		}
 		else if(eq(w,"opcode"))		// opcode(ld a,N)  or  opcode(bit 7,(hl))  etc.
 		{
@@ -864,6 +885,22 @@ hi:			n = uint8(value(q,pAny,valid)>>8);
 			n = z80_major_opcode(substr(a,q.p-1));
 			valid = yes;
 			goto op;
+		}
+		else if(eq(w,"target"))
+		{
+			if(target==NULL && current_segment_ptr==NULL) throw syntax_error("#target not yet defined");
+			n = q.testWord(target?target:"ROM");
+			if(!n && !is_name(q.nextWord())) throw syntax_error("target name expected");
+			valid = yes;
+			goto kzop;
+		}
+		else if(eq(w,"segment"))
+		{
+			if(current_segment_ptr==NULL) throw syntax_error("#code or #data segment not yet defined");
+			n = q.testWord(current_segment_ptr->name);
+			if(!n && !is_name(q.nextWord())) throw syntax_error("segment name expected");
+			valid = yes;
+			goto kzop;
 		}
 		else --q;	// put back '('
 	}
@@ -927,6 +964,7 @@ label:	if(casefold_labels) w = lowerstr(w);
 				valid = no; final = no;
 				l->is_used = true;
 			}
+			goto op;
 		}
 		else
 		{
@@ -954,13 +992,18 @@ label:	if(casefold_labels) w = lowerstr(w);
 				XXXASSERT(l->is_used);// = yes;
 				break;
 			}
+			goto op;
 		}
 	}
-	else
-	{
+
+// if we come here we are out of clues:
 syntax_error:
-		throw syntax_error("syntax error");
-	}
+	throw syntax_error("syntax error");
+
+// expect ')' and goto op:
+kzop:
+	q.expect(')');
+	goto op;
 
 // ---- expect operator ----
 
@@ -1811,19 +1854,19 @@ void Z80Assembler::asmCFlags( SourceLine& q ) throw(any_error)
 		if(s[0]=='-'&&s[1]=='I')	// -I/full/path/to/include/dir
 		{							// -Ior/path/rel/to/source/dir	=> path in #cflags is relative to source file!
 			cstr path = s+2;
-//			if(path[0]=='/') throw fatal_error("hard path not allowed here (use command line option -I instead)");
-//			if(contains(path,"..")) throw fatal_error("'..' not allowed here (use command line option -I instead)");
+
+			// CGI-MODUS: Da im #include-Statement im C-Source beliebige Pfade stehen können
+			// und der C-Compiler dann Dateien in diesen Verzeichnissen sucht und einbindet
+			// kann der Aufrufer so auf die gesamte Platte zugreifen.
+			// Die meisten Dateien werden zwar nur einige Zeilen Fehlermeldung produzieren,
+			// aber auch da können schon sensible Informationen angezeigt werden.
+			if(cgi_mode) throw fatal_error("option '-I' not allowed in CGI mode");
+
 			if(path[0]!='/') path = catstr(source_directory,path);
 			path = fullpath(path); if(errno) throw fatal_error(errno);
 			if(lastchar(path)!='/') throw fatal_error(ENOTDIR);
 			s = catstr("-I",path);
 		}
-//		else
-//		{
-//			if(contains(s,"..")) throw fatal_error("'..' not allowed here");
-//			if(s[0]=='/') throw fatal_error("hard path not allowed here");
-//			if(s[0]=='-' && s[1] && s[2]=='/') throw fatal_error("hard path not allowed here");
-//		}
 
 		c_flags.append_if_new(s);
 	}
@@ -2031,10 +2074,7 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 		}
 		else
 		{
-			fqn = q.nextWord();
-			if(fqn[0]!='"') throw syntax_error("quoted directory name expected");
-			fqn = unquotedstr(fqn);
-			if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+			fqn = get_directory(q);
 		}
 
 		if(lastchar(fqn)!='/') fqn = catstr(fqn,"/");
@@ -2090,10 +2130,7 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 	}
 	else
 	{
-		cstr fqn = q.nextWord();
-		if(fqn[0]!='"') throw syntax_error("quoted filename expected");
-		fqn = unquotedstr(fqn);
-		if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+		cstr fqn = get_filename(q);
 
 		if(endswith(fqn,".c"))
 		{
@@ -2233,11 +2270,7 @@ void Z80Assembler::asmInsert( SourceLine& q ) throw(any_error)
 
 	q.is_data = yes;	// even if it isn't, but we don't know. else listfile() will bummer
 
-	cstr fqn = q.nextWord();
-	if(fqn[0]!='"') throw syntax_error("quoted filename expected");
-
-	fqn = unquotedstr(fqn);
-	if(fqn[0]!='/') fqn = catstr(directory_from_path(q.sourcefile),fqn);
+	cstr fqn = get_filename(q);
 
 	FD fd(fqn,'r');
 	off_t sz = fd.file_size();			// file size
@@ -2301,10 +2334,14 @@ void Z80Assembler::asmSegment( SourceLine& q, bool is_data ) throw(any_error)
 	{
 		XXXASSERT(pass==1);
 
-		uint8 fillbyte = is_data || eq(target,"ROM") ? 0xFF : 0x00;
+		uint8 fillbyte = is_data || ne(target,"ROM") ? 0x00 : 0xFF;
 		segment = new Segment(name,is_data,fillbyte,relocatable,resizable,has_flag);
 		segments.append(segment);
-		q.label = new Label(name,segment,q.sourcelinenumber,address,address_is_valid,yes,yes,no);
+
+		Label* l = &global_labels().find(name);
+		if(l && l->is_defined) { addError(usingstr("label %s redefined",name)); return; }
+
+		q.label = new Label(name,segment,q.sourcelinenumber,address,address_is_valid,yes,yes,l!=NULL);
 		global_labels().add(q.label);
 	}
 	else if(address_is_valid)

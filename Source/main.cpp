@@ -46,7 +46,7 @@
 
 
 cstr appl_name = "zasm";
-cstr version   = "4.0.7";
+cstr version   = "4.0.9";
 
 
 /* helper: get the compile date in preferred format "yyyy-mm-dd":
@@ -93,6 +93,7 @@ static cstr help =
 "  -z  --clean     clear intermediate files, e.g. compiled c files\n"
 "  -e  --compare   compare own output to existing output file\n"
 "  -T  --test      run self test (requires developer source tree)\n"
+"  -g  --cgi       prevent access to files outside the source dir\n"
 "  --maxerrors=NN  set maximum for reported errors (default=30, max=999)\n"
 "  -o0             don't write output file\n"
 "  -l0             don't write list file\n"
@@ -142,6 +143,7 @@ int main( int argc, cstr argv[] )
 	bool flatops	 = no;
 	bool compare     = no;
 	bool selftest    = no;
+	bool cgi_mode	 = no;
 	uint maxerrors   = 30;
 // filepaths:
 	cstr inputfile  = NULL;
@@ -187,6 +189,7 @@ int main( int argc, cstr argv[] )
 			if(eq(s,"--flatops"))  { flatops = 1;     continue; }
 			if(eq(s,"--compare"))  { compare = 1;     continue; }
 			if(eq(s,"--test"))     { selftest = 1;    continue; }
+			if(eq(s,"--cgi"))      { cgi_mode = 1;    continue; }
 			if(startswith(s,"--maxerrors="))
 				{
 					char* ep; ulong n = strtoul(s+12,&ep,10);
@@ -209,6 +212,7 @@ int main( int argc, cstr argv[] )
 			case 'x': outputstyle=c; continue;
 			case 'b': outputstyle=c; continue;
 			case 'z': clean=yes; continue;
+			case 'g': cgi_mode=yes; continue;
 
 			case 'v': if(*(s+1)>='0' && *(s+1)<='3') verbose = *++s - '0'; else ++verbose; continue;
 
@@ -247,6 +251,30 @@ int main( int argc, cstr argv[] )
 
 		uint errors = 0;
 		char opt[] = "-v0e"; opt[2] += verbose;
+
+		change_working_dir(catstr(testdir,"ZXSP/"));
+		{
+		cstr a[] = { zasm, opt, "template_o.asm", "original/" };
+		errors += main(NELEM(a),a);
+
+		a[2] = "template_p.asm";
+		errors += main(NELEM(a),a);
+
+		a[2] = "template_ace.asm";
+		errors += main(NELEM(a),a);
+
+		a[2] = "template_tap.asm";
+		errors += main(NELEM(a),a);
+
+		a[2] = "template_z80.asm";
+		errors += main(NELEM(a),a);
+
+		a[2] = "template_sna.asm";
+		errors += main(NELEM(a),a);
+
+		cstr b[] = { zasm, opt, "-c", catstr(testdir,"../sdcc/bin/sdcc"), "template_rom_with_c_code.asm", "original/" };
+		errors += main(NELEM(b),b);
+		}
 
 		change_working_dir(catstr(testdir,"Z80/"));
 		{
@@ -352,7 +380,7 @@ int main( int argc, cstr argv[] )
 
 		if(verbose)
 		{
-			fprintf(stderr, "total time: %3.4f sec.\n", now()-start);
+			fprintf(stderr, "\ntotal time: %3.4f sec.\n", now()-start);
 			if(errors>1) fprintf(stderr, "\nzasm: %u errors\n\n", errors);
 			else fprintf(stderr, errors ? "\nzasm: 1 error\n\n" : "zasm: no errors\n");
 		}
@@ -525,6 +553,7 @@ int main( int argc, cstr argv[] )
 	ass.flat_operators = flatops;
 	ass.max_errors     = maxerrors;
 	ass.compare_to_old = compare;
+	ass.cgi_mode	   = cgi_mode;
 	if(c_includes) ass.c_includes = c_includes;
 	if(libraries) ass.stdlib_dir  = libraries;
 	if(c_compiler) ass.c_compiler = c_compiler;

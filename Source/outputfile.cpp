@@ -548,7 +548,7 @@ void Z80Assembler::checkZX80File() throw(any_error)
 	// valid ram size: 1k, 2k, 3k, 4k, 16k
 	bool ramsize_valid = ramsize>=sizeof(ZX80Head)+1 && ramsize<=16 kB;
 	if(!ramsize_valid) addError(
-		usingstr("total ram size out of range: must be ≥40+1 ($2A+1) and ≤16k (size=$%04X",ramsize));
+		usingstr("total ram size out of range: must be ≥40+1 ($28+1) and ≤16k (size=$%04X",ramsize));
 	if(ramsize<sizeof(ZX80Head)) return;
 
 	Segment& hs = segments[i0];

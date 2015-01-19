@@ -19,7 +19,6 @@ Documentation/*.html
 Documentation/00000.txt
 Documentation/Buch.txt
 
-Test/zxsp test files/
 Test/s/
 Test/*.bin
 Test/*.rom
