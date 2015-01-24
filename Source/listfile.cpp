@@ -362,17 +362,21 @@ void Z80Assembler::writeListfile(cstr listpath, int style) throw(any_error)
 		fd.write_fmt("%s; --------------------------------------\n",	indentstr);
 		fd.write_fmt("%s; zasm: assemble \"%s\"\n",						indentstr, source_filename);
 
-		if( allow_dotnames||require_colon||syntax_8080||casefold_labels||
-			target_z180||ixcbr2_enabled||ixcbxh_enabled )
+		if(	asm8080 || target_z180 ||  target_8080 ||
+			flat_operators || casefold || allow_dotnames ||
+			require_colon || ixcbr2_enabled || ixcbxh_enabled )
 		{
-			fd.write_fmt("%s; opts:%s%s%s%s%s%s\n", indentstr,
-				syntax_8080?" --asm8080":"",
-				casefold_labels&&!syntax_8080?" --casefold":"",
-				allow_dotnames?" --dotnames":"",
-				require_colon?" --reqcolon":"",
-				target_z180?" --z180":"",
-				ixcbr2_enabled?" --ixcbr2":"",
-				ixcbxh_enabled?" --ixcbxh":"");
+			fd.write_fmt("%s; opts:%s%s%s%s%s%s%s%s%s%s\n", indentstr,
+				asm8080					? " --asm8080"  : "",
+				target_z180				? " --z180"     : "",
+				target_z80  &&  asm8080	? " --z80"      : "",
+				target_8080	&& !asm8080	? " --8080"     : "",
+				flat_operators			? " --flatops"  : "",
+				casefold    && !asm8080	? " --casefold" : "",
+				allow_dotnames			? " --dotnames" : "",
+				require_colon			? " --reqcolon" : "",
+				ixcbr2_enabled			? " --ixcbr2"   : "",
+				ixcbxh_enabled			? " --ixcbxh"   : "" );
 		}
 
 		fd.write_fmt("%s; date: %s\n",									indentstr, datetimestr(timestamp));

@@ -5,7 +5,7 @@
 
 var TITLE	 = «zasm - z80 assembler - download page»
 var KEYWORDS = «zasm, z80, z180, 8080, ZX80, ZX81, Jupiter Ace, ZX Spectrum, CP/M, kio, Assembler, download, sdcc»
-var ROBOTS	 = «index,nofollow»
+var ROBOTS	 = «index,follow»
 
 var DESCRIPTION =
 «zasm - z80 assembler - download page.
@@ -61,6 +61,13 @@ li	<span class=blue>Macros</span> and <tt class=blue>rept</tt> are now supported
 li	The required source layouts for the various special output files (tape, sna, etc.) have changed. 
 li	A <span class=blue>character set conversion</span> for strings and character literals can be defined. 
 
+h4	Notes on sdcc version 3.4.0
+p	The following is for users who want to include c sources and use the current stable version of sdcc, which is version 3.4.0, released 2014-04-11.
+p	It does not apply to OSX users who download the file "sdcc for zasm OSX.zip" from this directory or users who use sdcc 3.4.1 or later, which currently must be a snapshot build, or people who don't want to include c source files in their z80 assembler files.
+p	sdcc folks have renamed some global symbols which are referenced by compiled programs right after they released version 3.4.0. Unluckily the library provided with "sdcc for zasm ….zip" below already expects the new symbols as used in version 3.4.1. Due to this mismatch sdcc 3.4.0 cannot be used, unless you rename the files in sdcc/lib/ from this archive to the old names and rename the defined labels therein to the old names too.
+p	So it's probably easier to download a snapshot from the sdcc website. Unluckily this seems to be not so easy either: At least for my properly updated Linux Mint installation their requirements to the version of the stdclib++ library are still too high… At this point i gave up and leave it as an excercise to the informed Linux user to solve this problem.
+
+
 h4	What's new
 p	<b>2015-01-01</b>: Version 4.0.2: added support for native 8080 assembler source
 	<b>2015-01-01</b>: Version 4.0.3: added more support for alternate/various/weird syntax 
@@ -68,6 +75,9 @@ p	<b>2015-01-01</b>: Version 4.0.2: added support for native 8080 assembler sour
 	<b>2015-01-08</b>: Version 4.0.5: #define, test suite, --flatops, Linux version
 	<b>2015-01-15</b>: Version 4.0.7: "extended arguments" in macros with '<' … '>'
 	<b>2015-01-18</b>: Version 4.0.8: fixed bug in .ACE file export
+	<b>2015-01-19</b>: Version 4.0.9: fixed bug in .81 export, secure cgi mode
+	<b>2015-01-22</b>: Version 4.0.10: bug fixes, added Z80 instructions in 8080 assembler syntax
+	<b>2015-01-24</b>: Version 4.0.11: Made Linux happy again
 
 h4 Git Repository
 p	You can checkout the source from my Git repository:

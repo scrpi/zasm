@@ -176,7 +176,7 @@ void SourceLine::expectEol() throw (syntax_error)
 cstr SourceLine::nextWord()
 {
 	skip_spaces();
-	if(*p==';') skip_to_eol();
+	if(*p==';') return "";
 	if(*p==0)   return "";					// endofline
 
 	cstr word = p;
@@ -255,6 +255,20 @@ cstr SourceLine::nextWord()
 	return substr(word, p);
 }
 
+
+/*	whitestr() up to error column
+	error column is expected to be the current parsing position p
+	Wenn der Fehler erst nach Untersuchung des nachfolgenden Tokens festgestellt wurde,
+	wurde p über den dazwischen liegenden Leerraum weitergestellt.
+	Dann ist es unschön, wenn die Fehlerposition erst nach so viele Leerzeichen oder Tabs
+	angezeigt wird, da dann auch die Fehlermeldung entsprechend weiter nach rechts raussteht.
+	Deshalb wird p zuerst wieder über den Leerraum links von p zurückgestellt.
+*/
+cstr SourceLine::whitestr()
+{
+	while(p>text && *(p-1)<=' ') p--;
+	return ::whitestr(substr(text,p));
+}
 
 
 

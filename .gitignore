@@ -38,7 +38,7 @@ Test/Z180/*.rom
 Test/8080/*.lst
 Test/8080/*.rom
 Test/8086 oder so/
-
+Test/ZXSP/original/s/
 Test/Z80/original/*.lst
 
 Test/Z80/pacalpaca/
@@ -48,4 +48,5 @@ pitfalls.txt
 zasm.cgi
 distributions
 sdcc/sdcc manual.pdf
+sdcc/bin-Linux32/
 INFO_and_TODO.txt

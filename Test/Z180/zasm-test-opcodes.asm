@@ -209,7 +209,7 @@ n20			equ 	20
 	ld	a,(de)
 	rrca
 
-#if !defined(i8080)
+#if !defined(_8080_)
 	in	d,(c)
 	in	d,(bc)
 	in	f,(c)
@@ -595,7 +595,7 @@ n	equ	40h
 ;			Z80 / non 8080 opcodes
 ; –––––––––––––––––––––––––––––––––––––––––––––––––
 
-#if !defined(i8080)
+#if !defined(_8080_)
 	exx
 	Neg
 	cpd
@@ -829,7 +829,7 @@ loop2:
 ;			using index register
 ; –––––––––––––––––––––––––––––––––––––––––––––––––
 
-#if !defined(i8080)
+#if !defined(_8080_)
 	jp   ix
 	jp   iy
 	jp   (ix)
@@ -869,7 +869,7 @@ loop2:
 	push iy
 
 ; ––––––––––––––––––––––––––––––––––
-#if !defined(z180)
+#if !defined(_z180_)
 	ld   a,xh		; illegal
 	ld   a,xl		; illegal
 	ld   a,yh		; illegal
@@ -948,7 +948,7 @@ loop2:
 	ld   (iy+1),n
 
 ; ––––––––––––––––––––––––––––––––––
-#if !defined(z180)
+#if !defined(_z180_)
 	add  a,xh		; illegal
 	add  a,xl		; illegal
 	add  a,yh		; illegal
@@ -1081,7 +1081,7 @@ loop2:
 	rrc  (iy+1)
 	sla  (ix+1)
 	sla  (iy+1)
-#if !defined(z180)	
+#if !defined(_z180_)	
 	sll  (ix+1)
 	sll  (iy+1)
 #endif	
@@ -1098,7 +1098,7 @@ loop2:
 ;		z80 illegal IXCB opcodes
 ; –––––––––––––––––––––––––––––––––––––––––––––––––
 
-#if defined(ixcbxh)
+#if defined(_ixcbxh_)
     sra	xh
     sra	yl
     sla	xh
@@ -1145,7 +1145,7 @@ loop2:
 	set  7,yl		; illegal
 #endif
 
-#if test_fails && (!defined(ixcbxh) || defined(z180))
+#if test_fails && (!defined(_ixcbxh_) || defined(_z180_))
 !	bit  0,xh		; illegal
 !	bit  1,xl		; illegal
 !	bit  2,yh		; illegal
@@ -1192,7 +1192,7 @@ loop2:
 !	sll	 yl
 #endif
 
-#if defined(ixcbr2)
+#if defined(_ixcbr2_)
 	sra	 (ix+1),a
 	sra	 (iy+1),b
 	sla	 (ix+1),c
@@ -1247,7 +1247,7 @@ loop2:
 	set  7,(iy+1),b	; illegal
 #endif
 
-#if test_fails && (!defined(ixcbr2) || defined(z180))
+#if test_fails && (!defined(_ixcbr2_) || defined(_z180_))
 !	rl   (ix+1),a
 !	rl   (iy+1),b
 !	rlc  (ix+1),c
@@ -1310,7 +1310,7 @@ loop2:
 ;			Hitachi HD64180 opcodes
 ; –––––––––––––––––––––––––––––––––––––––––––––––––
 
-#if defined(z180)
+#if defined(_z180_)
 	in0  b,(n)		; ed 00 n	hd 64180
 	in0  c,(n)		; ed 08 n	hd 64180
 	in0  d,(n)		; ed 10 n	hd 64180
@@ -1430,7 +1430,7 @@ n16	equ	16
 ; –––––––––––––––––––––––––––––––––––––––––––––––––
 ;		ill. 8080 opcodes:
 ; –––––––––––––––––––––––––––––––––––––––––––––––––
-#if test_fails & defined(i8080)
+#if test_fails & defined(_8080_)
 !	exx
 !	Neg
 !	cpd
@@ -1462,7 +1462,7 @@ n16	equ	16
 ;		ill. arguments for 8080 opcodes:
 ; –––––––––––––––––––––––––––––––––––––––––––––––––
 
-#if test_fails & defined(i8080)
+#if test_fails & defined(_8080_)
 !	jp   (ix)
 !	jp   (iy)
 
@@ -1801,7 +1801,7 @@ loop3:
 
 #endif ; test_fails & defined(i8080)
 
-#if test_fails & defined(i8080)
+#if test_fails & defined(_8080_)
 !	jp   ix
 !	jp   iy
 
@@ -1964,11 +1964,13 @@ loop3:
 	ld	bc,(hl)
 	ld	de,(hl)
 
-#if !defined(i8080)
+#if !defined(_8080_)
+#if !defined(_z180_)
 	ld	bc,ix		; compound, illegal
 	ld	bc,iy		; compound, illegal
 	ld	de,ix		; compound, illegal
 	ld	de,iy		; compound, illegal
+#endif
 	ld	bc,(ix+1)
 	ld	de,(ix+1)
 	ld	bc,(iy+1)

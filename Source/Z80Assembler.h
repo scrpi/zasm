@@ -107,21 +107,20 @@ public:
 
 // more:
 	CharMap*	charset;
-//	bool		seg0_org_set;	// cleared before each pass, set by ORG
 
 // options:
-	bool		ixcbr2_enabled;		// enable ixcb illegals: e.g. set b,(ix+d),r2
-	bool		ixcbxh_enabled;		// enable ixcb illegals: e.g. bit b,xh
-	bool		target_z180;		// enable Z180/hd64180 opcodes
-	bool		target_8080;		// limit instruction set to 8080 opcodes
-	bool		syntax_8080;		// use 8080 assembler syntax
-	bool		target_z80;			// target_z80 == !target_8080  => at least a Zilog Z80
-	bool		allow_dotnames;		// allow label names starting with a dot '.'
-	bool		require_colon;		// program labels must be followed by a colon ':'
-	bool		casefold_labels;	// label names are not case sensitive
-	bool		flat_operators;		// no operator precedence: evaluate strictly from left to right
-	bool		compare_to_old;		// compare own output file to existing reference file
-	bool		cgi_mode;			// disallow escaping from sourcefile's directory
+	bool		ixcbr2_enabled;	// enable ixcb illegals: e.g. set b,(ix+d),r2
+	bool		ixcbxh_enabled;	// enable ixcb illegals: e.g. bit b,xh
+	bool		target_z180;	// enable Z180/hd64180 opcodes
+	bool		target_8080;	// limit instruction set to 8080 opcodes
+	bool		asm8080;		// use 8080 assembler syntax
+	bool		target_z80;		// target_z80 == !target_8080  => at least a Zilog Z80
+	bool		allow_dotnames;	// allow label names starting with a dot '.'
+	bool		require_colon;	// program labels must be followed by a colon ':'
+	bool		casefold;		// label names are not case sensitive
+	bool		flat_operators;	// no operator precedence: evaluate strictly from left to right
+	bool		compare_to_old;	// compare own output file to existing reference file
+	bool		cgi_mode;		// disallow escaping from sourcefile's directory
 
 private:
 	int32	value			(SourceLine&, int prio, bool& valid) TAE;
@@ -140,8 +139,10 @@ private:
 	void	asmLocal		(SourceLine&)				TAE;
 	void	asmEndLocal		(SourceLine&)				TAE;
 	void	asmEnd			(SourceLine&)				TAE;
-	void	asmInstr		(SourceLine&)				TAE;
-	void	asmInstr8080	(SourceLine&)				TAE;
+	void	asmPseudoInstr	(SourceLine&,cstr)			TAE;
+	void	asmZ80Instr		(SourceLine&,cstr)			TAE;
+	void	asm8080Instr	(SourceLine&,cstr)			TAE;
+	void	(Z80Assembler::*asmInstr) (SourceLine&,cstr)TAE;
 	void	asmAssert		(SourceLine&)				TAE;
 	void	asmDefine		(SourceLine&)				TAE;
 	void	asmCharset		(SourceLine&)				TAE;
@@ -156,9 +157,9 @@ private:
 	void	store			(int n, int m, int u)		TAE { current_segment_ptr->store(n,m,u); }
 	void	store			(int a, int b, int c, int d)TAE { current_segment_ptr->store(a,b,c,d); }
 //	void	storeCBopcode	(int n)						TAE { store(0xCB,n); }
-//	void	storeIXopcode	(int n)						TAE { store(0xDD,n); }
+	void	storeIXopcode	(int n)						TAE;
 	void	storeEDopcode	(int n)						TAE;
-//	void	storeIYopcode	(int n)						TAE { store(0xFD,n); }
+	void	storeIYopcode	(int n)						TAE;
 
 //	void	storeOpcode     (int n)						TAE	{ current_segment_ptr->store(n); }
 	void 	storeWord		(int n)						TAE	{ current_segment_ptr->storeWord(n); }
@@ -169,8 +170,8 @@ private:
 	void	storeOffset 	(int n, bool valid)			TAE;
 	void	storeSpace		(int n, bool valid, int c)	TAE	{ current_segment().storeSpace(n,valid,c); }
 	void	storeSpace		(int n, bool valid)			TAE	{ current_segment().storeSpace(n,valid); }
-	void	store_XYCB_op	(int pfx, int op, int dis)	TAE;
-	void	store_XY_byte_op(int pfx, int op, int dis)	TAE;
+//	void	store_XYCB_op	(int pfx, int op, int dis)	TAE;
+//	void	store_XY_byte_op(int pfx, int op, int dis)	TAE;
 	uint8	popLastByte		()							{ return current_segment().popLastByte(); }
 
 	uint32	currentPosition	()							{ return current_segment().currentPosition(); }

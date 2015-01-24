@@ -74,6 +74,7 @@ public:
 	Label const& find(cstr name) const		{ return ObjHashMap::get(name); }
 	Array<Label*>& getItems()				{ return ObjHashMap::getItems(); }
 	void		remove(cstr name)			{ ObjHashMap::remove(name); }
+	bool		contains(cstr name) const	{ return indexof(name) != -1; }
 };
 
 

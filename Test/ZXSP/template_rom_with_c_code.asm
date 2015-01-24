@@ -121,9 +121,16 @@ NMI::	RETN						; add NMI handler here
 ; the payload:
 ; ================================================================
 
+
 #CFLAGS  $CFLAGS --nostdinc -I../../sdcc/include	; add some flags for sdcc
 #INCLUDE "main.c"									; compile & include file "main.c"
 #INCLUDE LIBRARY "../../sdcc/lib/"					; resolve missing global labels
+
+#if !defined(__mulint)	; fix for old sdcc 3.4.x:
+				defs	0,__mulint		; make __mulint missing
+__mulint_rrx_s	equ 	__mulint		; define what we need to be what we have
+#INCLUDE LIBRARY "../../sdcc/lib/"					; resolve missing global labels
+#endif
 
 
 ; ================================================================
