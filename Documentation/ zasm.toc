@@ -48,18 +48,18 @@ p	Note: internal links in this document are generated automatically. Some links 
 
 H1	  Assembler directives
 //H3:
-+		hash_target.txt
-+		hash_code.txt
-+		hash_data.txt
-+		hash_if.txt
-+		hash_end.txt
-+		hash_include.txt
-+		hash_insert.txt
-+		hash_local.txt
-+		hash_assert.txt
-+		hash_cflags.txt
-+		hash_define.txt
-+		hash_charset.txt
++		_target.txt
++		_code.txt
++		_data.txt
++		_if.txt
++		_end.txt
++		_include.txt
++		_insert.txt
++		_local.txt
++		_assert.txt
++		_cflags.txt
++		_define.txt
++		_charset.txt
 
 
 // –––––––––––––––––––––––––––––––––––––––––––––––––
@@ -88,6 +88,7 @@ p	Unless you use command line option '--reqcolon' Z80 and pseudo instructions mu
 +		rept endm.txt
 +		phase dephase.txt
 +		z80 z180 8080.txt
++		dotnames reqcolon etc.txt
 +		equ.txt
 +		defl set.txt
 +		Label definition.txt
@@ -104,6 +105,7 @@ H1 		CPU instructions
 +		Syntax variants.txt
 +		Compound instructions.txt
 +		8080 assembler instructions.txt
++		8080 assembler Z80 instructions.txt
 
 
 // –––––––––––––––––––––––––––––––––––––––––––––––––

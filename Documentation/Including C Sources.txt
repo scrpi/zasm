@@ -4,6 +4,7 @@ H1	Including C Source Files
 
 p	This is a summary page for all the c source related information otherwise spread over the zasm documentation.
 
+
 p	Related command line options
 
 pre	-c path/to/cc   	set path to c compiler (default: sdcc in $PATH)
@@ -25,6 +26,7 @@ pre	<a href="../Examples/template_rom_with_c_code.asm">Examples/template_rom_wit
 	<a href="../Test/test-tap.asm">Test/test-tap.asm</a>
 
 p	include/ and lib/ directory
+	Note: the supplied <tt>sdcc/lib/</tt> directory requires sdcc 3.4.1.
 	
 pre	<a href="../sdcc/include/">sdcc/include/</a>
 	<a href="../sdcc/lib/">sdcc/lib/</a>
@@ -184,16 +186,16 @@ pre
 	    pop  ix
 	    ret
 
-		
+		 
 p	Use this as a template for your own implementation. For an example see <a href="http://k1.spdns.de/Develop/Projects/zasm/Examples/zx_spectrum_io_rom.s" target=_blank>Examples/zx_spectrum_io_rom.s</a>
 
 	
 	
 
-+	hash_include.txt
-+	hash_cflags.txt
-+	hash_target.txt
-+	hash_code.txt
-+	hash_data.txt
-+	hash_local.txt
++	_include.txt
++	_cflags.txt
++	_target.txt
++	_code.txt
++	_data.txt
++	_local.txt
 

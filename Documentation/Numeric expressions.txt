@@ -28,10 +28,12 @@ p	Of course labels can be used in expressions. Labels may refer to local or glob
 
 h4	Predefined names
 
-p	<b>'$'</b> is used to get the value of the current logical code position. It always refers to the start of a statement, e.g. to the first byte of an instruction or the postition of the first byte in a 'defb' instruction:
+p	<b>'$'</b> or <b>'.'</b> is used to get the value of the current logical code position. It always refers to the start of a statement, e.g. to the first byte of an instruction or the postition of the first byte in a 'defb' instruction:
 
 pre	foo:	djnz $		; jump to foo
 	bar:	defb $,$,$	; stores 3x the value of bar
+	
+p	'.' is recognized for old sources only, do not use it in new code.
 
 p	<b>'$$'</b> refers to the physical code position. For an explanation of 'physical' vs. 'logical' code position see instruction '.phase'.
 
@@ -50,6 +52,21 @@ p	<b>defined(<name>)</b> results in 0 or 1 depending on whether the named label 
 p	<b>target(NAME)</b>: tests whether the named #target is selected. Use this if you made it selectable for some reason in your source. Result is 0 or 1.
 
 p	<b>segment(NAME)</b>: tests whether the named segment is the currently selected #code or #data segment. Result is 0 or 1.
+
+h4	Predefined labels
+p	The assembler defines labels which can be tested with 'defined(<name>)' if certain command line options are set.
+
+p	<b>_z80_</b> This label is defined if you are using the 8080 assembler syntax and the target cpu is a Z80 or Z180.
+p	<b>_z180_</b> This label is defined if the target cpu is a Z180.
+p	<b>_8080_</b> This label is defined if you are using standard Z80 assembler syntax and the target cpu is a Intel 8080.
+p	<b>_reqcolon_</b> This label is defined if the option '--reqcolon' was set on the command line or with the pseudo instruction '.reqcolon'.
+p	<b>_dotnames_</b> This label is defined if the option '--dotnames' was set on the command line or with the pseudo instruction '.dotnames'.
+p	<b>_casefold_</b> This label is defined if the option '--casefold' was set on the command line or with the pseudo instruction '.casefold'. It is also defined if this option was set implicitely, e.g. with '--asm8080' or '.8080'.
+p	<b>_flatops_</b> This label is defined if the option '--flatops' was set on the command line or with the pseudo instruction '.flatops'.
+p	<b>_ixcbr2_</b> This label is defined if the option '--ixcbr2' was set on the command line or with the pseudo instruction '.ixcbr2'.
+p	<b>_ixcbxh_</b> This label is defined if the option '--ixcbxh' was set on the command line or with the pseudo instruction '.ixcbxh'.
+
+
 
 	
 h4	Operators

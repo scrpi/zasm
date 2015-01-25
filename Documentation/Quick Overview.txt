@@ -107,7 +107,7 @@ p	See chapter 'Command line options'&nbsp;for details.
 
 h5	Include C sources
 	
-p	zasm 4.0 can include <span class=blue>c source files</span>, with the help of <tt class=blue>sdcc</tt>. A trimmed version of sdcc is included in the OSX distro. 
+p	zasm 4.0 can include <span class=blue>c source files</span>, with the help of <tt class=blue>sdcc</tt>. A trimmed version of sdcc for OSX can be found on the zasm download page. 
 
 p	C source files are #included just like assembler source files. They are compiled using sdcc and the output file is #included into the total source. 
 

@@ -1,8 +1,10 @@
 
-h3	org, .org
-	org
+h3	org, .org or .loc
+	org, loc
 	
 pre		org <value>
+		.org <value>
+		.loc <value>
 
 p	The pseudo instruction 'org' has two use cases:
 p	It can define the start address of the assembler code or it can insert some space up to the new address.
@@ -53,3 +55,4 @@ pre	#code _FOO, 0x4F00
 
 p	This will insert 256 spaces at the beginning of the segment.
 
+p	Name '.loc' is also recognized to support sources for different assemblers. <tt>org</tt> is recommended, the others are deprecated for new source.

@@ -8,9 +8,11 @@ p	This directive declares an area of ram to be used for variables etc. #data beh
 
 p	For a simple rom written entirely in assembler you probably need only one data segment, or even no data segment at all, if you just define the variables' addresses with the pseudo instruction equ.
 
-p	Typically the assembler instruction 'defs' alias 'ds' or '.ds' is used to allocate space in a data segment. You cannot use instructions which actually try to store bytes into this segment – only gaps.
+p	The name can be chosen freely, but must be a valid label name. zasm generates a label for the start address of each segment. Names for segments are case sensitive like all labels, except if command line option --casefold was used. 
+
+p	Typically the assembler instruction 'defs' alias 'ds' is used to allocate space in a data segment. You cannot use instructions which actually try to store bytes into this segment – only gaps.
 p	In addition the assembler instruction 'data' is allowed in a data segment, which just does the same.
-p	Also allowed are org and align, because they also just insert space, they're just different in how they calculate the gap size.
+p	Also allowed are <tt>org</tt> and <tt>align</tt>, because they also just insert space, they're just different in how they calculate the gap size.
 
 p	The following example might be used if you include c source:
 

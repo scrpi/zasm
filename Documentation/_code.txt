@@ -4,13 +4,13 @@ h3	#code
 
 pre	#code <name>,<start>,<size>,<flags>
 
-p	This defines a code segment where the generated code will be stored. If the #target assembler directive has been used then at least one #code segment must be defined. Depending on the desired target your source must consist of multiple #code segments. See the section about target files.
+p	This defines a code segment where the generated code will be stored. If the assembler directive #target has been used then at least one #code segment must be defined. Depending on the desired target your source must consist of multiple #code segments. See the section about target files.
 
 p	Arguments may be left unspecified from right to left. If you need to specify the size but not the address, you can use '*' to mark an argument as unspecified, e.g.:
 
 pre	#code	BLOCK1, *, 0x400 	; appended to the previous code block, size = 1kB; no flag
 
-p	If you define more than one code segment, then the segments (and thus the code therein) will be appended in the output file in the sequence of definition. Typically you define all used segments at the start of your source file and then later re-enter the segments as required. The following is an example as it might be used if you also include c sources:
+p	If you define more than one code segment, then the segments (and thus the code therein) will be appended in the output file in the sequence of definition. Typically you define all used segments at the start of your source file in the sequence they shall be appended to the output file and then later re-enter the segments as required. The following is an example as it might be used if you also include c sources:
 
 pre	#code	_BOOT,0x0000		; segment with Reset, RST and NMI vectors
 	#code 	_GSINIT				; init code: the compiler adds some code here and there as required
@@ -18,7 +18,7 @@ pre	#code	_BOOT,0x0000		; segment with Reset, RST and NMI vectors
 	#code 	_CODE				; most code and const data go here
 	#code 	_INITIALIZER		; initializer for initialized data in ram
 
-p	The name can be chosen freely, but must be a valid label name. zasm generates a label for the start address of each segment. If you include c source, then the c compiler requires the above code segments to be defined.
+p	The name can be chosen freely, but must be a valid label name. zasm generates a label for the start address of each segment. If you include c source, then the c compiler requires the above code segments to be defined. Names for segments are case sensitive like all labels, except if command line option --casefold was used. 
 
 p	The start address is required for the first segment only or it will default to 0. Following segments will be automatically assigned start addresses without gap. 
 

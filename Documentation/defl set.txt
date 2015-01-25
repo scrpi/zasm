@@ -1,11 +1,12 @@
 
-h3	defl and set
+h3	defl, set and '='
 	defl, set
 	
 p	Define a redefinable named value:
 
 pre	<name>[:][:] set  <value>
 	<name>[:][:] defl <value>
+	<name>[:][:] = <value>
 
 p	Labels defined with this keyword can be redefined at some later position.	
 p	Especially for use in macros it is useful to allow labels which can be redefined to another value.
