@@ -22,18 +22,18 @@ pre	RLCR r		CROSS-Doc: used RLC which is already used for RLCA, also deviation f
 	LDAR		CROSS-Doc: no opcode for LD A,R
 
 p	Some opcodes were extended to be used with dis(X) and dis(Y) as well.
-p	The new registers I, R were not accessed by name but with dedicated menmonics.
+p	The new registers I, R were not accessed by name but with dedicated mnemonics.
 p	The index registers were abbreviated X and Y and an access <tt>(IX+dis)</tt> was written as <tt>dis(X)</tt>. 
 
 h5	New mnemonics
 
 pre	<b>8080 syntax     Z80 syntax</b>
-	DJNZ			djnz dis
-	JRZ				jr	 z,dis
-	JRNZ			jr	 nz,dis
-	JRC				jr	 c,dis
-	JRNC			jr	 nc,dis
-	JMPR			jr	 dis
+	DJNZ dis		djnz dis
+	JRZ	 dis		jr	 z,dis
+	JRNZ dis		jr	 nz,dis
+	JRC	 dis		jr	 c,dis
+	JRNC dis		jr	 nc,dis
+	JMPR dis		jr	 dis
 	EXX				exx
 	EXAF			ex	af,af'
 	XTIX			ex	ix,(sp)
@@ -54,8 +54,8 @@ pre	<b>8080 syntax     Z80 syntax</b>
 	INIR			inir
 	OUTD			outd
 	OUTI			outi
-	OTDR			otdr	note: CROSS used OUTDR
-	OTIR			otir	note: CROSS used OUTIR
+	OTDR			otdr			note: CROSS used OUTDR
+	OTIR			otir			note: CROSS used OUTIR
 	STAI			ld	i,a
 	STAR			ld	r,a
 	LDAI			ld	a,i
@@ -70,16 +70,16 @@ pre	<b>8080 syntax     Z80 syntax</b>
 	NEG				neg
 	SPIX			ld	sp,ix
 	SPIY			ld	sp,iy
-	SBCD			ld	(NN),bc		named acc. to SHLD; note: *not* sbc!
-	SDED			ld	(NN),de		""
-	SSPD			ld	(NN),sp		""
-	SIXD			ld	(NN),ix		""
-	SIYD			ld	(NN),iy		""
-	LBCD			ld	bc,(NN)		named acc. to LHLD
-	LDED			ld	de,(NN)		""
-	LSPD			ld	sp,(NN)		""
-	LIXD			ld	ix,(NN)		""
-	LIYD			ld	iy,(NN)		""
+	SBCD NN			ld	(NN),bc		named acc. to SHLD; note: *not* sbc!
+	SDED NN			ld	(NN),de		""
+	SSPD NN			ld	(NN),sp		""
+	SIXD NN			ld	(NN),ix		""
+	SIYD NN			ld	(NN),iy		""
+	LBCD NN			ld	bc,(NN)		named acc. to LHLD
+	LDED NN			ld	de,(NN)		""
+	LSPD NN			ld	sp,(NN)		""
+	LIXD NN			ld	ix,(NN)		""
+	LIYD NN			ld	iy,(NN)		""
 	INC	 R			in	r,(c) 		R = B C D E H L A;  note: *not* inc!
 	OUTC R			out	(c),r		R = B C D E H L A
 	DADC R			adc	hl,rr		R = B D H SP

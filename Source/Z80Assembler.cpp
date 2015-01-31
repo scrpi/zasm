@@ -2632,6 +2632,7 @@ void Z80Assembler::asmPseudoInstr(SourceLine& q, cstr w) throw(any_error)
 	case '.org':
 	case ' org':
 		// org <value>	; add space up to address
+		q.is_data = yes;
 		n = value(q, pAny, v=1);
 		current_segment().storeSpaceUpToAddress(n,v);
 		return;
