@@ -46,7 +46,7 @@
 
 
 cstr appl_name = "zasm";
-cstr version   = "4.0.12";
+cstr version   = "4.0.13";
 
 
 /* helper: get the compile date in preferred format "yyyy-mm-dd":

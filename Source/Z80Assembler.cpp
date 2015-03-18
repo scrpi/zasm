@@ -41,7 +41,7 @@
 #include "helpers.h"
 #include "CharMap.h"
 #include "Z80/z80_major_opcode.h"
-//#include "hash/sdbm_hash.h"
+
 extern char** environ;
 
 
@@ -190,6 +190,7 @@ Z80Assembler::Z80Assembler()
 	ixcbxh_enabled(no),	// 	e.g. set b,xh
 	target_z180(no),
 	target_8080(no),
+	asm8080(no),
 	target_z80(yes),
 	allow_dotnames(no),
 	require_colon(yes),
@@ -632,7 +633,7 @@ eol:	throw syntax_error("unexpected end of line");
 	if(q.testChar('('))			// test for built-in function
 	{
 		if(	eq(w,"defined") || eq(w,"hi") || eq(w,"lo") || eq(w,"min") || eq(w,"max") ||
-			eq(w,"opcode") || eq(w,"target") || eq(w,"segment") )
+			eq(w,"opcode") || eq(w,"target") || eq(w,"segment") || eq(w,"required") )
 		{
 			for(uint nkl = 1; nkl; )
 			{
@@ -876,6 +877,25 @@ bin_number:	while(is_bin_digit(*w)) { n += n + (*w&1); w++; }
 				Label& label = labels.find(w);
 				if(&label!=NULL && label.is_defined &&			// found && defined?
 					label.sourceline<=current_sourceline_index)	// if pass>1: check line of definition. TODO: to be tested
+						 { n=1; break; }
+				if(i==0) { n=0; break; }						// not found / not defined
+			}
+
+			goto kzop;
+		}
+		if(eq(w,"required"))	// required(NAME)  or  required(NAME::)
+		{						// note: label value is not neccessarily valid
+			w = q.nextWord();
+			if(!is_letter(*w) && *w!='_') throw fatal_error("label name expected");
+			bool global = q.testChar(':')&&q.testChar(':');
+
+			for(uint i=global?0:local_labels_index;;i=labels[i].outer_index)
+			{
+				Labels& labels = this->labels[i];
+				Label& label = labels.find(w);
+
+				if(&label!=NULL && (!label.is_defined ||		// found && defined?
+					label.sourceline>current_sourceline_index))	// if pass>1: check line of definition. TODO: to be tested
 						 { n=1; break; }
 				if(i==0) { n=0; break; }						// not found / not defined
 			}
@@ -2216,7 +2236,8 @@ cstr Z80Assembler::compileFile(cstr fqn) throw(any_error)
 
 	// if the .s file exists and is newer than the .c file, then don't compile again:
 	// note: this does not handle modified header files or modified CFLAGS or upgraded SDCC itself!
-	if(exists_node(fqn_z) && file_mtime(fqn_z) > file_mtime(fqn_q)) return fqn_z;
+	if(exists_node(fqn_z) && file_mtime(fqn_z) > file_mtime(fqn_q))
+		return fqn_z;
 
 	// create pipe:
     const int R=0,W=1;

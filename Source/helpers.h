@@ -48,7 +48,6 @@ EXT void write_intel_hex			( FD&, uint32 address, uint8 const* data, uint32 size
 EXT uint write_motorola_s19			( FD&, uint32 address, uint8 const* data, uint32 size ) throw(file_error);
 EXT void write_srecord				( FD&, S19Type, uint32 address, uint8 const* data, uint size ) throw(file_error);
 EXT void write_compressed_page_ace	( FD&, uint8 const* data, uint size ) throw(file_error);
-EXT double now();
 
 
 #endif // helpers_h

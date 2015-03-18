@@ -208,7 +208,7 @@ void Z80Assembler::writeTapFile(FD& fd) throw(any_error)	// no error checking!
 		if(writetypebyte) fd.write_uint8(flag);		// block type
 
 		// write data and calc checksum
-		uint checksum = flag;
+		uint checksum = jupiterace ? 0 : flag;
 		while(i<j)
 		{
 			s = &segments[i++];

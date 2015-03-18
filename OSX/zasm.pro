@@ -39,9 +39,9 @@ SOURCES += \
     Source/Z80Header.cpp \
     Source/Macro.cpp \
     Libraries/cstrings/cstrings.cpp \
-    Libraries/kio/abort.cpp \
     Libraries/kio/errors.cpp \
-    Libraries/kio/log.cpp \
+    Libraries/kio/exceptions.cpp \
+    Libraries/unix/log.cpp \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
@@ -65,15 +65,15 @@ HEADERS += \
     config.h \
     Libraries/cstrings/base85.h \
     Libraries/cstrings/cstrings.h \
-    Libraries/kio/abort.h \
     Libraries/kio/errors.h \
     Libraries/kio/kio.h \
     Libraries/kio/log.h \
+    Libraries/kio/exceptions.h \
+	Libraries/kio/standard_types.h \
+	Libraries/kio/peekpoke.h \
     Libraries/unix/FD.h \
     Libraries/unix/tempmem.h \
     Libraries/unix/files.h \
-	Libraries/kio/standard_types.h \
-	Libraries/kio/peekpoke.h \
     Libraries/Templates/Array.h \
     Libraries/Templates/HashMap.h \
     Libraries/Z80/z80_clock_cycles.h \
