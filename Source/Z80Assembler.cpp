@@ -1726,6 +1726,7 @@ void Z80Assembler::asmMacroCall(SourceLine& q, Macro& m) TAE
 				n = strlen(w);
 				if(n<2||w[n-1]!=c) throw syntax_error(usingstr("closing '%c' missing",c));
 			}
+			while(q.p>aa && *(q.p-1)<=' ') q.p--;
 		//	if(aa==q.p) throw syntax_error("empty argument (use <>");		denk…
 			rpl.append(substr(aa,q.p));
 		}

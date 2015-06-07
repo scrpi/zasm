@@ -107,7 +107,7 @@ pre	#include standard library
 	
 p	This will resolve all symbols from the system library known as required at that point in your source.
 
-p	As a prerequisite zasm must know where to find the system library directory. It is recommended to use the supplied directory from the distribution and then you have to tell zasm where it is. This can be done with the commnad line option -L.
+p	As a prerequisite zasm must know where to find the system library directory. It is recommended to use the supplied directory from the distribution and then you have to tell zasm where it is. This can be done with the command line option -L.
 p	Example:
 pre	$> zasm -L /work/sdcc/lib foo.asm
 

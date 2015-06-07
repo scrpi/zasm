@@ -13,7 +13,7 @@ some special formats for ZX Spectrum emulators, e.g. ".TAP" and ".SNA" files.»
 
 var KEYWORDS = «zasm, z80 assembler, ZX Spectrum, kio»
 
-var ROBOTS = «index,nofollow»
+var ROBOTS = «index,follow»
 
 
 var MAIN = 

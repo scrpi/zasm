@@ -448,7 +448,11 @@ int main( int argc, cstr argv[] )
 
 
 // check source file:
-	if(!inputfile) h: abort(help, version, compiledatestr(), _PLATFORM);
+	if(!inputfile)
+	{
+		h: fprintf(stderr, help, version, compiledatestr(), _PLATFORM);
+		return 1;
+	}
 	inputfile = fullpath(inputfile,no);
 	if(errno)
 	{
