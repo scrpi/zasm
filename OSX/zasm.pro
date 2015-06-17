@@ -45,9 +45,9 @@ SOURCES += \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
-    Libraries/Z80/z80_clock_cycles.cpp \
-    Libraries/Z80/z80_major_opcode.cpp \
-    Libraries/Z80/z80_opcode_length.cpp \
+    Libraries/Z80/goodies/z80_clock_cycles.cpp \
+    Libraries/Z80/goodies/z80_major_opcode.cpp \
+    Libraries/Z80/goodies/z80_opcode_length.cpp \
 
 HEADERS += \
     Source/Error.h \
@@ -76,10 +76,10 @@ HEADERS += \
     Libraries/unix/files.h \
     Libraries/Templates/Array.h \
     Libraries/Templates/HashMap.h \
-    Libraries/Z80/z80_clock_cycles.h \
-    Libraries/Z80/z80_major_opcode.h \
-    Libraries/Z80/z80_major_opcode_tables.h \
-    Libraries/Z80/z80_opcode_length.h \
+    Libraries/Z80/goodies/z80_clock_cycles.h \
+    Libraries/Z80/goodies/z80_major_opcode.h \
+    Libraries/Z80/goodies/z80_major_opcode_tables.h \
+    Libraries/Z80/goodies/z80_opcode_length.h \
     Libraries/Z80/Z80opcodes.h \
     Libraries/hash/sdbm_hash.h \
 

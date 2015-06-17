@@ -40,7 +40,7 @@
 #include "Templates/HashMap.h"
 #include "helpers.h"
 #include "CharMap.h"
-#include "Z80/z80_major_opcode.h"
+#include "Z80/goodies/z80_major_opcode.h"
 
 extern char** environ;
 
