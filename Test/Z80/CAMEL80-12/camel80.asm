@@ -50,7 +50,7 @@
 DOCODE  EQU 0      ; flag to indicate CODE words
 link    DEFL 0     ; link to previous Forth word
 
-head    MACRO   #label,#length,#name,#action
+Head    MACRO   #label,#length,#name,#action
         DW link
         DB 0
 link    DEFL $
@@ -61,7 +61,7 @@ link    DEFL $
         ENDIF
         ENDM
 
-immed   MACRO   #label,#length,#name,#action
+Immed   MACRO   #label,#length,#name,#action
         DW link
         DB 1
 link    DEFL $

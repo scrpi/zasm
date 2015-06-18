@@ -2616,6 +2616,7 @@ void Z80Assembler::asmPseudoInstr(SourceLine& q, cstr w) throw(any_error)
 		=> Code-Abweichung zw. Pass 1 und Pass 2.
 		Deshalb: nur solche Macro-Aufrufe erkennen, die hinter der Macro-Definition liegen.
 	*/
+	w = lowerstr(w);
 	Macro& m = macros.get(w);
 	if(&m && current_sourceline_index>m.mdef) { asmMacroCall(q,m); return; }
 
