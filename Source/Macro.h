@@ -29,17 +29,18 @@
 #define MACRO_H
 
 #include "Templates/HashMap.h"
+#include "Templates/StrArray.h"
 
 class Macro
 {
 public:
-	CstrArray	args;
+	cstrArray	args;
 	uint32		mdef;
 	uint32		endm;
 	char		tag;
 
 public:
-	Macro(CstrArray& args, uint32 a, uint32 e, char tag)		:args(args),mdef(a),endm(e),tag(tag){}
+	Macro(cstrArray& args, uint32 a, uint32 e, char tag)		:args(args),mdef(a),endm(e),tag(tag){}
 };
 
 class Macros : public ObjHashMap<cstr,Macro>

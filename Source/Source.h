@@ -30,7 +30,7 @@
 
 
 #include "kio/kio.h"
-#include "Templates/Array.h"
+#include "Templates/ObjArray.h"
 #include "SyntaxError.h"
 
 class Label;

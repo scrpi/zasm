@@ -71,7 +71,7 @@ Labels::~Labels()
 {
 	if(!is_global)
 	{
-		Array<Label*> labels = getItems();
+		Array<Label*>& labels = getItems();
 		for(uint i=0;i<labels.count();i++)
 		{
 			if(labels[i]->is_global) labels[i] = NULL;

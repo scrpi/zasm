@@ -29,7 +29,7 @@
 #define ZASMSEGMENT_H
 
 
-#include "Templates/Array.h"
+#include "Templates/ObjArray.h"
 #include "SyntaxError.h"
 typedef Array<uint8> Core;
 

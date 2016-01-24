@@ -101,7 +101,7 @@ public:
 	cstr		c_includes;		// -I: fqn to custom include dir or NULL
 	cstr		stdlib_dir;		// -L: fqn to custom library dir or NULL (not only c but any .globl)
 	cstr		c_tempdir;		// fqn of sub directory in temp_directory acc. to c_flags for .s files
-	CstrArray	c_flags;
+	cstrArray	c_flags;
 	int			c_qi;			// index of source file in cc_argv[] or -1
 	int			c_zi;			// index of output file in cc_argv[] or -1
 

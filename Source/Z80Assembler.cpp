@@ -1646,7 +1646,7 @@ void Z80Assembler::asmMacro( SourceLine& q, cstr name, char tag ) throw(any_erro
 	if(macros.contains(name)) throw fatal_error("macro redefined");
 
 	// parse argument list:
-	CstrArray args;
+	cstrArray args;
 	if(!q.testEol())
 	{
 		if(strchr("!#$%&.:?@\\^_|~",*q)) tag = *q;		// test whether args in def specify some kind of tag
@@ -1672,7 +1672,7 @@ void Z80Assembler::asmMacro( SourceLine& q, cstr name, char tag ) throw(any_erro
 		s.rewind();
 		if(s[0]=='#')
 		{
-			if(tag=='#' && is_name(++s.p) && args.find(s.nextWord())>=0) continue;
+			if(tag=='#' && is_name(++s.p) && args.contains(s.nextWord())) continue;
 			throw fatal_error("unexpected assembler directive inside macro");
 		}
 		if(s.testDotWord("endm"))
@@ -1695,7 +1695,7 @@ void Z80Assembler::asmMacroCall(SourceLine& q, Macro& m) TAE
 	cstr w;
 
 	// read arguments in macro call:
-	CstrArray rpl;
+	cstrArray rpl;
 	if(!q.testEol()) do
 	{
 		if(q.testChar('<'))		// extended argument: < ... " ... ' ... , ... ; ... > [,;\n]
@@ -1736,7 +1736,7 @@ void Z80Assembler::asmMacroCall(SourceLine& q, Macro& m) TAE
 	XXXASSERT(q.testEol());
 
 	// get arguments in macro definition:
-	CstrArray& args = m.args;
+	cstrArray& args = m.args;
 	if(rpl.count()<args.count()) throw syntax_error(usingstr("not enough arguments: required=%i",args.count()));
 	if(rpl.count()>args.count()) throw syntax_error(usingstr("too many arguments: required=%i",args.count()));
 
@@ -1774,8 +1774,8 @@ void Z80Assembler::asmMacroCall(SourceLine& q, Macro& m) TAE
 			s.p = p+1; w = s.nextWord();		// get potential argument name
 			if(casefold) w = lowerstr(w);
 
-			int a = args.find(w);				// get index of argument in argument list
-			if(a==-1) continue;					// not an argument
+			uint a = args.indexof(w);			// get index of argument in argument list
+			if(a == ~0u) continue;				// not an argument
 
 			// w is the name of argument #a
 			// it was found starting at p+1 in s.text  (p points to the '&')
@@ -1873,7 +1873,7 @@ void Z80Assembler::asmCFlags( SourceLine& q ) throw(any_error)
 	XXXASSERT(c_qi<(int)c_flags.count() && c_zi<(int)c_flags.count());
 
 	if(c_flags.count()==0) init_c_flags();	// --> sdcc -mz80 -S
-	CstrArray old_cflags = c_flags;		// moves contents
+	cstrArray old_cflags = c_flags;		// moves contents
 	int old_c_qi = c_qi; c_qi = -1;
 	int old_c_zi = c_zi; c_zi = -1;
 
@@ -2090,10 +2090,10 @@ void Z80Assembler::asmTarget( SourceLine& q ) throw(any_error)
 }
 
 
-static int find(Array<cstr> a, cstr s)
+static bool contains(Array<cstr>& a, cstr s)
 {
-	for(int i=a.count();i--;) if(eq(s,a[i])) return i;
-	return -1;
+	for(int i=a.count();i--;) if(eq(s,a[i])) return yes;
+	return no;
 }
 
 
@@ -2156,7 +2156,7 @@ void Z80Assembler::asmInclude( SourceLine& q ) throw(any_error)
 			cstr fname = files[i].fname();
 			cstr name  = basename_from_path(fname);
 
-			if(names.count() && !find(names,name)) continue;	// not in explicit list
+			if(names.count() && !contains(names,name)) continue;	// not in explicit list
 
 			Label* l = &global_labels().find(name);
 			if(!l) continue;			// never used, defined or declared
