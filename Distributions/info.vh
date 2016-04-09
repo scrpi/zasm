@@ -78,6 +78,7 @@ p	<b>2015-01-01</b>: Version 4.0.2: added support for native 8080 assembler sour
 	<b>2015-01-19</b>: Version 4.0.9: fixed bug in .81 export, secure cgi mode
 	<b>2015-01-22</b>: Version 4.0.10: bug fixes, added Z80 instructions in 8080 assembler syntax
 	<b>2015-01-24</b>: Version 4.0.11: Made Linux happy again
+	<b>2016-04-09</b>: Version 4.0.15: Bug fixes
 
 h4 Git Repository
 p	You can checkout the source from my Git repository:

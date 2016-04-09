@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2015
+/*	Copyright  (c)	Günter Woigk 2014 - 2016
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -183,7 +183,8 @@ void Segment::setFlag( int32 n ) throw(syntax_error)
 */
 void Segment::setOrigin( int32 new_address, bool valid ) throw(syntax_error)
 {
-	XXXASSERT(valid || !org_valid);		// darf nicht wieder invalid werden
+	// kann wieder invalid werden: nach .phase ... .dephase
+	//	XXXASSERT(valid || !org_valid);		// darf nicht wieder invalid werden
 
 	if(valid && new_address!=(int16)new_address && new_address!=(uint16)new_address)
 		throw syntax_error("address out of range");

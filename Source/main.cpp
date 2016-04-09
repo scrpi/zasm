@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 1994 - 2015
+/*	Copyright  (c)	Günter Woigk 1994 - 2016
   					mailto:kio@little-bat.de
 
 	This file is free software
@@ -46,7 +46,7 @@
 
 
 cstr appl_name = "zasm";
-cstr version   = "4.0.13";
+cstr version   = "4.0.15";
 
 
 /* helper: get the compile date in preferred format "yyyy-mm-dd":
@@ -68,7 +68,7 @@ static cstr compiledatestr()
 */
 static cstr help =
 "–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\n"
-"  zasm - z80 assembler (c) 1994 - 2015 Günter Woigk.\n"
+"  zasm - z80 assembler (c) 1994 - 2016 Günter Woigk.\n"
 "  version %s, %s, for %s.\n"										// version, date, platform
 "  homepage: k1.spdns.de/Develop/Projects/zasm/\n"
 "  send bug reports to: kio@little-bat.de\n\n"

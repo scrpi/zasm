@@ -1,4 +1,4 @@
-/*	Copyright  (c)	Günter Woigk 2014 - 2015
+/*	Copyright  (c)	Günter Woigk 2014 - 2016
 					mailto:kio@little-bat.de
 
 	This program is distributed in the hope that it will be useful,
@@ -227,7 +227,7 @@ cstr SourceLine::nextWord()
 		c = *p++;
 		if (c=='>') return ">>";
 		if (c=='=') return ">=";
-		p--;		return "<";
+		p--;		return ">";
 
 	case '&':
 		c = *p++;

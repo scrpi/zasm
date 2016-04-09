@@ -39,15 +39,15 @@ SOURCES += \
     Source/Z80Header.cpp \
     Source/Macro.cpp \
     Libraries/cstrings/cstrings.cpp \
-    Libraries/kio/abort.cpp \
     Libraries/kio/errors.cpp \
-    Libraries/kio/log.cpp \
+    Libraries/kio/exceptions.cpp \
+    Libraries/unix/log.cpp \
     Libraries/unix/FD.cpp \
     Libraries/unix/tempmem.cpp \
     Libraries/unix/files.cpp \
-    Libraries/Z80/z80_clock_cycles.cpp \
-    Libraries/Z80/z80_major_opcode.cpp \
-    Libraries/Z80/z80_opcode_length.cpp \
+    Libraries/Z80/goodies/z80_clock_cycles.cpp \
+    Libraries/Z80/goodies/z80_major_opcode.cpp \
+    Libraries/Z80/goodies/z80_opcode_length.cpp \
 
 HEADERS += \
     Source/Error.h \
@@ -65,21 +65,21 @@ HEADERS += \
     config.h \
     Libraries/cstrings/base85.h \
     Libraries/cstrings/cstrings.h \
-    Libraries/kio/abort.h \
     Libraries/kio/errors.h \
     Libraries/kio/kio.h \
-    Libraries/kio/log.h \
+    Libraries/unix/log.h \
     Libraries/unix/FD.h \
     Libraries/unix/tempmem.h \
     Libraries/unix/files.h \
 	Libraries/kio/standard_types.h \
 	Libraries/kio/peekpoke.h \
+    Libraries/kio/exceptions.h \
     Libraries/Templates/Array.h \
     Libraries/Templates/HashMap.h \
-    Libraries/Z80/z80_clock_cycles.h \
-    Libraries/Z80/z80_major_opcode.h \
-    Libraries/Z80/z80_major_opcode_tables.h \
-    Libraries/Z80/z80_opcode_length.h \
+    Libraries/Z80/goodies/z80_clock_cycles.h \
+    Libraries/Z80/goodies/z80_major_opcode.h \
+    Libraries/Z80/goodies/z80_major_opcode_tables.h \
+    Libraries/Z80/goodies/z80_opcode_length.h \
     Libraries/Z80/Z80opcodes.h \
     Libraries/hash/sdbm_hash.h \
 
